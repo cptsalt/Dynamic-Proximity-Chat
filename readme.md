@@ -28,7 +28,7 @@ This mod requires [StarCustomChat](https://github.com/KrashV/StarCustomChat) 1.8
 - Volume Control - :+/:- : Use :+ to increase the volume of a quote/sound. Use :- to decrease it. Use := to reset it. You can make noises louder/quieter four times in each direction (:++++, :----)
 - Local OOC - ((Hello)): Use (()) for local OOC. Local OOC has a range, and does not require line of sight, but may not be seen if players are far away.
 - Radio - {Hello}: Use {} for radio chat. This can be seen through walls, but is distinct from OOC, and supports languages.
-- Emphasis - Look \*there\*: Use ** or // for emphasis (either one works). This changes nothing about the chat, but makes it anything inside of it specific color.
+- Emphasis - Look \*there\*: Use ** or // for emphasis (either one works). This changes nothing about the chat, but makes it anything inside of it a specific color.
 - Item Emphasis - The \Titled Object\: Functionally identical to normal emphasis, but uses a different colors.
 - Rolling - |100|: Rolls a number between 1 and the provided maximum. The value should be consistent between players.
 
