@@ -26,30 +26,31 @@ This mod requires [StarCustomChat](https://github.com/KrashV/StarCustomChat) 1.8
 - Sounds - <bang>: Use <> to open and close sounds. They are identical to quotes in function, but are intended for noises made by things, rather than people.
 - Volume Control - :+/:- : Use :+ to increase the volume of a quote/sound. Use :- to decrease it. Use := to reset it. You can make noises louder/quieter four times in each direction (:++++, :----)
 - Local OOC - ((Hello)): Use (()) for local OOC. Local OOC has a range, and does not require line of sight, but may not be seen if players are far away.
-- Global OOC - (((Hello))): Use ((())) for global OOC. Global OOC can be seen by the entire world, it's basically the same as the Local chat mode
-- Radio - {Hello}: Use {} for radio chat. This can be seen through walls, but is distinct from global OOC, and supports languages.
-- Emphasis - Look *there*: Use ** or // for emphasis (either one works). This changes nothing about the chat, but makes it anything inside of it specific color.
-- Item Emphasis - The \Titled Object\: Functionally identical to normal emphasis, but uses a different color
+- Radio - {Hello}: Use {} for radio chat. This can be seen through walls, but is distinct from OOC, and supports languages.
+- Emphasis - Look \*there\*: Use ** or // for emphasis (either one works). This changes nothing about the chat, but makes it anything inside of it specific color.
+- Item Emphasis - The \Titled Object\: Functionally identical to normal emphasis, but uses a different colors.
 - Rolling - |100|: Rolls a number between 1 and the provided maximum. The value should be consistent between players.
 
 ## Languages:
-Languages in this mod work by checking player inventories for items that are created with language codes made up of some amount of letters.
-Depending on how many items with a given code a player has, they will understand more or less of a language.
-Someone who's 90/80/50/etc% proficient will know about 90/80/50/etc% of the words in the language. This proficiency can be increased or decreased with more or fewer items in your inventory.
-By default, the language [!!] is universal, and everyone can understand it regardless of whether or not they have any items with the code.
+Languages in this mod work by checking player inventories for items that are created with language codes made up of some amount of letters. Depending on how many items with a given code a player has, they will understand more or less of a language.
+
+Someone who's 90/80/50/etc% proficient will know about 90/80/50/etc% of the words in the language. This proficiency can be increased or decreased with more or fewer items in your inventory. By default, the language [!!] is universal, and everyone can understand it regardless of whether or not they have any items with the code.
+
 Known words are unique to each player and language, and each language's scrambling seed is unique.
-For (arbitrary) example: The language [LA] will always encode "Hello" to something like "Mylli", and the language [PT] will always encode "Hello" to something like "Jotta".
+- For (arbitrary) example: The language [LA] will always encode "Hello" to something like "Mylli", and the language [PT] will always encode "Hello" to something like "Jotta".
+
 Languages also have their own color for scrambled words, they also stay the same for a given language.
+
 Using empty brackets [] will reset the active language to the player's default language, or [!!] if they do not have one.
+
 You can have multiple default languages, the mod will find the first one in your inventory. Just remember to switch them around when you need them.
-*Note:* Language items show up in the crafting components section of your inventory, since they're components to craft dialogue, or something like that.
+- *Note:* Language items show up in the crafting components section of your inventory, since they're components to craft dialogue, or something like that.
 
 ## Typo Correction 
-You can add and remove typos from a list that's stored in your player file. 
-Once you've added and removed the typos to your liking, you should then use the /typotoggle or /typocheck commands to make sure the tool is active or inactive.
-When you add a typo and correction, the mod will scan and replace any typos that match that word before sending your message if the typo correction tool is active.
-Note: Typos will only be corrected as words with punctuation or spaces around them, excluding language brackets. A typo should not correct parts of a word unless you spell it out with punctuation.
-Something like "guh-guh-guh...GHOST!!!" might autocorrect "guh" to "gum", for example, if you have a typo specifying such.
+You can add and remove typos from a list that's stored in your player file.
+
+Once you've added and removed the typos to your liking, you should then use the /typotoggle or /typocheck commands to make sure the tool is active or inactive. When you add a typo and correction, the mod will scan and replace any typos that match that word before sending your message if the typo correction tool is active.
+- *Note:* Typos will only be corrected as words with punctuation or spaces around them, excluding language brackets.
 
 ## Commands:
 /newlangitem name (String), code (String), count (Number), default (True/False), color (#hex code) - Createse new language items for your character.
@@ -83,5 +84,6 @@ Note: Correction is not provided here, since you typically wouldn't need to remo
 # Planned Enhancements:
 - /showtypos command to see all of your typos and corrections
 - Global radio channels (difficult to do clientside)
+- Global OOC chat
 - Encrypted radio channels
 - Automatically omitting character names from language scrambling
