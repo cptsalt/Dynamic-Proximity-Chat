@@ -22,7 +22,7 @@ This mod requires [StarCustomChat](https://github.com/KrashV/StarCustomChat) 1.8
 # How to use the mod:
 
 ## Chat controls:
-- Actions - He does this: Default state, writing a full message without any quotes or indicators will post an action. Actions require line of sight to receive them.
+- Actions - He does this: Default state, writing a full message without any quotes or indicators will post an action. Actions require line of sight to be received.
 - Quotes - "Hello": Use "" to open and close quotes. They have a shorter range than actions, but do not need direct line of sight so long as there is open air between the sender and receiver.
 - Sounds - <bang>: Use <> to open and close sounds. They are identical to quotes in function, but are intended for noises made by things, rather than people.
 - Volume Control - :+/:- : Use :+ to increase the volume of a quote/sound. Use :- to decrease it. Use := to reset it. You can make noises louder/quieter four times in each direction (:++++, :----)
