@@ -1,0 +1,8 @@
+{
+  "name" : "inlineprox",
+  "friendlyName" : "Inline Proximity Chat",
+  "description" : "Inline Proximity Chat for StarCustomChat, based on the proximity mode in the mod of the same name by Degranon",
+  "author" : "Captain Salt",
+  "version" : "0.1",
+  "includes" : ["starcustomchat"]
+}
