@@ -6,7 +6,7 @@
 This is a chat mod that takes very heavy inspiration from a very technically impressive server that closed some time ago; this is my attempt to recreate some of those functions from memory. It is built based on Degranon's Star Custom Chat proximity plugin, and thus requires the base mod, as well as either StarExtensiosn or OpenStarbound.
 In essence, this mod searches for certain characters to dictate different modes within the message, then it determines whether or not the receiving player can see the components of the message. Quotes can be garbled or muffled, and there are modifiers for things like volume.
 
-The mod additionally adds virtually unlimited languages for roleplaying. You can create a language with a code to use in chat, which encodes any dialogue until the language is set again in the message.
+The mod additionally adds virtually infinite languages for roleplaying. You can create a language with a code to use in chat, which encodes any dialogue until the language is set again in the message.
 Each character has a proficiency for any given language. This proficiency depends on how many language items the character has in their inventory, between 0 and 10.
 Users who only know some (or none) of a language will have some of the words scrambled depending on the proficiency.
 
