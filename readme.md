@@ -1,5 +1,5 @@
 ## Notice
-- This mod is not polished, and I made it half asleep in a week, so expect there to be a few bugs. Feel free to report them or make a pull request to fix them.
+This mod is not polished, and I made it half asleep in a week, so expect there to be a few bugs. Feel free to report them or make a pull request to fix them.
 
 # About
 This is a chat mod that takes very heavy inspiration from a very technically impressive server that closed some time ago; this is my attempt to recreate some of those functions from memory. It is built based on Degranon's Star Custom Chat proximity plugin, and thus requires the base mod, as well as either StarExtensiosn or OpenStarbound.
