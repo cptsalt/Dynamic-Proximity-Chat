@@ -1,5 +1,6 @@
-## Notice
-This mod is not polished, and I made it half asleep in a week, so expect there to be a few bugs. Feel free to report them or make a pull request to fix them.
+# Notice
+- This mod is not polished, and I made it half asleep in a week, so expect there to be a few bugs. Feel free to report them or make a pull request to fix them.
+- This mod will not work with other language or proximity mods, and it is recommended that these conflicting mods are disabled.
 
 # About
 This is a chat mod that takes very heavy inspiration from a very technically impressive server that closed some time ago; this is my attempt to recreate some of those functions from memory. It is built based on Degranon's Star Custom Chat proximity plugin, and thus requires the base mod, as well as either StarExtensiosn or OpenStarbound.
@@ -86,3 +87,4 @@ Note: Correction is not provided here, since you typically wouldn't need to remo
 - Global OOC chat
 - Encrypted radio channels
 - Automatically omitting character names from language scrambling
+- Russian Support. Right now this mod won't work with non-ASCII script
