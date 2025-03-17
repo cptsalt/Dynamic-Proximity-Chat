@@ -78,7 +78,6 @@ Note: Correction is not provided here, since you typically wouldn't need to remo
 - Since languages are managed with items, you can share them between players and quickly add/delete them.
 - Sounds and quotes have a different volume manager, you can run a string like ":++HEY" <:--scuffle> "COME HERE!!", and the sound will have "-2" volume, while the quotes will have "+2" for both segments.
 - Typos are case sensitive, though I may change this in the future. You can enter typos for caps lock or holding shift for too long, I guess.
-- You can see and change the proximity radius in the Star Custom Chat settings. Hovering over the bar will show ranges with different colored circles. If you change this value, you will both send and receive in shorter ranges.
 - This mod comes with NO typos pre-made, so you'll have to configure your own. You can do this by editing your player file if you want, but only do that after you've run the add/remove/toggle command at least once.
 
 # Planned Enhancements:
