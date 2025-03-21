@@ -7,7 +7,7 @@
     "commands.newlangitem.desc":"Adds a new language item. {name, code, count, automatic, [hex color]}",
     "commands.addtypo.desc":"Adds a typo to your list. {typo, correction}",
     "commands.removetypo.desc":"Removes a typo from your list. {typo}",
-    "commands.toggletypo.desc":"Toggles whether or not autocorrection happens",
+    "commands.toggletypos.desc":"Toggles whether or not autocorrection happens",
     "commands.checktypo.desc":"Checks if autocorrection is on or off",
     "commands.showtypos.desc":"Returns a list of your saved typos and corrections"
 }

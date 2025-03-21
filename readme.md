@@ -1,5 +1,5 @@
 # Notice
-- This mod is not polished, and I made it half asleep in a week, so expect there to be a few bugs. Feel free to report them or make a pull request to fix them.
+- This mod is not polished, and I made it half asleep in a week, so expect there to be some bugs. Feel free to report them or make a pull request to fix them.
 - This mod will not work with other language or proximity mods, and it is recommended that these conflicting mods are disabled.
 
 # About
@@ -50,7 +50,7 @@ You can have multiple default languages, the mod will find the first one in your
 ## Typo Correction 
 You can add and remove typos from a list that's stored in your player file.
 
-Once you've added and removed the typos to your liking, you should then use the /typotoggle or /typocheck commands to make sure the tool is active or inactive. When you add a typo and correction, the mod will scan and replace any typos that match that word before sending your message if the typo correction tool is active.
+Once you've added and removed the typos to your liking, you should then use the /toggletypos, /showtypos or /checktypo commands to make sure the tool is active or inactive. When you add a typo and correction, the mod will scan and replace any typos that match that word before sending your message if the typo correction tool is active.
 - *Note:* Typos will only be corrected as words with punctuation or spaces around them, excluding language brackets.
 
 ## Commands:
@@ -70,9 +70,9 @@ Once you've added and removed the typos to your liking, you should then use the 
 - typo: The typo to remove
 Note: Correction is not provided here, since you typically wouldn't need to remove a word based on what it corrects to.
 
-/typotoggle - Activates or Deactivates typo correction, off by default.
+/toggletypos - Activates or Deactivates typo correction, off by default.
 
-/typocheck - Checks the status of the typo correction tool.
+/checktypo - Checks the status of the typo correction tool.
 
 /showtypos - Shows the list of saved typos you have, and if the tool is on or off.
 

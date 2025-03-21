@@ -59,11 +59,11 @@ function inlineprox:addCustomCommandPreview(availableCommands, substr)
       description = "commands.removetypo.desc",
       data = "/removetypo"
     })
-  elseif string.find("/toggletypo", substr, nil, true) then
+  elseif string.find("/toggletypos", substr, nil, true) then
     table.insert(availableCommands, {
-      name = "/toggletypo",
-      description = "commands.toggletypo.desc",
-      data = "/toggletypo"
+      name = "/toggletypos",
+      description = "commands.toggletypos.desc",
+      data = "/toggletypos"
     })
   elseif string.find("/checktypo", substr, nil, true) then
     table.insert(availableCommands, {
@@ -155,7 +155,7 @@ function inlineprox:registerMessageHandlers(shared) --look at this function in i
   starcustomchat.utils.setMessageHandler("/checktypo", function(_, _, data)
     return checktypo(false)
   end)
-  starcustomchat.utils.setMessageHandler("/toggletypo", function(_, _, data)
+  starcustomchat.utils.setMessageHandler("/toggletypos", function(_, _, data)
     return checktypo(true)
   end)
   starcustomchat.utils.setMessageHandler("/addtypo", function(_, _, data)
