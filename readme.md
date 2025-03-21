@@ -74,6 +74,8 @@ Note: Correction is not provided here, since you typically wouldn't need to remo
 
 /typocheck - Checks the status of the typo correction tool.
 
+/showtypos - Shows the list of saved typos you have, and if the tool is on or off.
+
 # Tips:
 - [!!] can be used for the code in a language item, so it may be worthwhile to generate a set of default language items with that code in case you make others later for niche situations
 - Since languages are managed with items, you can share them between players and quickly add/delete them.
@@ -82,7 +84,6 @@ Note: Correction is not provided here, since you typically wouldn't need to remo
 - This mod comes with NO typos pre-made, so you'll have to configure your own. You can do this by editing your player file if you want, but only do that after you've run the add/remove/toggle command at least once.
 
 # Planned Enhancements:
-- /showtypos command to see all of your typos and corrections
 - Global radio channels (difficult to do clientside)
 - Global OOC chat
 - Encrypted radio channels

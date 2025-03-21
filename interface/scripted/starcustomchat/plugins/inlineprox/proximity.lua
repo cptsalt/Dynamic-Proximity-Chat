@@ -26,13 +26,17 @@ function printTime()
   return hour .. ":" .. minute
 end
 
-local function wordBytes(word)
-  local returnStr = ""
-  for char in word:gmatch(".") do
-    char = char:lower()
-    returnStr = returnStr .. math.abs(string.byte(char) - 100)
+local function dump(o)
+  if type(o) == 'table' then
+    local s = '{ '
+    for k, v in pairs(o) do
+      if type(k) ~= 'number' then k = '"' .. k .. '"' end
+      s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
+    end
+    return s .. '} '
+  else
+    return tostring(o)
   end
-  return returnStr
 end
 
 function inlineprox:addCustomCommandPreview(availableCommands, substr)
@@ -68,10 +72,12 @@ function inlineprox:addCustomCommandPreview(availableCommands, substr)
       data = "/checktypo"
     })
     --this one is broken, not sure why
-    -- elseif string.find("/showtypos", substr, nil, true) then
-    --   table.insert(availableCommands, {
-    --     name = "/showtypos"
-    --   })
+  elseif string.find("/showtypos", substr, nil, true) then
+    table.insert(availableCommands, {
+      name = "/showtypos",
+      description = "commands.showtypos.desc",
+      data = "/showtypos"
+    })
   end
 end
 
@@ -122,11 +128,30 @@ end
 
 --this messagehandler function runs if the chat preview exists
 function inlineprox:registerMessageHandlers(shared) --look at this function in irden chat's editchat thing
-  -- shared.setMessageHandler("/showtypos", function(_, _, data)
-  --   local typoTable = player.getProperty("typos", {})
-  --   local typoStr = sb.printJson(typoTable, true)
-  --   return typoStr
-  -- end) --pretty sure this one is broken
+  starcustomchat.utils.setMessageHandler("/showtypos", function(_, _, data)
+    local typoTable = player.getProperty("typos", {})
+    if typoTable == nil then
+      return "You have no corrections or typos saved. Use /addtypo to make one."
+    end
+
+    local rtStr = "Typos and corrections:^#2ee;"
+    local tyTableLen = 0
+    local typosActive = "off"
+    for k, v in pairs(typoTable) do
+      if k ~= "typosActive" then
+        rtStr = rtStr .. " {" .. k .. " -> " .. v .. "}"
+        tyTableLen = tyTableLen + 1
+      elseif v then
+        typosActive = "on"
+      end
+    end
+    rtStr = rtStr .. "^reset;. Typo correction is " .. typosActive .. "."
+
+    if tyTableLen == 0 then
+      rtStr = "You have no corrections or typos saved. Use /addtypo to make one."
+    end
+    return rtStr
+  end)
   starcustomchat.utils.setMessageHandler("/checktypo", function(_, _, data)
     return checktypo(false)
   end)
@@ -138,6 +163,10 @@ function inlineprox:registerMessageHandlers(shared) --look at this function in i
     -- local typo, correction = chat.parseArguments(data)
     local splitArgs = splitStr(data, " ")
     local typo, correction = splitArgs[1], splitArgs[2]
+
+    if typo == nil or correction == nil then
+      return "Missing arguments for /addtypo, need {typo, correction}"
+    end
     local typoTable = player.getProperty("typos", {})
 
     typoTable[typo] = correction
@@ -150,6 +179,10 @@ function inlineprox:registerMessageHandlers(shared) --look at this function in i
     local typo = splitStr(data, " ")[1]
     local typoTable = player.getProperty("typos", false)
 
+    if typo == nil then
+      return "Missing arguments for /removetypo, need {typo}"
+    end
+
     if typoTable then
       typoTable[typo] = nil
       player.setProperty("typos", typoTable)
@@ -159,11 +192,12 @@ function inlineprox:registerMessageHandlers(shared) --look at this function in i
 
   starcustomchat.utils.setMessageHandler("/newlangitem", function(_, _, data)
     local splitArgs = splitStr(data, " ")
-    local langName, langKey, langLevel, isDefault, color = splitArgs[1], splitArgs[2], (tonumber(splitArgs[3]) or 10),
+    local langName, langKey, langLevel, isDefault, color = (splitArgs[1] or nil), (splitArgs[2] or nil),
+    (tonumber(splitArgs[3]) or 10),
         (splitArgs[4] or nil), (splitArgs[5] or nil)
 
-    if langKey == nil then
-      return "Missing arguments for /newlangitem"
+    if langKey == nil or langName == nil then
+      return "Missing arguments for /newlangitem, need {name, code, count, automatic, [hex color]}"
     end
     if isDefault == nil then
       isDefault = false
@@ -176,8 +210,6 @@ function inlineprox:registerMessageHandlers(shared) --look at this function in i
       if #color > 7 then
         color = color:sub(1, 7)
       end
-
-      
     end
     langKey = langKey:upper()
     langKey = langKey:gsub("[%[%]]", "")
@@ -221,7 +253,7 @@ end
 
 function inlineprox:onSendMessage(data)
   --think about running this in local to allow players without the mod to still see messages
-  
+
   if data.mode == "Prox" then
     data.time = printTime()
     data.proximityRadius = self.proximityRadius
@@ -229,7 +261,6 @@ function inlineprox:onSendMessage(data)
       local position = player.id() and world.entityPosition(player.id())
 
       if position then
-        
         local estRad = data.proximityRadius
         local rawText = data.text
         local sum = 0
@@ -248,7 +279,7 @@ function inlineprox:onSendMessage(data)
             if i:match("[%s%p]") and i ~= "[" and i ~= "]" then
               if typoTable[wordBuffer] ~= nil then
                 newText = newText .. typoTable[wordBuffer] .. i
-                
+
                 wordBuffer = ""
               else
                 newText = newText .. wordBuffer .. i
@@ -273,7 +304,7 @@ function inlineprox:onSendMessage(data)
             parenSum = parenSum + 1
           elseif i == "{" and rawText:find("}", iCount) ~= nil then
             globalFlag = true
-          elseif i == "[" and langEnd ~= nil then --use this flag to check for default languages. A string without any noise won't have any language support
+          elseif i == "[" and langEnd ~= nil then        --use this flag to check for default languages. A string without any noise won't have any language support
             local langKey
             if rawText:sub(iCount, langEnd) == "[]" then --checking for []
               langKey = defaultKey
@@ -282,11 +313,10 @@ function inlineprox:onSendMessage(data)
               langKey = rawText:sub(iCount + 1, langEnd - 1)
             end
             local upperKey = langKey:upper()
-            
+
             local langItem = player.getItemWithParameter("langKey", upperKey)
 
             if (langItem == nil and upperKey ~= "!!") then
-              
               rawText = rawText:gsub("%[" .. langKey, "[" .. defaultKey)
             end
           else
@@ -296,14 +326,14 @@ function inlineprox:onSendMessage(data)
         end
         data.content = rawText
         data.text = ""
-        if (parenSum == 2) then
+        if (parenSum == 2 or globalFlag) then
           estRad = estRad * 2
         else
           estRad = estRad + (estRad * 0.25 + (3 * sum))
         end
 
         --estrad should be pretty close
-        
+
 
 
         local players              --use world.players() for global. I'm gonna try with the proximity estimation to save some processing time
@@ -315,7 +345,7 @@ function inlineprox:onSendMessage(data)
             boundMode =
             "position"
           })
-          
+
           --need to find some kind of global player function
         else
           -- players = world.playerQuery(position, world.size(), {
@@ -333,7 +363,7 @@ function inlineprox:onSendMessage(data)
           world.sendEntityMessage(pl, "scc_add_message", data)
           playerCount = playerCount + 1
         end
-        
+
 
         return true
       end
@@ -351,32 +381,40 @@ end
 
 function inlineprox:formatIncomingMessage(message)
   --think about running this in local to allow players without the mod to still see messages
-  
+
   if message.mode == "Prox" then
     message.text = message.content
     message.content = ""
-    
-    
+
+
     if message.connection then --i don't know what receivingRestricted does
-      
       local authorEntityId = message.connection * -65536
 
       if world.entityExists(authorEntityId) then
-        
         local authorPos = world.entityPosition(authorEntityId)
         local playerPos = world.entityPosition(player.id())
         local messageDistance = world.magnitude(playerPos, authorPos)
-        -- sb.logWarn("CHANGE RADIUS TESTING VALUE")
         -- messageDistance = 30
         local inSight = not world.lineTileCollision(authorPos, playerPos, { "Block", "Dynamic" }) --not doing dynamic, i think that's only for open doors
+
+        -- this is for later, testing to see if i can calculate how many tiles are between a sender and receiver
+        -- local testCol = world.lineTileCollisionPoint(authorPos, playerPos, { "Block", "Dynamic" })
+        -- sb.logWarn("messageDistance is " .. messageDistance)
+        -- if testCol ~= nil then
+        --   sb.logInfo("testCol is " .. dump(testCol))
+        --   local pos1 = testCol[1][1]
+        --   local pos2 = testCol[1][2]
+        --   sb.logInfo("pos1 "..pos1.." pos2 "..pos2)
+        --   sb.logInfo("distance is " .. world.magnitude(pos1, pos2))
+        -- end
         local randSource = sb.makeRandomSource()
 
 
 
 
-        
-        local actionRad = 200         --this is hard-coded for now, i might chagne it later
-        local loocRad = actionRad * 2 --2x actions, actions should already be pretty long though
+
+        local actionRad = 200             --this is hard-coded for now, i might chagne it later
+        local loocRad = actionRad * 2     --2x actions, actions should already be pretty long though
 
         local noiseRad = 0.25 * actionRad --talking, should be smaller than actions
         --originally i made this a function, but tracking the values is difficult and it's easier to manually set them since there are only 9
@@ -493,10 +531,11 @@ function inlineprox:formatIncomingMessage(message)
               --check for path
               local noPathVol
               if world.findPlatformerPath(authorPos, playerPos, root.monsterMovementSettings("smallflying")) then --if path is found
-                
-                noPathVol = volTable[useRad] - 1 --set the volume to 1 level lower
-              else                               --if the path isn't found
-                noPathVol = volTable[useRad] - 2 --set the volume to 2 levels lower
+                noPathVol = volTable[useRad] -
+                    1                                                                                             --set the volume to 1 (maybe 2 later on) level lower
+              else                                                                                                --if the path isn't found
+                noPathVol = volTable[useRad] -
+                    4                                                                                             --set the volume to 4 levels lower
               end
               if noPathVol > 4 then
                 noPathVol = 4
@@ -544,7 +583,7 @@ function inlineprox:formatIncomingMessage(message)
               parseDefault('"')
             end
           end,
-          ['<'] = function() --i could combine these two, but i don't want to
+          ['<'] = function()                                  --i could combine these two, but i don't want to
             if curMode ~= "sound" and curMode ~= "quote" then --added quotes here so people can do the cool combine vocoder thing <::Pick up that can.::>
               newMode("sound")
             end
@@ -747,7 +786,7 @@ function inlineprox:formatIncomingMessage(message)
             local fStart, fEnd = rawText:find("%[%S%S+]", cInd - 1)
             if fStart ~= nil and fEnd ~= nil then
               local newCode = rawSub(fStart + 1, fEnd - 1)
-              
+
               if languageCode ~= newCode and curMode == "quote" then
                 newMode(curMode)
               end
@@ -824,35 +863,35 @@ function inlineprox:formatIncomingMessage(message)
           return returnStr
         end
 
+        local function wordBytes(word)
+          local returnStr = ""
+          for char in word:gmatch(".") do
+            char = char:lower()
+            returnStr = returnStr .. math.abs(string.byte(char) - 100)
+          end
+          return returnStr
+        end
+
         local function langWordRep(word, byteLC)
-          local lowercaseVowels = { 'a', 'e', 'i', 'o', 'u', 'y' }
-          local uppercaseVowels = { 'A', 'E', 'I', 'O', 'U', 'Y' }
-          local lowercaseConsonants = { 'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't',
+          local vowels = { 'a', 'e', 'i', 'o', 'u', 'y' }
+          local consonants = { 'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't',
             'v', 'w',
             'x', 'z' }
-          local uppercaseConsonants = { 'B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T',
-            'V', 'W',
-            'X', 'Z' }
           local pickInd = 0
           local newWord = ""
           randSource:init(tonumber(byteLC .. wordBytes(word)))
           for char in word:gmatch(".") do
             local charLower = char:lower()
             local isLower = char == charLower
-            if char:lower():match("[aeiouy]") then
-              local randNum = randSource:randInt(1, #lowercaseVowels)
-              if isLower then
-                char = lowercaseVowels[randNum]
-              else
-                char = uppercaseVowels[randNum]
-              end
+            if charLower:match("[aeiouy]") then
+              local randNum = randSource:randInt(1, #vowels)
+              char = vowels[randNum]
             elseif not char:match("[%p]") then
-              local randNum = randSource:randInt(1, #lowercaseConsonants)
-              if isLower then
-                char = lowercaseConsonants[randNum]
-              else
-                char = uppercaseConsonants[randNum]
-              end
+              local randNum = randSource:randInt(1, #consonants)
+              char = consonants[randNum]
+            end
+            if not isLower then
+              char = char:upper()
             end
             newWord = newWord .. char
           end
@@ -880,7 +919,7 @@ function inlineprox:formatIncomingMessage(message)
           if langColor == nil then
             local hexDigits = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
             local randSource = sb.makeRandomSource()
-            local hexMin = 0
+            local hexMin = 1
 
             --not sure if there's an cleaner way to do this
             randSource:init(byteLC .. wordBytes("Red One"))
@@ -898,7 +937,7 @@ function inlineprox:formatIncomingMessage(message)
             langColor = "#" .. rNumR .. rNumG .. rNumB .. rNumR2 .. rNumG2 .. rNumB2
           end
 
-          
+
           while iCount <= #str do
             char = str:sub(iCount, iCount)
             if char == "[" and str:sub(iCount + 3, iCount + 3) == "]" then
@@ -930,7 +969,7 @@ function inlineprox:formatIncomingMessage(message)
             returnStr = returnStr:sub(0, #returnStr - 1)
           end
 
-          
+
           randSource:init()
           return returnStr
         end
@@ -1017,19 +1056,6 @@ function inlineprox:formatIncomingMessage(message)
         local langBank = {}               --populate with languages in inventory when you find them
         local prevLang = getDefaultLang() --either the player's default language, or !!
 
-        local function dump(o)
-          if type(o) == 'table' then
-            local s = '{ '
-            for k, v in pairs(o) do
-              if type(k) ~= 'number' then k = '"' .. k .. '"' end
-              s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
-            end
-            return s .. '} '
-          else
-            return tostring(o)
-          end
-        end
-
         if maxRad ~= -1 and (messageDistance > maxRad and validSum == 0) then
           message.text = ""
         else
@@ -1046,7 +1072,7 @@ function inlineprox:formatIncomingMessage(message)
             msgQuality = 0
           })
 
-          
+
 
           for k, v in pairs(textTable) do
             if v['hasLOS'] == false and chunkType == "action" then
@@ -1081,7 +1107,7 @@ function inlineprox:formatIncomingMessage(message)
                 end
               elseif chunkType == "quote" then
                 msgColor = colorTable[volTable[v['radius']]]
-                
+
                 if chunkType == 'quote' and langKey ~= "!!" then
                   local langProf, langColor
                   if langBank[langKey] ~= nil then
@@ -1140,7 +1166,6 @@ function inlineprox:formatIncomingMessage(message)
               end
               chunkStr = colorWithin(chunkStr, "\\", "#d80", msgColor)  --orange
             elseif chunkType == "quote" and hasValids and prevType ~= "quote" then
-              
               chunkStr = "They say something."
               v['valid'] = true
               chunkType = "action"
@@ -1210,7 +1235,7 @@ end
 
 -- function inlineprox:onReceiveMessage(message) --i'm not sure why this would be needed, or if it would help at all
 --   if message.connection ~= 0 and message.mode == "Prox" then
-    
+
 --   end
 -- end
 

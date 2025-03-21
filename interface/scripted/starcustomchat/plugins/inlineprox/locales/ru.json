@@ -1,5 +1,5 @@
+//obviously this isn't russian, someone feel free to translate with a PR
 {
-    //sorry russia, i don't speak russian
     "chat.modes.Prox": "Proximity",
     "settings.prox_radius": "Proximity radius (this doesn't do anything right now, it's always 200)",
     "settings.plugins.inlineprox": "Inline Proximity Chat",
@@ -8,5 +8,6 @@
     "commands.addtypo.desc":"Adds a typo to your list. {typo, correction}",
     "commands.removetypo.desc":"Removes a typo from your list. {typo}",
     "commands.toggletypo.desc":"Toggles whether or not autocorrection happens",
-    "commands.checktypo.desc":"Checks if autocorrection is on or off"
+    "commands.checktypo.desc":"Checks if autocorrection is on or off",
+    "commands.showtypos.desc":"Returns a list of your saved typos and corrections"
 }
