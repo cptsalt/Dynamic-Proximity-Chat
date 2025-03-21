@@ -193,7 +193,7 @@ function inlineprox:registerMessageHandlers(shared) --look at this function in i
   starcustomchat.utils.setMessageHandler("/newlangitem", function(_, _, data)
     local splitArgs = splitStr(data, " ")
     local langName, langKey, langLevel, isDefault, color = (splitArgs[1] or nil), (splitArgs[2] or nil),
-    (tonumber(splitArgs[3]) or 10),
+        (tonumber(splitArgs[3]) or 10),
         (splitArgs[4] or nil), (splitArgs[5] or nil)
 
     if langKey == nil or langName == nil then
@@ -648,7 +648,7 @@ function inlineprox:formatIncomingMessage(message)
 
                 if nextChar == nil then --if they just put this at the end for some reason
                   cInd = nCEnd + 1
-                else
+                elseif nextInd ~= nil then
                   nextChar = rawSub(nextInd, nextInd)
                 end
                 if nextChar == '"' then
@@ -664,6 +664,12 @@ function inlineprox:formatIncomingMessage(message)
                 local sum = 0
                 local nextStr = rawSub(nCStart + 1, nCEnd)
 
+                if doVolume == "quote" then
+                  sum = tVol
+                else
+                  sum = sVol
+                end
+
                 for i in nextStr:gmatch(".") do
                   if i == '+' then
                     sum = sum + 1
@@ -671,7 +677,7 @@ function inlineprox:formatIncomingMessage(message)
                     sum = sum - 1
                   elseif i == '=' then
                     sum = 0
-                    if curMode == 'quote' or doVolume == "quote" then
+                    if doVolume == "quote" then
                       tVolRad = noiseRad
                     else
                       sVolRad = noiseRad
@@ -679,10 +685,14 @@ function inlineprox:formatIncomingMessage(message)
                   end
                 end
                 cInd = nCEnd
-                if curMode == 'quote' or doVolume == "quote" then
+
+                sum = math.min(math.max(sum, -4), 4)
+
+                if doVolume == "quote" then
+                  tVol = sum
                   tVolRad = soundTable[sum]
                 else
-                  sVolRad = sVolRad * (1.5 ^ math.min(maxAmp, sum))
+                  sVol = sum
                   sVolRad = soundTable[sum]
                 end
               end
@@ -974,7 +984,7 @@ function inlineprox:formatIncomingMessage(message)
           return returnStr
         end
 
-        local colorTable = {
+        local colorTable = { --transparency is an options here, but it makes things hard to read
           [-4] = "#555",
           [-3] = "#777",
           [-2] = "#999",
