@@ -10,101 +10,13 @@
 
   "baseConfigValues": {
     "modeColors": {
-      "Prox" : "violet"
-      //previously darkgreen
+      "Prox" : "CornFlowerBlue"
     }
   },
 
   "parameters": {
-    // You can specify the stagehandType if you want to send the proximity messages to the stagehand instead of the players around
-    "uniqueStagehandType": "",
-    // Otherwise, you can specify a "do your thing and die" stagehand. 
-    "stagehandType": "",
-    "proximityRadius": 200
+    "proxRadius": 200
   },
 
-  "localeKeys": {
-    "chat.modes.Prox": {
-      "ru": "Близкий",
-      "en": "Proximity"
-    },
-    "settings.prox_radius": {
-      "ru": "Радиус близких сообщений",
-      "en": "Proximity radius (this doesn't do anything right now, it's always 200)"
-    },
-    "settings.plugins.inlineprox": {
-      "ru": "Близкий чат",
-      "en": "Inline Proximity Chat"
-    },
-    "settings.plugins.restrict_description": {
-      "ru": "Получать близкие сообщения только от персонажей в радиусе",
-      "en": "Send & receive proximity based messages in the set radius. Green = actions, red = talking/sounds, orange = clarity range, blue = Prox OOC"
-    }
-  },
-
-  "settingsPage": {
-    "tabButtons": {
-      "baseImage": "/interface/scripted/starcustomchat/plugins/inlineprox/settingstabs/tab.png",
-      "hoverImage": "/interface/scripted/starcustomchat/plugins/inlineprox/settingstabs/tabhover.png",
-      "baseImageChecked": "/interface/scripted/starcustomchat/plugins/inlineprox/settingstabs/tabselected.png",
-      "hoverImageChecked": "/interface/scripted/starcustomchat/plugins/inlineprox/settingstabs/tabselectedhover.png"
-    },
-    "priority": 5,
-    "gui": {
-      "titleText": {
-        "type": "label",
-        "position": [12, 130],
-        "fontSize": 12,
-        "hAnchor": "left",
-        "value": ""
-      },
-      "sldProxRadius" : {
-        "type": "slider",
-        "gridImage" : "/interface/optionsmenu/largeselection.png",
-        "position": [60, 90],
-        "callback": "updateProxRadius"
-      },
-  
-      "lblProxRadiusHint" : {
-        "type": "label",
-        "position": [120, 80],
-        "color": "lightgray",
-        "fontSize": 6,
-        "hAnchor": "mid",
-        "value": ""
-      },
-  
-      "lblProxRadiusValue" : {
-        "type": "label",
-        "position": [120, 100],
-        "hAnchor": "mid",
-        "value": ""
-      },
-
-      // "chkRestrictReceiving": {
-      //   "type": "button",
-      //   "position": [150, 60],
-      //   "checkable": true,
-      //   "checked": true,
-      //   "base": "/interface/crafting/checkboxnocheck.png",
-      //   "hover": "/interface/crafting/checkboxnocheck.png",
-      //   "baseImageChecked": "/interface/crafting/checkboxcheck.png",
-      //   "hoverImageChecked": "/interface/crafting/checkboxcheck.png",
-      //   "callback": "restrictReceiving"
-      // },
-
-      "lblRestrictingInfo": {
-        "type": "label",
-        "position": [120, 70],
-        "hAnchor": "mid",
-        "vAnchor": "top",
-        "fontSize": 6,
-        "color": "lightgray",
-        "wrapWidth": 200
-      }
-    }
-  },
-
-  "script": "/interface/scripted/starcustomchat/plugins/inlineprox/proximity.lua",
-  "settingsScript": "/interface/scripted/starcustomchat/plugins/inlineprox/inlineproxsettings.lua"
+  "script": "/interface/scripted/starcustomchat/plugins/inlineprox/proximity.lua"
 }

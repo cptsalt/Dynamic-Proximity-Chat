@@ -6,24 +6,6 @@ inlineprox = PluginClass:new({
 
 function inlineprox:init()
   self:_loadConfig()
-  self.proximityRadius = root.getConfiguration("scc_inlineprox_radius") or self.proximityRadius
-end
-
-function planetTime()
-  local n = world.timeOfDay()
-  local t = n * 24 * 3600
-  local hours = t / 3600
-  local minutes = (t / 60) % 60
-
-  return (hours + 6) % 24, minutes
-end
-
-function printTime()
-  hour, minute = planetTime()
-  hour = string.format("%02d", math.floor(hour))
-  minute = string.format("%02d", math.floor(minute))
-
-  return hour .. ":" .. minute
 end
 
 function inlineprox:addCustomCommandPreview(availableCommands, substr)
@@ -242,13 +224,13 @@ function inlineprox:onSendMessage(data)
   --think about running this in local to allow players without the mod to still see messages
 
   if data.mode == "Prox" then
-    data.time = printTime()
-    data.proximityRadius = self.proximityRadius
+    -- data.time = systemTime() this is where i'd add time if i wanted it
+    data.proxRadius = self.proxRadius
     local function sendMessageToPlayers()
       local position = player.id() and world.entityPosition(player.id())
 
       if position then
-        local estRad = data.proximityRadius
+        local estRad = data.proxRadius
         local rawText = data.text
         local sum = 0
         local parenSum = 0
@@ -315,40 +297,22 @@ function inlineprox:onSendMessage(data)
         data.text = ""
         if (parenSum == 2 or globalFlag) then
           estRad = estRad * 2
+        elseif sum > 3 then
+          estRad = estRad * 1.5
         else
           estRad = estRad + (estRad * 0.25 + (3 * sum))
         end
 
-        --estrad should be pretty close
+        --estrad should be pretty close to actual radius
 
 
-
-        local players              --use world.players() for global. I'm gonna try with the proximity estimation to save some processing time
-        if globalFlag == true then --globalFlag is only true if a global condition is met
-          -- chat.send needs a string, doesn't work with a table
-          --chat.send(data) --this might have fixed the global issue, check with osb people later
-          -- world.players() returns nil when run. I think it's broken (at least in singleplayer)
-          players = world.playerQuery(position, world.size(), {
-            boundMode =
-            "position"
-          })
-
-          --need to find some kind of global player function
-        else
-          -- players = world.playerQuery(position, world.size(), {
-          --   boundMode =
-          --   "position"
-          -- })
-          players = world.playerQuery(position, estRad, {
-            boundMode =
-            "position" -- this bound mode is one of a few, i think this one bases it off position, but idk. The default is "collisionarea", which may interfere with tiles
-          })
-        end
-
-        local playerCount = 0
+        --this is where i'd change players if needed
+        local players = world.playerQuery(position, estRad, {
+          boundMode =
+          "position"
+        })
         for _, pl in ipairs(players) do
           world.sendEntityMessage(pl, "scc_add_message", data)
-          playerCount = playerCount + 1
         end
 
 
@@ -1235,8 +1199,3 @@ end
 
 --   end
 -- end
-
-function inlineprox:onSettingsUpdate(data)
-  self.proximityRadius = root.getConfiguration("scc_inlineprox_radius") or self.proximityRadius
-  -- self.receivingRestricted = root.getConfiguration("scc_proximity_restricted") or false --don't use this for this version of the plugin
-end
