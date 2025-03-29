@@ -1194,8 +1194,8 @@ function inlineprox:formatIncomingMessage(message)
   return message
 end
 
--- function inlineprox:onReceiveMessage(message) --i'm not sure why this would be needed, or if it would help at all
---   if message.connection ~= 0 and message.mode == "Prox" then
-
---   end
--- end
+function inlineprox:onReceiveMessage(message) --here for logging the message you receive, just in case you wanted to save it or something
+  if message.connection ~= 0 and message.mode == "Prox" then
+    sb.logInfo("Chat: <%s> %s", message.nickname, message.text)
+  end
+end
