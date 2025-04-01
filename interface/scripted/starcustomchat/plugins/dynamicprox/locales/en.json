@@ -1,6 +1,6 @@
 {
     "chat.modes.Prox": "Dynamic",
-    "settings.plugins.inlineprox": "Inline Proximity Chat",
+    "settings.plugins.dynamicprox": "Dynamic Proximity Chat",
     "commands.newlangitem.desc":"Adds a new language item. {name, code, count, automatic, [hex color]}",
     "commands.addtypo.desc":"Adds a typo to your list. {typo, correction}",
     "commands.removetypo.desc":"Removes a typo from your list. {typo}",

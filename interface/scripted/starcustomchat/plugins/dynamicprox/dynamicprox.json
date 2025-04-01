@@ -1,5 +1,5 @@
 {
-  "name": "Inline Prox Chat",
+  "name": "Dynamic Prox Chat",
 
   "modes": [{
     "name": "Prox",
@@ -18,5 +18,5 @@
     "proxRadius": 200
   },
 
-  "script": "/interface/scripted/starcustomchat/plugins/inlineprox/proximity.lua"
+  "script": "/interface/scripted/starcustomchat/plugins/dynamicprox/proximity.lua"
 }

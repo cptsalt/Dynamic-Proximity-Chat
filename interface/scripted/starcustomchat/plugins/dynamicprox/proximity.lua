@@ -1,14 +1,14 @@
 require "/interface/scripted/starcustomchat/plugin.lua"
 
-inlineprox = PluginClass:new({
-  name = "inlineprox"
+dynamicprox = PluginClass:new({
+  name = "dynamicprox"
 })
 
-function inlineprox:init()
+function dynamicprox:init()
   self:_loadConfig()
 end
 
-function inlineprox:addCustomCommandPreview(availableCommands, substr)
+function dynamicprox:addCustomCommandPreview(availableCommands, substr)
   if string.find("/newlangitem", substr, nil, true) then
     table.insert(availableCommands, {
       name = "/newlangitem",
@@ -96,7 +96,7 @@ local function getDefaultLang()
 end
 
 --this messagehandler function runs if the chat preview exists
-function inlineprox:registerMessageHandlers(shared) --look at this function in irden chat's editchat thing
+function dynamicprox:registerMessageHandlers(shared) --look at this function in irden chat's editchat thing
   starcustomchat.utils.setMessageHandler("/showtypos", function(_, _, data)
     local typoTable = player.getProperty("typos", {})
     if typoTable == nil then
@@ -220,7 +220,7 @@ function inlineprox:registerMessageHandlers(shared) --look at this function in i
   end)
 end
 
-function inlineprox:onSendMessage(data)
+function dynamicprox:onSendMessage(data)
   --think about running this in local to allow players without the mod to still see messages
 
   if data.mode == "Prox" then
@@ -330,7 +330,7 @@ function inlineprox:onSendMessage(data)
   end
 end
 
-function inlineprox:formatIncomingMessage(message)
+function dynamicprox:formatIncomingMessage(message)
   --think about running this in local to allow players without the mod to still see messages
 
   if message.mode == "Prox" then
@@ -1194,7 +1194,7 @@ function inlineprox:formatIncomingMessage(message)
   return message
 end
 
-function inlineprox:onReceiveMessage(message) --here for logging the message you receive, just in case you wanted to save it or something
+function dynamicprox:onReceiveMessage(message) --here for logging the message you receive, just in case you wanted to save it or something
   if message.connection ~= 0 and message.mode == "Prox" then
     sb.logInfo("Chat: <%s> %s", message.nickname, message.text)
   end
