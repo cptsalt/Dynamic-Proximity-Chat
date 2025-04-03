@@ -4,6 +4,79 @@ dynamicprox = PluginClass:new({
     name = "dynamicprox",
 })
 
+-- FezzedOne: From FezzedTech.
+local function rollDice(die) -- From https://github.com/brianherbert/dice/, with modifications.
+    if type(die) == "string" then
+        local rolls, sides, modOperation, modifier
+        local numberDie = tonumber(die)
+        if numberDie then
+            sides = math.floor(numberDie)
+            if sides < 1 then return nil end
+            rolls = 1
+            modOperation = "+"
+            modifier = 0
+        else
+            local i, j = string.find(die, "d")
+            if not i then return nil end
+            if i == 1 then
+                rolls = 1
+            else
+                rolls = tonumber(string.sub(die, 0, (j - 1)))
+            end
+
+            local afterD = string.sub(die, (j + 1), string.len(die))
+            local i_1, j_1 = string.find(afterD, "%d+")
+            local i_2, _ = string.find(afterD, "^[%+%-%*/]%d+")
+            local afterSides
+            if j_1 and not i_2 then
+                sides = tonumber(string.sub(afterD, i_1, j_1))
+                j = j_1
+                afterSides = string.sub(afterD, (j + 1), string.len(afterD))
+            else
+                sides = 6
+                afterSides = afterD
+            end
+            if sides < 1 then return nil end
+
+            if string.len(afterSides) == 0 then
+                modOperation = "+"
+                modifier = 0
+            else
+                modOperation = string.sub(afterSides, 1, 1)
+                modifier = tonumber(string.sub(afterSides, 2, string.len(afterSides)))
+            end
+
+            if not modifier then return nil end
+        end
+
+        -- Make sure dice are properly random.
+        math.randomseed(math.floor(os.clock() * 100000000000))
+
+        local roll, total = 0, 0
+        while roll < rolls do
+            total = total + math.random(1, sides)
+            roll = roll + 1
+        end
+
+        -- Finished with our rolls, now add/subtract our modifier
+        if modOperation == "+" then
+            total = math.floor(total + modifier)
+        elseif modOperation == "-" then
+            total = math.floor(total - modifier)
+        elseif modOperation == "*" then
+            total = math.floor(total * modifier)
+        elseif modOperation == "/" then
+            total = math.floor(total / modifier)
+        else
+            return nil
+        end
+
+        return total
+    else
+        return nil
+    end
+end
+
 function dynamicprox:init() self:_loadConfig() end
 
 function dynamicprox:addCustomCommandPreview(availableCommands, substr)
@@ -731,13 +804,18 @@ function dynamicprox:formatIncomingMessage(message)
                         local fStart, fEnd = rawText:find("%d+|", cInd)
 
                         if fStart ~= nil and fEnd ~= nil then
-                            -- FezzedOne: Fixed nil dereference bug here. Not all messages have a time!
-                            local timeNum = tostring(math.floor(os.time()))
-                            local mixNum = tonumber(timeNum .. math.abs(authorEntityId))
-                            randSource:init(mixNum)
-                            local numMax = rawSub(fStart, fEnd - 1):gsub("%D", "")
-                            local roll = randSource:randInt(1, tonumber(numMax))
-                            parseDefault("|" .. roll .. "|")
+                            -- local timeNum = tostring(math.floor(os.time()))
+                            -- local mixNum = tonumber(timeNum .. math.abs(authorEntityId))
+                            -- randSource:init(mixNum)
+                            -- local numMax = rawSub(fStart, fEnd - 1):gsub("%D", "")
+                            -- local roll = randSource:randInt(1, tonumber(numMax) or 20)
+                            -- FezzedOne: Replaced dice roller with the more flexible one from FezzedTech.
+
+                            local diceResults = rawSub(fStart, fEnd):gsub(
+                                "(.-)[,|]",
+                                function(die) return tostring(rollDice(die) or "n/a") .. ", " end
+                            )
+                            parseDefault("|" .. diceResults:sub(1, -3) .. "|")
                             cInd = fEnd + 1
                         else
                             parseDefault("|")
