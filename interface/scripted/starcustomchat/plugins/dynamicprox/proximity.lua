@@ -731,7 +731,8 @@ function dynamicprox:formatIncomingMessage(message)
                         local fStart, fEnd = rawText:find("%d+|", cInd)
 
                         if fStart ~= nil and fEnd ~= nil then
-                            local timeNum = message.time:gsub("%D", "")
+                            -- FezzedOne: Fixed nil dereference bug here. Not all messages have a time!
+                            local timeNum = tostring(math.floor(os.time()))
                             local mixNum = tonumber(timeNum .. math.abs(authorEntityId))
                             randSource:init(mixNum)
                             local numMax = rawSub(fStart, fEnd - 1):gsub("%D", "")
