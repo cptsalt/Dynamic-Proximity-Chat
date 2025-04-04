@@ -385,7 +385,6 @@ function dynamicprox:onSendMessage(data)
                             else
                                 -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
                                 langKey = rawText:sub(iCount + 1, langEnd - 1)
-                                sb.logInfo("langKey = '%s'", langKey)
                                 langKey = langKey:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
                             end
                             local upperKey = langKey:upper()
