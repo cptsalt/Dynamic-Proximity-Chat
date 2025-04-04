@@ -878,16 +878,16 @@ function dynamicprox:formatIncomingMessage(message)
                         if rawSub(cInd, cInd + 1) == "[[" then
                             parseDefault("[[")
                             cInd = cInd + 1
+                        elseif rawSub(cInd, cInd + 1) == "[]" then --this should never happen anymore
+                            newMode(curMode)
+                            languageCode = defaultKey
+                            cInd = cInd + 2
                         elseif fStart ~= nil and fEnd ~= nil then
                             local newCode = rawSub(fStart + 1, fEnd)
 
                             if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
                             languageCode = newCode:upper()
                             cInd = rawText:find("%S", fEnd + 2) or #rawText --set index to the next non whitespace character after the code
-                        elseif rawSub(cInd, cInd + 1) == "[]" then --this should never happen anymore
-                            newMode(curMode)
-                            languageCode = defaultKey
-                            cInd = cInd + 2
                         else
                             parseDefault("[")
                         end
