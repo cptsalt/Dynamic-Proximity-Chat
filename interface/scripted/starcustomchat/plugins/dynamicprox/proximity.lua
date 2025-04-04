@@ -1018,7 +1018,7 @@ function dynamicprox:formatIncomingMessage(message)
                         local isLower = char == charLower
                         local vowelPattern = mergePattern(vowels)
                         local compFail = randSource:randInt(0, 150)
-                            > (proficiency + wordLength ^ 2 - 2 * wordLength - 10)
+                            > (proficiency - (wordLength ^ 2 + 10) / (math.max(1, proficiency - 50) / 5))
                         if proficiency < 5 or compFail then -- FezzedOne: Added a chance that a word will be partially comprehensible.
                             if charLower:match(vowelPattern) then
                                 local randNum = randSource:randInt(1, #vowels)
@@ -1049,6 +1049,7 @@ function dynamicprox:formatIncomingMessage(message)
                     local byteLC = wordBytes(langCode)
                     local iCount = 1
                     local char
+                    local effProf = 64 * math.log(prof / 3 + 1, 10)
 
                     if langColor == nil then
                         local hexDigits =
@@ -1092,10 +1093,11 @@ function dynamicprox:formatIncomingMessage(message)
                                 randSource:init(tonumber(wordBytes(uniqueId) + byteLC + byteWord))
                                 local wordRoll = randSource:randInt(1, 100)
                                 if
-                                    prof < 5
-                                    or (wordRoll - wordLength + wordLength ^ 2 - 2 * wordLength - 10) > prof
+                                    effProf < 5
+                                    or (wordRoll + (wordLength ^ 2 / (math.max(1, effProf - 50) / 5)) - 10)
+                                        > effProf
                                 then
-                                    wordBuffer = langWordRep(trim(wordBuffer), prof, byteLC)
+                                    wordBuffer = langWordRep(trim(wordBuffer), effProf, byteLC)
                                     wordBuffer = "^" .. langColor .. ";" .. wordBuffer .. "^" .. msgColor .. ";"
                                     rCount = rCount + 1
                                 end
