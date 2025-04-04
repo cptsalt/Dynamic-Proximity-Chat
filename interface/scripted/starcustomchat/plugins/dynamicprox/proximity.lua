@@ -1297,7 +1297,7 @@ function dynamicprox:formatIncomingMessage(message)
                                     end
                                 end
                                 --check message quality
-                                if v["msgQuality"] < 100 and chunkType == "quote" then
+                                if v["msgQuality"] < 100 and not v["isRadio"] and chunkType == "quote" then
                                     chunkStr = degradeMessage(trim(chunkStr), v["msgQuality"])
                                 end
 
