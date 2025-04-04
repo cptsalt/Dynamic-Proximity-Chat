@@ -1390,6 +1390,6 @@ end
 
 function dynamicprox:onReceiveMessage(message) --here for logging the message you receive, just in case you wanted to save it or something
     if message.connection ~= 0 and (message.mode == "Prox" or message.mode == "ProxSecondary") then
-        sb.logInfo("Chat: <%s> %s", message.nickname, message.text)
+        sb.logInfo("Chat: <%s> %s", message.nickname:gsub("%^[^^;];", ""), message.text:gsub("%^[^^;];", ""))
     end
 end
