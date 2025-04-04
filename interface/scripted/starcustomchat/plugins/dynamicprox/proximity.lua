@@ -283,16 +283,49 @@ function dynamicprox:onSendMessage(data)
         local function sendMessageToPlayers()
             local position = player.id() and world.entityPosition(player.id())
 
+            -- FezzedOne: Dice roll handling.
+            local rawText = data.text
+            local newStr = ""
+            local cInd = 1
+            while cInd <= #rawText do
+                local c = rawText:sub(cInd, cInd)
+                if c == "\\" then -- Handle escapes.
+                    newStr = newStr .. "\\" .. rawText:sub(cInd + 1, cInd + 1)
+                    cInd = cInd + 1
+                elseif c == "|" then
+                    local fStart = cInd
+                    local fEnd = rawText:find("|", cInd + 1)
+
+                    if fStart ~= nil and fEnd ~= nil then
+                        -- FezzedOne: Replaced dice roller with the more flexible one from FezzedTech.
+                        local diceResults = rawText:sub(fStart + 1, fEnd)
+                        diceResults = diceResults:gsub("[ ]*", ""):gsub(
+                            "(.-)[,|]",
+                            function(die) return tostring(rollDice(die) or "n/a") .. ", " end
+                        )
+                        newStr = newStr .. "|" .. diceResults:sub(1, -3) .. "|"
+                        cInd = fEnd
+                    else
+                        newStr = newStr .. "|"
+                    end
+                else
+                    newStr = newStr .. c
+                end
+                cInd = cInd + 1
+            end
+
+            data.text = newStr
+
             -- FezzedOne: Global OOC chat.
             local globalOocStrings = {}
-            data.text = data.text:gsub("%(%(%((.-)%)%)%)", function(s)
+            data.text = data.text:gsub("\\%(%(%(", "(^;(("):gsub("%(%(%((.-)%)%)%)", function(s)
                 table.insert(globalOocStrings, s)
                 return ""
             end)
 
             local globalStrings = {}
             -- FezzedOne: Global actions and radio. Does not support IC language tags.
-            data.text = data.text:gsub("[{<][{<](.-)[}>][}>]", function(s)
+            data.text = data.text:gsub("\\<<", "<^;<"):gsub("\\{{", "{^;{"):gsub("[{<][{<](.-)[}>][}>]", function(s)
                 table.insert(globalStrings, s)
                 return ""
             end)
@@ -332,27 +365,36 @@ function dynamicprox:onSendMessage(data)
                     if parenSum == 3 then globalFlag = true end
 
                     local i = rawText:sub(iCount, iCount)
-                    local langEnd = rawText:find("]", iCount)
-                    if i == "+" then
+                    local langEnd = rawText:find("[^\\]%]", iCount)
+                    if i == "\\" then -- FezzedOne: Ignore escaped characters.
+                        iCount = iCount + 1
+                    elseif i == "+" then
                         sum = sum + 1
                     elseif i == "(" then
                         parenSum = parenSum + 1
                     elseif i == "{" and rawText:find("}", iCount) ~= nil then
                         globalFlag = true
                     elseif i == "[" and langEnd ~= nil then --use this flag to check for default languages. A string without any noise won't have any language support
-                        local langKey
-                        if rawText:sub(iCount, langEnd) == "[]" then --checking for []
-                            langKey = defaultKey
-                            rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
+                        if rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
+                            local langKey
+                            if rawText:sub(iCount, langEnd) == "[]" then --checking for []
+                                langKey = defaultKey
+                                rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
+                            else
+                                -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
+                                langKey = rawText
+                                    :sub(iCount + 1, langEnd)
+                                    :gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                            end
+                            local upperKey = langKey:upper()
+
+                            local langItem = player.getItemWithParameter("langKey", upperKey)
+
+                            if langItem == nil and upperKey ~= "!!" then
+                                rawText = rawText:gsub("%[" .. langKey, "[" .. defaultKey)
+                            end
                         else
-                            langKey = rawText:sub(iCount + 1, langEnd - 1)
-                        end
-                        local upperKey = langKey:upper()
-
-                        local langItem = player.getItemWithParameter("langKey", upperKey)
-
-                        if langItem == nil and upperKey ~= "!!" then
-                            rawText = rawText:gsub("%[" .. langKey, "[" .. defaultKey)
+                            iCount = iCount + 1
                         end
                     else
                         parenSum = 0
@@ -739,8 +781,13 @@ function dynamicprox:formatIncomingMessage(message)
                         -- end
                         parseDefault("*")
                     end,
-                    ["/"] = function() parseDefault("*") end,
-                    ["\\"] = function() parseDefault("\\") end,
+                    ["/"] = function() parseDefault("/") end,
+                    ["`"] = function() parseDefault("`") end,
+                    ["\\"] = function() -- Allow escaping any specially parsed character with `\`.
+                        local nextChar = rawSub(cInd + 1, cInd + 1)
+                        parseDefault(nextChar)
+                        cInd = cInd + 1
+                    end,
                     ["("] = function() --check for number of parentheses
                         local nextChar = rawSub(cInd + 1, cInd + 1)
                         if nextChar == "(" then
@@ -800,39 +847,44 @@ function dynamicprox:formatIncomingMessage(message)
                         radioMode = false
                         -- cInd = cInd + 1
                     end,
-                    ["|"] = function()
-                        local fStart, fEnd = rawText:find("%d+|", cInd)
-
-                        if fStart ~= nil and fEnd ~= nil then
-                            -- local timeNum = tostring(math.floor(os.time()))
-                            -- local mixNum = tonumber(timeNum .. math.abs(authorEntityId))
-                            -- randSource:init(mixNum)
-                            -- local numMax = rawSub(fStart, fEnd - 1):gsub("%D", "")
-                            -- local roll = randSource:randInt(1, tonumber(numMax) or 20)
-                            -- FezzedOne: Replaced dice roller with the more flexible one from FezzedTech.
-
-                            local diceResults = rawSub(fStart, fEnd):gsub(
-                                "(.-)[,|]",
-                                function(die) return tostring(rollDice(die) or "n/a") .. ", " end
-                            )
-                            parseDefault("|" .. diceResults:sub(1, -3) .. "|")
-                            cInd = fEnd + 1
-                        else
-                            parseDefault("|")
-                        end
-                    end,
+                    -- ["|"] = function()
+                    --     local fStart = cInd
+                    --     local fEnd = rawText:find("|", cInd + 1)
+                    --
+                    --     if fStart ~= nil and fEnd ~= nil then
+                    --         -- local timeNum = tostring(math.floor(os.time()))
+                    --         -- local mixNum = tonumber(timeNum .. math.abs(authorEntityId))
+                    --         -- randSource:init(mixNum)
+                    --         -- local numMax = rawSub(fStart, fEnd - 1):gsub("%D", "")
+                    --         -- local roll = randSource:randInt(1, tonumber(numMax) or 20)
+                    --         -- FezzedOne: Replaced dice roller with the more flexible one from FezzedTech.
+                    --         local diceResults = rawSub(fStart + 1, fEnd):gsub("[ ]*", ""):gsub(
+                    --             "(.-)[,|]",
+                    --             function(die) return tostring(rollDice(die) or "n/a") .. ", " end
+                    --         )
+                    --         parseDefault("|" .. diceResults:sub(1, -3) .. "|")
+                    --         cInd = fEnd + 1
+                    --     else
+                    --         parseDefault("|")
+                    --     end
+                    -- end,
                     ["["] = function()
-                        local fStart, fEnd = rawText:find("%[%S%S+]", cInd - 1)
-                        if fStart ~= nil and fEnd ~= nil then
-                            local newCode = rawSub(fStart + 1, fEnd - 1)
-
-                            if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
-                            languageCode = newCode:upper()
-                            cInd = rawText:find("%S", fEnd + 1) or #rawText --set index to the next non whitespace character after the code
+                        -- FezzedOne: Added escape code handling.
+                        local fStart = cInd
+                        local fEnd = rawText:find("[^\\]%]", cInd + 1)
+                        if rawSub(cInd, cInd + 1) == "[[" then
+                            parseDefault("[[")
+                            cInd = cInd + 1
                         elseif rawSub(cInd, cInd + 1) == "[]" then --this should never happen anymore
                             newMode(curMode)
                             languageCode = defaultKey
                             cInd = cInd + 2
+                        elseif fStart ~= nil and fEnd ~= nil then
+                            local newCode = rawSub(fStart + 1, fEnd)
+
+                            if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
+                            languageCode = newCode:upper()
+                            cInd = rawText:find("%S", fEnd + 2) or #rawText --set index to the next non whitespace character after the code
                         else
                             parseDefault("[")
                         end
@@ -877,9 +929,14 @@ function dynamicprox:formatIncomingMessage(message)
                     local rCount = 0
                     while iCount <= #str do
                         char = str:sub(iCount, iCount)
-                        if char == "[" and str:sub(iCount + 3, iCount + 3) == "]" then
-                            returnStr = returnStr .. str:sub(iCount, iCount + 3)
-                            iCount = iCount + 4
+                        if char == "\\" then
+                            returnStr = returnStr .. str:sub(iCount + 1, iCount + 1)
+                            iCount = iCount + 2
+                        -- FezzedOne: Got rid of hardcoded assumption that language codes are two characters long.
+                        elseif char == "[" and str:find("]", iCount) ~= nil then
+                            local closingBracket = str:find("]", iCount)
+                            returnStr = returnStr .. str:sub(iCount, closingBracket)
+                            iCount = closingBracket + 1
                         elseif char == "^" and str:find(";", iCount) ~= nil then
                             local nextSemi = str:find(";", iCount)
                             returnStr = returnStr .. str:sub(iCount, nextSemi)
@@ -908,7 +965,8 @@ function dynamicprox:formatIncomingMessage(message)
                     return returnStr
                 end
 
-                local function langWordRep(word, byteLC)
+                local function langWordRep(word, proficiency, byteLC)
+                    -- FezzedOne: The wordRoll parameter is now used.
                     local vowels = {
                         "a",
                         "e",
@@ -955,12 +1013,15 @@ function dynamicprox:formatIncomingMessage(message)
                         local charLower = char:lower()
                         local isLower = char == charLower
                         local vowelPattern = mergePattern(vowels)
-                        if charLower:match(vowelPattern) then
-                            local randNum = randSource:randInt(1, #vowels)
-                            char = vowels[randNum]
-                        elseif not char:match("[%p]") then -- Don't mess with punctuation.
-                            local randNum = randSource:randInt(1, #consonants)
-                            char = consonants[randNum]
+                        local compFail = randSource:randInt(0, 150) > proficiency
+                        if proficiency < 20 or compFail then -- FezzedOne: Added a chance that a word will be partially comprehensible.
+                            if charLower:match(vowelPattern) then
+                                local randNum = randSource:randInt(1, #vowels)
+                                char = vowels[randNum]
+                            elseif not char:match("[%p]") then -- Don't mess with punctuation.
+                                local randNum = randSource:randInt(1, #consonants)
+                                char = consonants[randNum]
+                            end
                         end
                         if not isLower then char = char:upper() end
                         newWord = newWord .. char
@@ -1008,9 +1069,11 @@ function dynamicprox:formatIncomingMessage(message)
 
                     while iCount <= #str do
                         char = str:sub(iCount, iCount)
-                        if char == "[" and str:sub(iCount + 3, iCount + 3) == "]" then
-                            returnStr = returnStr .. char .. str:sub(iCount + 1, iCount + 3)
-                            iCount = iCount + 3
+                        -- FezzedOne: Got rid of hardcoded assumption that language keys are two characters long.
+                        if char == "[" and str:find(iCount, "]") ~= nil then
+                            local closingBracket = str:find("]", iCount)
+                            returnStr = returnStr .. char .. str:sub(iCount + 1, closingBracket)
+                            iCount = closingBracket + 1
                         elseif char == " " and not wordBuffer:match("%a") and #wordBuffer > 0 then
                             returnStr = returnStr .. " " .. wordBuffer
                             wordBuffer = ""
@@ -1020,7 +1083,7 @@ function dynamicprox:formatIncomingMessage(message)
                                 randSource:init(tonumber(wordBytes(player.uniqueId()) .. byteLC .. byteWord))
                                 local wordRoll = randSource:randInt(1, 100)
                                 if wordRoll > prof then
-                                    wordBuffer = langWordRep(trim(wordBuffer), wordRoll, byteLC)
+                                    wordBuffer = langWordRep(trim(wordBuffer), prof, byteLC)
                                     wordBuffer = "^" .. langColor .. ";" .. wordBuffer .. "^" .. msgColor .. ";"
                                     rCount = rCount + 1
                                 end
@@ -1068,7 +1131,7 @@ function dynamicprox:formatIncomingMessage(message)
                             charBuffer = charBuffer .. i
                         end
                     end
-                    print("Charbuffer is " .. charBuffer)
+                    -- print("Charbuffer is " .. charBuffer)
                     return charBuffer
                 end
 
@@ -1239,9 +1302,10 @@ function dynamicprox:formatIncomingMessage(message)
                             if chunkType ~= "action" then --allow asterisks to stay in actions
                                 chunkStr = colorWithin(chunkStr, "*", "#fe7", msgColor) --yellow
                             end
-                            chunkStr = colorWithin(chunkStr, "\\", "#d80", msgColor) --orange
+                            -- FezzedOne: This now uses backticks.
+                            chunkStr = colorWithin(chunkStr, "`", "#d80", msgColor) --orange
                         elseif chunkType == "quote" and hasValids and prevType ~= "quote" then
-                            chunkStr = "They say something."
+                            chunkStr = "Says something."
                             v["valid"] = true
                             chunkType = "action"
                         end
@@ -1251,8 +1315,8 @@ function dynamicprox:formatIncomingMessage(message)
                             local checkCombo = quoteCombo:gsub("%[%w%w%]", "")
 
                             if not checkCombo:match("[%w%d]") then
-                                if prevStr ~= "They say something." then
-                                    quoteCombo = "They say something."
+                                if prevStr ~= "Says something." then
+                                    quoteCombo = "Says something."
                                 else
                                     quoteCombo = ""
                                 end
