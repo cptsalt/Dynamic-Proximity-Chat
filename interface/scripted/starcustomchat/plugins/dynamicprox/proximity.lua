@@ -963,6 +963,7 @@ function dynamicprox:formatIncomingMessage(message)
                     if not type(word) == "string" then return 0 end
                     for char in word:gmatch(".") do
                         char = char:lower()
+                        returnNum = returnNum * 16
                         returnNum = returnNum + math.abs(string.byte(char) - 100)
                     end
                     return returnNum
@@ -1012,7 +1013,7 @@ function dynamicprox:formatIncomingMessage(message)
                     local pickInd = 0
                     local newWord = ""
                     local wordLength = #word
-                    randSource:init(tonumber(byteLC + wordBytes(word)))
+                    randSource:init(byteLC + wordBytes(word))
                     for char in word:gmatch(".") do
                         local charLower = char:lower()
                         local isLower = char == charLower
@@ -1050,6 +1051,10 @@ function dynamicprox:formatIncomingMessage(message)
                     local iCount = 1
                     local char
                     local effProf = 64 * math.log(prof / 3 + 1, 10)
+                    local uniqueIdBytes = wordBytes(
+                        (xsb and isLocalPlayer(receiverEntityId)) and world.entityUniqueId(receiverEntityId)
+                            or player.uniqueId()
+                    )
 
                     if langColor == nil then
                         local hexDigits =
@@ -1087,10 +1092,7 @@ function dynamicprox:formatIncomingMessage(message)
                             if #wordBuffer > 0 then
                                 local wordLength = #wordBuffer
                                 local byteWord = wordBytes(wordBuffer)
-                                local uniqueId = (xsb and isLocalPlayer(receiverEntityId))
-                                        and world.entityUniqueId(receiverEntityId)
-                                    or player.uniqueId()
-                                randSource:init(tonumber(wordBytes(uniqueId) + byteLC + byteWord))
+                                randSource:init(uniqueIdBytes + byteLC + byteWord)
                                 local wordRoll = randSource:randInt(1, 100)
                                 if
                                     effProf < 5
