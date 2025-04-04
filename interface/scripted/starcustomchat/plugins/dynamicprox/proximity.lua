@@ -1013,7 +1013,7 @@ function dynamicprox:formatIncomingMessage(message)
                     local pickInd = 0
                     local newWord = ""
                     local wordLength = #word
-                    randSource:init(byteLC + wordBytes(word))
+                    randSource:init(math.tointeger(byteLC + wordBytes(word)))
                     for char in word:gmatch(".") do
                         local charLower = char:lower()
                         local isLower = char == charLower
@@ -1063,17 +1063,17 @@ function dynamicprox:formatIncomingMessage(message)
                         local hexMin = 1
 
                         --not sure if there's an cleaner way to do this
-                        randSource:init(byteLC + wordBytes("Red One"))
+                        randSource:init(math.tointeger(byteLC + wordBytes("Red One")))
                         local rNumR = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC + wordBytes("Green Two"))
+                        randSource:init(math.tointeger(byteLC + wordBytes("Green Two")))
                         local rNumG = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC + wordBytes("Blue Three"))
+                        randSource:init(math.tointeger(byteLC + wordBytes("Blue Three")))
                         local rNumB = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC + wordBytes("Red Four"))
+                        randSource:init(math.tointeger(byteLC + wordBytes("Red Four")))
                         local rNumR2 = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC + wordBytes("Green Five"))
+                        randSource:init(math.tointeger(byteLC + wordBytes("Green Five")))
                         local rNumG2 = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC + wordBytes("Blue Six"))
+                        randSource:init(math.tointeger(byteLC + wordBytes("Blue Six")))
                         local rNumB2 = hexDigits[randSource:randInt(hexMin, 16)]
                         langColor = "#" .. rNumR .. rNumG .. rNumB .. rNumR2 .. rNumG2 .. rNumB2
                     end
@@ -1092,7 +1092,7 @@ function dynamicprox:formatIncomingMessage(message)
                             if #wordBuffer > 0 then
                                 local wordLength = #wordBuffer
                                 local byteWord = wordBytes(wordBuffer)
-                                randSource:init(uniqueIdBytes + byteLC + byteWord)
+                                randSource:init(math.tointeger(uniqueIdBytes + byteLC + byteWord))
                                 local wordRoll = randSource:randInt(1, 100)
                                 if
                                     effProf < 5
