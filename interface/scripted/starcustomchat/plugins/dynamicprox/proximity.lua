@@ -447,7 +447,7 @@ function dynamicprox:onSendMessage(data)
                     end
                     globalMsg:sub(1, -2)
                     globalMsg = "{{" .. globalMsg .. "}}"
-                    globalMsg = globalMsg:gsub("[ ]*", " "):gsub("%{ ", "{"):gsub(" %}", "}")
+                    globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
                     chat.send(globalMsg, "Broadcast", false)
                 end
@@ -458,7 +458,7 @@ function dynamicprox:onSendMessage(data)
                     end
                     globalOocMsg:sub(1, -2)
                     globalOocMsg = "((" .. globalOocMsg .. "))"
-                    globalOocMsg = globalOocMsg:gsub("[ ]*", " ")
+                    globalOocMsg = globalOocMsg:gsub("[ ]+", " ")
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
                     chat.send(globalOocMsg, "Broadcast", false)
                 end
