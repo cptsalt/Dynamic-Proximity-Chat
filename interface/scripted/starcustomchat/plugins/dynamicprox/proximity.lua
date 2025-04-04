@@ -366,7 +366,8 @@ function dynamicprox:onSendMessage(data)
                     if parenSum == 3 then globalFlag = true end
 
                     local i = rawText:sub(iCount, iCount)
-                    local langEnd = rawText:find("[^\\]%]", iCount)
+                    local langEnd = rawText:find("]", iCount)
+                    -- if langEnd then langEnd = langEnd - 1 end
                     if i == "\\" then -- FezzedOne: Ignore escaped characters.
                         iCount = iCount + 1
                     elseif i == "+" then
@@ -383,9 +384,9 @@ function dynamicprox:onSendMessage(data)
                                 rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
                             else
                                 -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
-                                langKey = rawText
-                                    :sub(iCount + 1, langEnd)
-                                    :gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                langKey = rawText:sub(iCount + 1, langEnd - 1)
+                                sb.logInfo("langKey = '%s'", langKey)
+                                langKey = langKey:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
                             end
                             local upperKey = langKey:upper()
 
@@ -876,16 +877,16 @@ function dynamicprox:formatIncomingMessage(message)
                         if rawSub(cInd, cInd + 1) == "[[" then
                             parseDefault("[[")
                             cInd = cInd + 1
-                        elseif rawSub(cInd, cInd + 1) == "[]" then --this should never happen anymore
-                            newMode(curMode)
-                            languageCode = defaultKey
-                            cInd = cInd + 2
                         elseif fStart ~= nil and fEnd ~= nil then
                             local newCode = rawSub(fStart + 1, fEnd)
 
                             if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
                             languageCode = newCode:upper()
                             cInd = rawText:find("%S", fEnd + 2) or #rawText --set index to the next non whitespace character after the code
+                        elseif rawSub(cInd, cInd + 1) == "[]" then --this should never happen anymore
+                            newMode(curMode)
+                            languageCode = defaultKey
+                            cInd = cInd + 2
                         else
                             parseDefault("[")
                         end
@@ -958,12 +959,13 @@ function dynamicprox:formatIncomingMessage(message)
                 end
 
                 local function wordBytes(word)
-                    local returnStr = ""
+                    local returnNum = 0
+                    if not type(word) == "string" then return 0 end
                     for char in word:gmatch(".") do
                         char = char:lower()
-                        returnStr = returnStr .. math.abs(string.byte(char) - 100)
+                        returnNum = returnNum + math.abs(string.byte(char) - 100)
                     end
-                    return returnStr
+                    return returnNum
                 end
 
                 local function langWordRep(word, proficiency, byteLC)
@@ -1009,13 +1011,15 @@ function dynamicprox:formatIncomingMessage(message)
 
                     local pickInd = 0
                     local newWord = ""
-                    randSource:init(tonumber(byteLC .. wordBytes(word)))
+                    local wordLength = #word
+                    randSource:init(tonumber(byteLC + wordBytes(word)))
                     for char in word:gmatch(".") do
                         local charLower = char:lower()
                         local isLower = char == charLower
                         local vowelPattern = mergePattern(vowels)
-                        local compFail = randSource:randInt(0, 150) > proficiency
-                        if proficiency < 20 or compFail then -- FezzedOne: Added a chance that a word will be partially comprehensible.
+                        local compFail = randSource:randInt(0, 150)
+                            > (proficiency + wordLength ^ 2 - 2 * wordLength - 10)
+                        if proficiency < 5 or compFail then -- FezzedOne: Added a chance that a word will be partially comprehensible.
                             if charLower:match(vowelPattern) then
                                 local randNum = randSource:randInt(1, #vowels)
                                 char = vowels[randNum]
@@ -1053,17 +1057,17 @@ function dynamicprox:formatIncomingMessage(message)
                         local hexMin = 1
 
                         --not sure if there's an cleaner way to do this
-                        randSource:init(byteLC .. wordBytes("Red One"))
+                        randSource:init(byteLC + wordBytes("Red One"))
                         local rNumR = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC .. wordBytes("Green Two"))
+                        randSource:init(byteLC + wordBytes("Green Two"))
                         local rNumG = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC .. wordBytes("Blue Three"))
+                        randSource:init(byteLC + wordBytes("Blue Three"))
                         local rNumB = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC .. wordBytes("Red Four"))
+                        randSource:init(byteLC + wordBytes("Red Four"))
                         local rNumR2 = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC .. wordBytes("Green Five"))
+                        randSource:init(byteLC + wordBytes("Green Five"))
                         local rNumG2 = hexDigits[randSource:randInt(hexMin, 16)]
-                        randSource:init(byteLC .. wordBytes("Blue Six"))
+                        randSource:init(byteLC + wordBytes("Blue Six"))
                         local rNumB2 = hexDigits[randSource:randInt(hexMin, 16)]
                         langColor = "#" .. rNumR .. rNumG .. rNumB .. rNumR2 .. rNumG2 .. rNumB2
                     end
@@ -1080,10 +1084,17 @@ function dynamicprox:formatIncomingMessage(message)
                             wordBuffer = ""
                         elseif char ~= "'" and char:match("[%s%p]") then
                             if #wordBuffer > 0 then
+                                local wordLength = #wordBuffer
                                 local byteWord = wordBytes(wordBuffer)
-                                randSource:init(tonumber(wordBytes(player.uniqueId()) .. byteLC .. byteWord))
+                                local uniqueId = (xsb and isLocalPlayer(receiverEntityId))
+                                        and world.entityUniqueId(receiverEntityId)
+                                    or player.uniqueId()
+                                randSource:init(tonumber(wordBytes(uniqueId) + byteLC + byteWord))
                                 local wordRoll = randSource:randInt(1, 100)
-                                if wordRoll > prof then
+                                if
+                                    prof < 5
+                                    or (wordRoll - wordLength + wordLength ^ 2 - 2 * wordLength - 10) > prof
+                                then
                                     wordBuffer = langWordRep(trim(wordBuffer), prof, byteLC)
                                     wordBuffer = "^" .. langColor .. ";" .. wordBuffer .. "^" .. msgColor .. ";"
                                     rCount = rCount + 1
