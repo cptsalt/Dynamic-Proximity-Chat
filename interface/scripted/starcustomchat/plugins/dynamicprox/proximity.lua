@@ -963,6 +963,7 @@ function dynamicprox:formatIncomingMessage(message)
                     for char in word:gmatch(".") do
                         char = char:lower()
                         returnNum = returnNum * 16
+                        if not math.tointeger(returnNum) then returnNum = math.tointeger(2 ^ 48) end
                         returnNum = returnNum + math.abs(string.byte(char) - 100)
                     end
                     return returnNum
