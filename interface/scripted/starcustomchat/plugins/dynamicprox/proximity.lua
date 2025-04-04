@@ -217,7 +217,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
 
     starcustomchat.utils.setMessageHandler("/newlangitem", function(_, _, data)
-        local splitArgs = splitStr(data, " ")
+        -- FezzedOne: Whitespace in language names is now supported.
+        local splitArgs = chat.parseArguments(data) -- splitStr(data, " ")
         local langName, langKey, langLevel, isDefault, color =
             (splitArgs[1] or nil),
             (splitArgs[2] or nil),
