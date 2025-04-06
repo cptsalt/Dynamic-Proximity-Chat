@@ -21,6 +21,7 @@ local DynamicProxPrefix = "^DynamicProx,reset;"
 local AuthorIdPrefix = "^author="
 local DefaultLangPrefix = ",defLang="
 local TagSuffix = ",reset;"
+local AnnouncementPrefix = "^clear;!!^reset;"
 
 -- FezzedOne: From FezzedTech.
 local function rollDice(die) -- From https://github.com/brianherbert/dice/, with modifications.
@@ -148,6 +149,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.sendlocal.desc",
             data = "/sendlocal",
         })
+    elseif string.find("/proxooc", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/proxooc",
+            description = "commands.proxooc.desc",
+            data = "/proxooc",
+        })
     end
 end
 
@@ -196,6 +203,20 @@ end
 
 --this messagehandler function runs if the chat preview exists
 function dynamicprox:registerMessageHandlers(shared) --look at this function in irden chat's editchat thing
+    starcustomchat.utils.setMessageHandler("/proxooc", function(_, _, data)
+        if string.lower(data) == "on" then
+            root.setConfiguration("DynamicProxChat::proximityOoc", true)
+            return "^green;ENABLED^reset; proximity OOC chat"
+        elseif string.lower(data) == "off" then
+            root.setConfiguration("DynamicProxChat::proximityOoc", false)
+            return "^red;DISABLED^reset; proximity OOC chat"
+        else
+            local enabled = root.getConfiguration("DynamicProxChat::proximityOoc") or false
+            return "Proximity OOC chat is "
+                .. (enabled and "^green;ENABLED" or "^red;DISABLED")
+                .. "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
+        end
+    end)
     starcustomchat.utils.setMessageHandler("/proxlocal", function(_, _, data)
         if string.lower(data) == "on" then
             root.setConfiguration("DynamicProxChat::localChatIsProx", true)
@@ -563,9 +584,15 @@ end
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
+        local isAnnouncement = hasPrefix
+                and (message.text:sub(#DynamicProxPrefix + 1, #DynamicProxPrefix + #AnnouncementPrefix) == AnnouncementPrefix)
+            or (message.text:sub(1, #AnnouncementPrefix) == AnnouncementPrefix)
         local isGlobalChat = message.mode == "Broadcast"
         -- FezzedOne: Added a setting that allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
-        if hasPrefix or (root.getConfiguration("DynamicProxChat::localChatIsProx") and message.mode == "Local") then
+        if
+            (hasPrefix or (root.getConfiguration("DynamicProxChat::localChatIsProx") and message.mode == "Local"))
+            and not isAnnouncement
+        then
             message.mode = "Prox"
             if hasPrefix and not message.processed then message.text = message.text:sub(#DynamicProxPrefix + 1, -1) end
             message.contentIsText = true
@@ -970,6 +997,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         oocBump = 1
                                         oocType = "lOOC"
                                         oocRad = actionRad * 2
+                                        if root.getConfiguration("DynamicProxChat::proximityOoc") then
+                                            uncapRad = true
+                                        end
                                     end
 
                                     if oocEnd ~= nil then
