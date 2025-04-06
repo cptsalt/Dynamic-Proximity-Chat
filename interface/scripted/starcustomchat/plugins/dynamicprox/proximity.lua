@@ -1,22 +1,16 @@
 require("/interface/scripted/starcustomchat/plugin.lua")
 
 -- Need this to copy message tables.
-local function deepCopy(objectToCopy)
-    local lookup_table = {}
-    local function _copy(object)
-        if type(object) ~= "table" then
-            return object
-        elseif lookup_table[object] then
-            return lookup_table[object]
-        end
-        local new_table = {}
-        lookup_table[object] = new_table
-        for index, value in pairs(object) do
-            new_table[_copy(index)] = _copy(value)
-        end
-        return setmetatable(new_table, _copy(getmetatable(object)))
+local function copy(obj, seen)
+    if type(obj) ~= "table" then return obj end
+    if seen and seen[obj] then return seen[obj] end
+    local s = seen or {}
+    local res = setmetatable({}, getmetatable(obj))
+    s[obj] = res
+    for k, v in pairs(obj) do
+        res[copy(k, s)] = copy(v, s)
     end
-    return _copy(objectToCopy)
+    return res
 end
 
 dynamicprox = PluginClass:new({
@@ -25,7 +19,8 @@ dynamicprox = PluginClass:new({
 
 local DynamicProxPrefix = "^DynamicProx,reset;"
 local AuthorIdPrefix = "^author="
-local AuthorIdSuffix = ",reset;"
+local DefaultLangPrefix = ",defLang="
+local TagSuffix = ",reset;"
 
 -- FezzedOne: From FezzedTech.
 local function rollDice(die) -- From https://github.com/brianherbert/dice/, with modifications.
@@ -339,236 +334,233 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 end
 
 function dynamicprox:onSendMessage(data)
-    local messageSender = function(data)
-        --think about running this in local to allow players without the mod to still see messages
+    --think about running this in local to allow players without the mod to still see messages
 
-        if data.mode == "Prox" then
-            -- data.time = systemTime() this is where i'd add time if i wanted it
-            data.proxRadius = self.proxRadius
-            local function sendMessageToPlayers()
-                local position = player.id() and world.entityPosition(player.id())
+    if data.mode == "Prox" then
+        -- data.time = systemTime() this is where i'd add time if i wanted it
+        data.proxRadius = self.proxRadius
+        local function sendMessageToPlayers()
+            local position = player.id() and world.entityPosition(player.id())
 
-                -- FezzedOne: Dice roll handling.
-                local rawText = data.text
-                local newStr = ""
-                local cInd = 1
-                while cInd <= #rawText do
-                    local c = rawText:sub(cInd, cInd)
-                    if c == "\\" then -- Handle escapes.
-                        newStr = newStr .. "\\" .. rawText:sub(cInd + 1, cInd + 1)
-                        cInd = cInd + 1
-                    elseif c == "|" then
-                        local fStart = cInd
-                        local fEnd = rawText:find("|", cInd + 1)
-
-                        if fStart ~= nil and fEnd ~= nil then
-                            -- FezzedOne: Replaced dice roller with the more flexible one from FezzedTech.
-                            local diceResults = rawText:sub(fStart + 1, fEnd)
-                            diceResults = diceResults:gsub("[ ]*", ""):gsub(
-                                "(.-)[,|]",
-                                function(die) return tostring(rollDice(die) or "n/a") .. ", " end
-                            )
-                            newStr = newStr .. "|" .. diceResults:sub(1, -3) .. "|"
-                            cInd = fEnd
-                        else
-                            newStr = newStr .. "|"
-                        end
-                    else
-                        newStr = newStr .. c
-                    end
+            -- FezzedOne: Dice roll handling.
+            local rawText = data.text
+            local newStr = ""
+            local cInd = 1
+            while cInd <= #rawText do
+                local c = rawText:sub(cInd, cInd)
+                if c == "\\" then -- Handle escapes.
+                    newStr = newStr .. "\\" .. rawText:sub(cInd + 1, cInd + 1)
                     cInd = cInd + 1
-                end
+                elseif c == "|" then
+                    local fStart = cInd
+                    local fEnd = rawText:find("|", cInd + 1)
 
-                data.text = newStr
-
-                -- FezzedOne: Global OOC chat.
-                local globalOocStrings = {}
-                data.text = data.text:gsub("\\%(%(%(", "(^;(("):gsub("%(%(%((.-)%)%)%)", function(s)
-                    table.insert(globalOocStrings, s)
-                    return ""
-                end)
-
-                local globalStrings = {}
-                -- FezzedOne: Global actions and radio. Does not support IC language tags.
-                data.text = data.text:gsub("\\<<", "<^;<"):gsub("\\{{", "{^;{"):gsub("[{<][{<](.-)[}>][}>]", function(s)
-                    table.insert(globalStrings, s)
-                    return ""
-                end)
-
-                if position then
-                    local estRad = data.proxRadius
-                    local rawText = data.text
-                    local sum = 0
-                    local parenSum = 0
-                    local iCount = 1
-                    local globalFlag = false
-                    local hasNoise = false
-                    local defaultKey = getDefaultLang()
-                    data.defaultLang = defaultKey
-                    local typoTable = player.getProperty("typos", {})
-                    local typoVar = typoTable["typosActive"]
-                    if typoVar then
-                        local newText = ""
-                        local wordBuffer = ""
-                        for i in (rawText .. " "):gmatch(".") do
-                            if i:match("[%s%p]") and i ~= "[" and i ~= "]" then
-                                if typoTable[wordBuffer] ~= nil then
-                                    newText = newText .. typoTable[wordBuffer] .. i
-
-                                    wordBuffer = ""
-                                else
-                                    newText = newText .. wordBuffer .. i
-                                end
-                                wordBuffer = ""
-                            else
-                                wordBuffer = wordBuffer .. i
-                            end
-                        end
-                        rawText = newText:sub(1, #newText - 1)
-                    end
-                    while iCount <= #rawText and not globalFlag do
-                        if parenSum == 3 then globalFlag = true end
-
-                        local i = rawText:sub(iCount, iCount)
-                        local langEnd = rawText:find("]", iCount)
-                        -- if langEnd then langEnd = langEnd - 1 end
-                        if i == "\\" then -- FezzedOne: Ignore escaped characters.
-                            iCount = iCount + 1
-                        elseif i == "+" then
-                            sum = sum + 1
-                        elseif i == "(" then
-                            parenSum = parenSum + 1
-                        elseif i == "{" and rawText:find("}", iCount) ~= nil then
-                            globalFlag = true
-                        elseif i == "[" and langEnd ~= nil then --use this flag to check for default languages. A string without any noise won't have any language support
-                            if rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
-                                local langKey
-                                if rawText:sub(iCount, langEnd) == "[]" then --checking for []
-                                    langKey = defaultKey
-                                    rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
-                                else
-                                    -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
-                                    langKey = rawText:sub(iCount + 1, langEnd - 1)
-                                    langKey = langKey:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
-                                end
-                                local upperKey = langKey:upper()
-
-                                local langItem = player.getItemWithParameter("langKey", upperKey)
-
-                                if langItem == nil and upperKey ~= "!!" then
-                                    rawText = rawText:gsub("%[" .. langKey, "[" .. defaultKey)
-                                end
-                            else
-                                iCount = iCount + 1
-                            end
-                        else
-                            parenSum = 0
-                        end
-                        iCount = iCount + 1
-                    end
-                    data.content = rawText
-                    data.text = ""
-                    if parenSum == 2 or globalFlag then
-                        estRad = estRad * 2
-                    elseif sum > 3 then
-                        estRad = estRad * 1.5
-                    else
-                        estRad = estRad + (estRad * 0.25 + (3 * sum))
-                    end
-
-                    --estrad should be pretty close to actual radius
-
-                    --this is where i'd change players if needed
-                    local players = world.playerQuery(position, estRad, {
-                        boundMode = "position",
-                    })
-
-                    -- if xsb then -- FezzedOne: On xStarbound, filter out local secondaries to avoid showing duplicate sent messages.
-                    --     local localPlayers = world.ownPlayers()
-                    --     local primaryPlayer = world.primaryPlayer()
-                    --     for i = #localPlayers, 1, -1 do
-                    --         if localPlayers[i] == primaryPlayer then
-                    --             table.remove(localPlayers, i)
-                    --             break
-                    --         end
-                    --     end
-                    --     for i = #players, 1, -1 do
-                    --         for j = 1, #localPlayers, 1 do
-                    --             if players[i] == localPlayers[j] then table.remove(players, i) end
-                    --         end
-                    --     end
-                    -- end
-
-                    -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
-                    -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
-                    if root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
-                        chat.send(
-                            DynamicProxPrefix
-                                .. AuthorIdPrefix
-                                .. tostring(player.id())
-                                .. AuthorIdSuffix
-                                .. data.content,
-                            "Local",
-                            false
+                    if fStart ~= nil and fEnd ~= nil then
+                        -- FezzedOne: Replaced dice roller with the more flexible one from FezzedTech.
+                        local diceResults = rawText:sub(fStart + 1, fEnd)
+                        diceResults = diceResults:gsub("[ ]*", ""):gsub(
+                            "(.-)[,|]",
+                            function(die) return tostring(rollDice(die) or "n/a") .. ", " end
                         )
+                        newStr = newStr .. "|" .. diceResults:sub(1, -3) .. "|"
+                        cInd = fEnd
                     else
-                        for _, pl in ipairs(players) do
-                            if xsb then data.sourceId = world.primaryPlayer() end
-                            data.targetId = pl -- Add the target player ID so we can filter received messages by target player on the other end on xStarbound clients.
-                            world.sendEntityMessage(pl, "scc_add_message", data)
-                        end
+                        newStr = newStr .. "|"
                     end
-                    if #globalStrings ~= 0 then
-                        local globalMsg = ""
-                        for _, str in ipairs(globalStrings) do
-                            globalMsg = globalMsg .. str .. " "
-                        end
-                        globalMsg:sub(1, -2)
-                        globalMsg = "{{" .. globalMsg .. "}}"
-                        globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
-                        globalMsg = DynamicProxPrefix .. globalMsg
-                        -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                        chat.send(globalMsg, "Broadcast", false)
-                    end
-                    if #globalOocStrings ~= 0 then
-                        local globalOocMsg = ""
-                        for _, str in ipairs(globalOocStrings) do
-                            globalOocMsg = globalOocMsg .. str .. " "
-                        end
-                        globalOocMsg:sub(1, -2)
-                        globalOocMsg = "((" .. globalOocMsg .. "))"
-                        globalOocMsg = globalOocMsg:gsub("[ ]+", " ")
-                        globalOocMsg = DynamicProxPrefix .. globalOocMsg
-                        -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                        chat.send(globalOocMsg, "Broadcast", false)
-                    end
-                    return true
+                else
+                    newStr = newStr .. c
                 end
+                cInd = cInd + 1
             end
 
-            local sendMessagePromise = {
-                finished = sendMessageToPlayers,
-                succeeded = function() return true end,
-            }
+            data.text = newStr
 
-            promises:add(sendMessagePromise)
-            player.say("...")
+            -- FezzedOne: Global OOC chat.
+            local globalOocStrings = {}
+            data.text = data.text:gsub("\\%(%(%(", "(^;(("):gsub("%(%(%((.-)%)%)%)", function(s)
+                table.insert(globalOocStrings, s)
+                return ""
+            end)
+
+            local globalStrings = {}
+            -- FezzedOne: Global actions and radio. Does not support IC language tags.
+            data.text = data.text:gsub("\\<<", "<^;<"):gsub("\\{{", "{^;{"):gsub("[{<][{<](.-)[}>][}>]", function(s)
+                table.insert(globalStrings, s)
+                return ""
+            end)
+
+            if position then
+                local estRad = data.proxRadius
+                local rawText = data.text
+                local sum = 0
+                local parenSum = 0
+                local iCount = 1
+                local globalFlag = false
+                local hasNoise = false
+                local defaultKey = getDefaultLang()
+                data.defaultLang = defaultKey
+                local typoTable = player.getProperty("typos", {})
+                local typoVar = typoTable["typosActive"]
+                if typoVar then
+                    local newText = ""
+                    local wordBuffer = ""
+                    for i in (rawText .. " "):gmatch(".") do
+                        if i:match("[%s%p]") and i ~= "[" and i ~= "]" then
+                            if typoTable[wordBuffer] ~= nil then
+                                newText = newText .. typoTable[wordBuffer] .. i
+
+                                wordBuffer = ""
+                            else
+                                newText = newText .. wordBuffer .. i
+                            end
+                            wordBuffer = ""
+                        else
+                            wordBuffer = wordBuffer .. i
+                        end
+                    end
+                    rawText = newText:sub(1, #newText - 1)
+                end
+                while iCount <= #rawText and not globalFlag do
+                    if parenSum == 3 then globalFlag = true end
+
+                    local i = rawText:sub(iCount, iCount)
+                    local langEnd = rawText:find("]", iCount)
+                    -- if langEnd then langEnd = langEnd - 1 end
+                    if i == "\\" then -- FezzedOne: Ignore escaped characters.
+                        iCount = iCount + 1
+                    elseif i == "+" then
+                        sum = sum + 1
+                    elseif i == "(" then
+                        parenSum = parenSum + 1
+                    elseif i == "{" and rawText:find("}", iCount) ~= nil then
+                        globalFlag = true
+                    elseif i == "[" and langEnd ~= nil then --use this flag to check for default languages. A string without any noise won't have any language support
+                        if rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
+                            local langKey
+                            if rawText:sub(iCount, langEnd) == "[]" then --checking for []
+                                langKey = defaultKey
+                                rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
+                            else
+                                -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
+                                langKey = rawText:sub(iCount + 1, langEnd - 1)
+                                langKey = langKey:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                            end
+                            local upperKey = langKey:upper()
+
+                            local langItem = player.getItemWithParameter("langKey", upperKey)
+
+                            if langItem == nil and upperKey ~= "!!" then
+                                rawText = rawText:gsub("%[" .. langKey, "[" .. defaultKey)
+                            end
+                        else
+                            iCount = iCount + 1
+                        end
+                    else
+                        parenSum = 0
+                    end
+                    iCount = iCount + 1
+                end
+                data.content = rawText
+                data.text = ""
+                if parenSum == 2 or globalFlag then
+                    estRad = estRad * 2
+                elseif sum > 3 then
+                    estRad = estRad * 1.5
+                else
+                    estRad = estRad + (estRad * 0.25 + (3 * sum))
+                end
+
+                --estrad should be pretty close to actual radius
+
+                --this is where i'd change players if needed
+                local players = world.playerQuery(position, estRad, {
+                    boundMode = "position",
+                })
+
+                -- if xsb then -- FezzedOne: On xStarbound, filter out local secondaries to avoid showing duplicate sent messages.
+                --     local localPlayers = world.ownPlayers()
+                --     local primaryPlayer = world.primaryPlayer()
+                --     for i = #localPlayers, 1, -1 do
+                --         if localPlayers[i] == primaryPlayer then
+                --             table.remove(localPlayers, i)
+                --             break
+                --         end
+                --     end
+                --     for i = #players, 1, -1 do
+                --         for j = 1, #localPlayers, 1 do
+                --             if players[i] == localPlayers[j] then table.remove(players, i) end
+                --         end
+                --     end
+                -- end
+
+                -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
+                -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
+                local chatTags = AuthorIdPrefix
+                    .. tostring(player.id())
+                    .. DefaultLangPrefix
+                    .. tostring(data.defaultLang)
+                    .. TagSuffix
+
+                if root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
+                    chat.send(DynamicProxPrefix .. chatTags .. data.content, "Local", false)
+                else
+                    for _, pl in ipairs(players) do
+                        if xsb then data.sourceId = world.primaryPlayer() end
+                        data.targetId = pl -- Add the target player ID so we can filter received messages by target player on the other end on xStarbound clients.
+                        world.sendEntityMessage(pl, "scc_add_message", data)
+                    end
+                end
+                if #globalStrings ~= 0 then
+                    local globalMsg = ""
+                    for _, str in ipairs(globalStrings) do
+                        globalMsg = globalMsg .. str .. " "
+                    end
+                    globalMsg:sub(1, -2)
+                    globalMsg = "{{" .. globalMsg .. "}}"
+                    globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
+                    globalMsg = DynamicProxPrefix .. chatTags .. globalMsg
+                    -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
+                    chat.send(globalMsg, "Broadcast", false)
+                end
+                if #globalOocStrings ~= 0 then
+                    local globalOocMsg = ""
+                    for _, str in ipairs(globalOocStrings) do
+                        globalOocMsg = globalOocMsg .. str .. " "
+                    end
+                    globalOocMsg:sub(1, -2)
+                    globalOocMsg = "((" .. globalOocMsg .. "))"
+                    globalOocMsg = globalOocMsg:gsub("[ ]+", " ")
+                    globalOocMsg = DynamicProxPrefix .. globalOocMsg
+                    -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
+                    chat.send(globalOocMsg, "Broadcast", false)
+                end
+                return true
+            end
         end
-    end
 
-    local status, errorMsg = pcall(messageSender, deepCopy(data))
-    if status then
-        return
-    else
-        sb.logWarn(
-            "[DynamicProxChat] Error occurred while sending proximity message: %s\n  Message data: %s",
-            errorMsg,
-            data
-        )
+        local sendMessagePromise = {
+            finished = function()
+                local status, errorMsg = pcall(sendMessageToPlayers)
+                if status then
+                    return errorMsg
+                else
+                    sb.logWarn(
+                        "[DynamicProxChat] Error occurred while sending proximity message: %s\n  Message data: %s",
+                        errorMsg,
+                        data
+                    )
+                    return false
+                end
+            end,
+            succeeded = function() return true end,
+        }
+
+        promises:add(sendMessagePromise)
+        player.say("...")
     end
 end
 
-function dynamicprox:formatIncomingMessage(message)
+function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
         -- FezzedOne: Added a setting that allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
@@ -584,16 +576,39 @@ function dynamicprox:formatIncomingMessage(message)
             if message.connection then --i don't know what receivingRestricted does
                 local hasAuthorPrefix = message.text:sub(1, #AuthorIdPrefix) == AuthorIdPrefix
                 local authorEntityId
+                local defaultLangStr = nil
                 if hasAuthorPrefix then
                     local i = #AuthorIdPrefix + 1
                     local authorIdStr = ""
+                    local c = ""
                     while i <= #message.text do
-                        local c = message.text:sub(i, i)
+                        c = message.text:sub(i, i)
                         if c == "," then break end
                         authorIdStr = authorIdStr .. c
                         i = i + 1
                     end
                     authorEntityId = math.tointeger(authorIdStr)
+                    if message.text:sub(i, i + #DefaultLangPrefix - 1) == DefaultLangPrefix then
+                        i = i + #DefaultLangPrefix
+                        defaultLangStr = ""
+                        while i <= #message.text do
+                            c = message.text:sub(i, i)
+                            if c == "," then break end
+                            defaultLangStr = defaultLangStr .. c
+                            i = i + 1
+                        end
+                        i = i + #TagSuffix
+                    else
+                        while i <= #message.text do
+                            c = message.text:sub(i, i)
+                            if c == ";" then
+                                i = i + 1
+                                break
+                            end
+                            i = i + 1
+                        end
+                    end
+                    message.text = message.text:sub(i, -1)
                 end
                 -- FezzedOne: Allows OpenStarbound and StarExtensions clients to correctly display received messages from xStarbound clients.
                 authorEntityId = authorEntityId or message.sourceId or (message.connection * -65536)
@@ -605,6 +620,7 @@ function dynamicprox:formatIncomingMessage(message)
                     for i = (message.connection * -65536 + 1), (message.connection * -65536 + 255), 1 do
                         if world.entityExists(i) and world.entityType(i) == "player" then
                             authorEntityId = i
+                            authorRendered = true
                             break
                         end
                     end
@@ -696,7 +712,7 @@ function dynamicprox:formatIncomingMessage(message)
                         local validSum = 0 --number of valid entries in the table
                         local cInd = 1 --lua starts at 1 >:(
                         local charBuffer = ""
-                        local languageCode = message.defaultLang --the !! shouldn't need to be set, but i'll leave it anyway
+                        local languageCode = defaultLangStr or message.defaultLang --the !! shouldn't need to be set, but i'll leave it anyway
                         local radioMode = false --radio flag
 
                         local modeRadTypes = {
@@ -1538,11 +1554,11 @@ function dynamicprox:formatIncomingMessage(message)
 
                 if xsb and message.contentIsText then
                     for _, pId in ipairs(ownPlayers) do
-                        handleMessage(pId, deepCopy(message))
+                        handleMessage(pId, copy(message))
                     end
                     message.text = ""
                 elseif message.contentIsText then
-                    handleMessage(receiverEntityId, deepCopy(message))
+                    handleMessage(receiverEntityId, copy(message))
                     message.text = ""
                 else
                     handleMessage(receiverEntityId)
@@ -1552,17 +1568,21 @@ function dynamicprox:formatIncomingMessage(message)
 
         return message
     end
+    -- return messageFormatter(rawMessage)
 
-    local status, messageOrError = pcall(messageFormatter, deepCopy(message))
+    local messageData = copy(rawMessage)
+    local rawText = messageData.text
+    local status, messageOrError = pcall(messageFormatter, rawMessage)
     if status then
         return messageOrError
     else
         sb.logWarn(
             "[DynamicProxChat] Error occurred while formatting proximity message: %s\n  Message data: %s",
             messageOrError,
-            message
+            messageData
         )
-        return message
+        rawMessage.text = rawText
+        return rawMessage
     end
 end
 
