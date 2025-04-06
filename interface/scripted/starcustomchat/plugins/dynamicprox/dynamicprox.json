@@ -1,21 +1,26 @@
 {
   "name": "Dynamic Prox Chat",
 
-  "modes": [{
-    "name": "Prox",
-    "has_tab": true,
-    "priority": 15,
-    "has_toggle": true
-  }],
+  "modes": [
+    {
+      "name": "Prox",
+      "has_tab": true,
+      "priority": 15,
+      "has_toggle": true
+    }
+  ],
 
   "baseConfigValues": {
     "modeColors": {
-      "Prox" : "CornFlowerBlue"
+      "Prox": "CornFlowerBlue"
     }
   },
 
   "parameters": {
-    "proxRadius": 200
+    "proxRadius": 200,
+    "proxActionRadius": 200,
+    "proxOocRadius": 400,
+    "proxTalkRadius": 50
   },
 
   "script": "/interface/scripted/starcustomchat/plugins/dynamicprox/proximity.lua"
