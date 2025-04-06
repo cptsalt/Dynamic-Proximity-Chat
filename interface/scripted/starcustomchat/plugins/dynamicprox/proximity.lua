@@ -210,6 +210,7 @@ local function splitStr(inputstr, sep) --replaced this with a less efficient lin
       arg = arg .. c
     end
   end
+  table.insert(t, arg)
   return t
 end
 
@@ -300,8 +301,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     if typoTable then
       typoTable[typo] = nil
       player.setProperty("typos", typoTable)
+      return 'Typo "' .. typo .. '" removed.'
+    else
+      return 'No typos found.'
     end
-    return 'Typo "' .. typo .. '" removed.'
   end)
 
   starcustomchat.utils.setMessageHandler("/newlangitem", function(_, _, data)
@@ -1248,6 +1251,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
               local iCount = 1
               local char
               local effProf = 64 * math.log(prof / 3 + 1, 10)
+              -- local effProf = 64 * math.log(prof / 5, 5) - 20 --attempt at tweaking value, low proficiency seems to bottom out too much
+              sb.logInfo("effProf is "..effProf)
               local uniqueIdBytes = wordBytes(
                 (xsb and isLocalPlayer(receiverEntityId)) and world.entityUniqueId(receiverEntityId)
                 or player.uniqueId()
