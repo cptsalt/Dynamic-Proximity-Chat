@@ -637,6 +637,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 end
 
                 local handleMessage = function(receiverEntityId, copiedMessage)
+                    local uncapRad = isGlobalChat
                     local message = copiedMessage or message
                     if xsb then
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
@@ -645,7 +646,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
                         end
                     end
-                    if message.contentIsText or world.entityExists(authorEntityId) then
+                    do
                         local authorPos, messageDistance, inSight = nil, math.huge, false
                         local playerPos = world.entityPosition(
                             world.entityExists(receiverEntityId) and receiverEntityId or player.id()
@@ -706,7 +707,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         local curMode = "action"
                         local prevMode = "action"
                         local prevDiffMode = "action"
-                        local maxRad = 0
+                        local maxRad = 0 -- Remove the maximum radius restriction from global messages.
                         local rawText = message.text
                         local debugTable = {} --this will eventually be smashed together to make filterText
                         local textTable = {} --this will eventually be smashed together to make filterText
@@ -994,6 +995,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 --maybe set up multiple radio ranges with multiple brackets? seems kind of pointless imo
                                 newMode(curMode)
                                 radioMode = true
+                                uncapRad = true
                                 parseDefault("{")
                             end,
                             ["}"] = function()
@@ -1001,6 +1003,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     parseDefault("}")
                                     parseDefault('"')
                                     newMode("action")
+                                elseif rawSub(cInd + 1, cInd + 1) == "}" then -- Check for an extra curly brace to ensure it's included in the radio chunk.
+                                    parseDefault("}")
+                                    parseDefault("}")
+                                    newMode(curMode)
                                 else
                                     parseDefault("}")
                                     newMode(curMode)
@@ -1358,28 +1364,40 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         local langBank = {} --populate with languages in inventory when you find them
                         local prevLang = getDefaultLang() --either the player's default language, or !!
 
-                        if maxRad ~= -1 and (messageDistance > maxRad and validSum == 0) then
+                        if not (uncapRad or maxRad == -1) and (messageDistance > maxRad and validSum == 0) then
                             message.text = ""
                         else
                             chunkType = nil
 
                             local prevChunk = ""
                             local repeatFlag = false
-                            table.insert(textTable, {
-                                text = "",
-                                radius = "0",
-                                type = "bad",
-                                langKey = ":(",
-                                valid = false,
-                                msgQuality = 0,
-                            })
+                            -- table.insert(textTable, {
+                            --     text = "",
+                            --     radius = "0",
+                            --     type = "bad",
+                            --     langKey = ":(",
+                            --     valid = false,
+                            --     msgQuality = 0,
+                            -- })
 
-                            for k, v in pairs(textTable) do
+                            for _, v in ipairs(textTable) do
                                 if v["hasLOS"] == false and chunkType == "action" then v["valid"] = false end
-                                if v["valid"] then hasValids = true end
+                                if v["valid"] and v["type"] ~= "lOOC" and v["type"] ~= "gOOC" and not v["isRadio"] then
+                                    hasValids = true
+                                end
                             end
-                            for k, v in pairs(textTable) do
-                                if v["radius"] == -1 or v["isRadio"] == true then v["valid"] = true end
+                            local numChunks = #textTable
+                            for k, v in ipairs(textTable) do
+                                local lastChunk = k == #numChunks
+
+                                if
+                                    v["radius"] == -1
+                                    or v["isRadio"] == true
+                                    or (v["type"] == "lOOC" and uncapRad)
+                                    or v["type"] == "gOOC"
+                                then
+                                    v["valid"] = true
+                                end
 
                                 chunkStr = v["text"]
                                 chunkType = v["type"]
@@ -1491,7 +1509,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 end
 
                                 --after check, this puts formatted chunks in
-                                if chunkType ~= "quote" and prevType == "quote" then
+                                if (chunkType ~= "quote" and prevType == "quote") or lastChunk then -- FezzedOne: Fixed bug where quote-only chat messages did not show up in chat.
                                     local checkCombo = quoteCombo:gsub("%[%w%w%]", "")
 
                                     if not checkCombo:match("[%w%d]") then
@@ -1507,7 +1525,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     tableStr = tableStr .. " " .. quoteCombo
                                     quoteCombo = ""
                                 end
-                                if chunkType ~= "sound" and prevType == "sound" then
+                                if (chunkType ~= "sound" and prevType == "sound") or lastChunk then -- FezzedOne: Ditto for sound-only messages.
                                     if soundCombo:match("[%w%d]") then
                                         soundCombo = "<" .. soundCombo .. ">"
                                         tableStr = tableStr .. " " .. soundCombo
@@ -1538,6 +1556,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             end
                             tableStr = cleanDoubleSpaces(tableStr) --removes double spaces, ignores colors
                             tableStr = tableStr:gsub(' "%s', ' "')
+                            tableStr = tableStr:gsub("}}{{", "...") --for multiple radios
+                            tableStr = tableStr:gsub("}}{", "...") --for multiple radios
+                            tableStr = tableStr:gsub("}{{", "...") --for multiple radios
                             tableStr = tableStr:gsub("}{", "...") --for multiple radios
                             tableStr = trim(tableStr)
 
