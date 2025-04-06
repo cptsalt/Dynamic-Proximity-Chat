@@ -563,6 +563,7 @@ end
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
+        local isGlobalChat = message.mode == "Broadcast"
         -- FezzedOne: Added a setting that allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
         if hasPrefix or (root.getConfiguration("DynamicProxChat::localChatIsProx") and message.mode == "Local") then
             message.mode = "Prox"
