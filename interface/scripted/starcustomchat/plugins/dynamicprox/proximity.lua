@@ -627,7 +627,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     end
                 end
                 local receiverEntityId = message.targetId or player.id()
-                local ownPlayers = world.ownPlayers()
+                local ownPlayers = {}
+                if xsb then
+                  ownPlayers = world.ownPlayers()
+                end
                 local isLocalPlayer = function(entityId)
                     if not xsb then return true end
                     for _, plr in ipairs(ownPlayers) do
