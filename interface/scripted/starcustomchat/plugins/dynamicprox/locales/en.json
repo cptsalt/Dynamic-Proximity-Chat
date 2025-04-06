@@ -7,6 +7,7 @@
   "commands.removetypo.desc": "Removes a typo from your list. {typo}",
   "commands.toggletypos.desc": "Toggles whether or not autocorrection happens",
   "commands.checktypo.desc": "Checks if autocorrection is on or off",
-  "commands.showtypos.desc": "Returns a list of your saved typos and corrections"
+  "commands.showtypos.desc": "Returns a list of your saved typos and corrections",
+  "commands.proxlocal.desc": "Sets whether received local chat will be handled as proximity chat. {on/off}",
+  "commands.sendlocal.desc": "Sets whether chat sent in the Proximity tab will be sent as local chat. {on/off}"
 }
-
