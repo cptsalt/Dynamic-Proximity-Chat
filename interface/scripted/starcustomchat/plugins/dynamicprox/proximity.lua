@@ -1512,7 +1512,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 end
 
                                 --after check, this puts formatted chunks in
-                                if chunkType ~= "quote" and prevType == "quote" then -- FezzedOne: Fixed bug where quote-only chat messages did not show up in chat.
+                                if chunkType ~= "quote" and prevType == "quote" then
                                     local checkCombo = quoteCombo:gsub("%[%w%w%]", "")
 
                                     if not checkCombo:match("[%w%d]") then
@@ -1522,13 +1522,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                             quoteCombo = ""
                                         end
                                         prevStr = quoteCombo
+                                    else
+                                        quoteCombo = '"' .. quoteCombo .. '"'
                                     end
-
-                                    quoteCombo = '"' .. quoteCombo .. '"'
                                     tableStr = tableStr .. " " .. quoteCombo
                                     quoteCombo = ""
                                 end
-                                if chunkType ~= "sound" and prevType == "sound" then -- FezzedOne: Ditto for sound-only messages.
+                                if chunkType ~= "sound" and prevType == "sound" then
                                     if soundCombo:match("[%w%d]") then
                                         soundCombo = "<" .. soundCombo .. ">"
                                         tableStr = tableStr .. " " .. soundCombo
