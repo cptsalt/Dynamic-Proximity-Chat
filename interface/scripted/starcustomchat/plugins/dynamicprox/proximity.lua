@@ -1594,7 +1594,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     local checkCombo = quoteCombo:gsub("%[%w%w%]", "")
 
                                     if not checkCombo:match("[%w%d]") then
-                                        if prevStr ~= "Says something." then
+                                        if prevStr ~= "Says something." and hasValids then
                                             quoteCombo = "Says something."
                                         else
                                             quoteCombo = ""
