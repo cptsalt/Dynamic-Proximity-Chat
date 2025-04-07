@@ -13,6 +13,18 @@ local function copy(obj, seen)
     return res
 end
 
+local function trim(s)
+    local l = 1
+    while string.sub(s, l, l) == " " do
+        l = l + 1
+    end
+    local r = #s
+    while string.sub(s, r, r) == " " do
+        r = r - 1
+    end
+    return string.sub(s, l, r)
+end
+
 dynamicprox = PluginClass:new({
     name = "dynamicprox",
 })
@@ -22,6 +34,9 @@ local AuthorIdPrefix = "^author="
 local DefaultLangPrefix = ",defLang="
 local TagSuffix = ",reset;"
 local AnnouncementPrefix = "^clear;!!^reset;"
+local randSource = sb.makeRandomSource()
+local DEBUG = false
+local DEBUG_PREFIX = "[DynamicProx::Debug] "
 
 -- FezzedOne: From FezzedTech.
 local function rollDice(die) -- From https://github.com/brianherbert/dice/, with modifications.
@@ -69,11 +84,12 @@ local function rollDice(die) -- From https://github.com/brianherbert/dice/, with
         end
 
         -- Make sure dice are properly random.
-        math.randomseed(math.floor(os.clock() * 100000000000))
+        --changed RNG to sb.makerandomsource to keep other rng features untouched
+        randSource:init(math.floor(os.clock() * 100000000000))
 
         local roll, total = 0, 0
         while roll < rolls do
-            total = total + math.random(1, sides)
+            total = total + randSource:randInt(1, sides)
             roll = roll + 1
         end
 
@@ -181,12 +197,29 @@ local function checktypo(toggle)
     return "Typo correction is " .. typoStatus
 end
 
-local function splitStr(inputstr, sep)
+local function splitStr(inputstr, sep) --replaced this with a less efficient linear search in order to be system agnostic
     if sep == nil then sep = "%s" end
+    local arg = ""
     local t = {}
-    for str in string.gmatch(inputstr, "([^" .. sep .. "]+)") do
-        table.insert(t, str)
+    local qFlag = false
+    for c in inputstr:gmatch(".") do
+        if c:match(sep) and not qFlag and #arg > 0 then
+            arg = trim(arg)
+            table.insert(t, arg)
+            arg = ""
+        elseif c == '"' then
+            if qFlag then
+                table.insert(t, arg)
+                qFlag = false
+                arg = ""
+            else
+                qFlag = true
+            end
+        else
+            arg = arg .. c
+        end
     end
+    table.insert(t, arg)
     return t
 end
 
@@ -203,6 +236,19 @@ end
 
 --this messagehandler function runs if the chat preview exists
 function dynamicprox:registerMessageHandlers(shared) --look at this function in irden chat's editchat thing
+    starcustomchat.utils.setMessageHandler("/proxdebug", function(_, _, data)
+        if string.lower(data) == "on" then
+            DEBUG = true
+            return "^green;ENABLED^reset; debug mode for Dynamic Proximity Chat"
+        elseif string.lower(data) == "off" then
+            DEBUG = false
+            return "^red;DISABLED^reset; debug mode for Dynamic Proximity Chat"
+        else
+            return "Debug mode for Dynamic Proximity Chat is "
+                .. (DEBUG and "^green;ENABLED" or "^red;DISABLED")
+                .. "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
+        end
+    end)
     starcustomchat.utils.setMessageHandler("/proxooc", function(_, _, data)
         if string.lower(data) == "on" then
             root.setConfiguration("DynamicProxChat::proximityOoc", true)
@@ -291,13 +337,16 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         if typoTable then
             typoTable[typo] = nil
             player.setProperty("typos", typoTable)
+            return 'Typo "' .. typo .. '" removed.'
+        else
+            return "No typos found."
         end
-        return 'Typo "' .. typo .. '" removed.'
     end)
 
     starcustomchat.utils.setMessageHandler("/newlangitem", function(_, _, data)
-        -- FezzedOne: Whitespace in language names is now supported.
-        local splitArgs = chat.parseArguments(data) -- splitStr(data, " ")
+        -- FezzedOne: Whitespace in language names is now supported (only on xStarbound).
+        -- Okay, Captain Salt, fair enough. I'll do it only on xSB because oSB and SE convert argument types implicitly.
+        local splitArgs = xsb and chat.parseArguments(data) or splitStr(data, " ")
         local langName, langKey, langLevel, isDefault, color =
             (splitArgs[1] or nil),
             (splitArgs[2] or nil),
@@ -584,15 +633,9 @@ end
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
-        local isAnnouncement = hasPrefix
-                and (message.text:sub(#DynamicProxPrefix + 1, #DynamicProxPrefix + #AnnouncementPrefix) == AnnouncementPrefix)
-            or (message.text:sub(1, #AnnouncementPrefix) == AnnouncementPrefix)
         local isGlobalChat = message.mode == "Broadcast"
         -- FezzedOne: Added a setting that allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
-        if
-            (hasPrefix or (root.getConfiguration("DynamicProxChat::localChatIsProx") and message.mode == "Local"))
-            and not isAnnouncement
-        then
+        if hasPrefix or (root.getConfiguration("DynamicProxChat::localChatIsProx") and message.mode == "Local") then
             message.mode = "Prox"
             if hasPrefix and not message.processed then message.text = message.text:sub(#DynamicProxPrefix + 1, -1) end
             message.contentIsText = true
@@ -654,7 +697,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     end
                 end
                 local receiverEntityId = message.targetId or player.id()
-                local ownPlayers = world.ownPlayers()
+                local ownPlayers = {}
+                if xsb then ownPlayers = world.ownPlayers() end
                 local isLocalPlayer = function(entityId)
                     if not xsb then return true end
                     for _, plr in ipairs(ownPlayers) do
@@ -695,7 +739,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         --   sb.logInfo("pos1 "..pos1.." pos2 "..pos2)
                         --   sb.logInfo("distance is " .. world.magnitude(pos1, pos2))
                         -- end
-                        local randSource = sb.makeRandomSource()
 
                         local actionRad = self.proxActionRadius -- FezzedOne: Un-hardcoded the action radius.
                         local loocRad = self.proxOocRadius -- actionRad * 2 -- FezzedOne: Un-hardcoded the local OOC radius.
@@ -985,6 +1028,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     local oocBump = 0
                                     local oocType
                                     local oocRad
+                                    if root.getConfiguration("DynamicProxChat::proximityOoc") then uncapRad = true end
                                     if rawSub(cInd + 2, cInd + 2) == "(" then
                                         --global ooc
                                         _, oocEnd = rawText:find("%)%)%)+", cInd) --the + catches extra parentheses in case someone adds more than 3
@@ -997,9 +1041,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         oocBump = 1
                                         oocType = "lOOC"
                                         oocRad = actionRad * 2
-                                        if root.getConfiguration("DynamicProxChat::proximityOoc") then
-                                            uncapRad = true
-                                        end
                                     end
 
                                     if oocEnd ~= nil then
@@ -1106,18 +1147,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             end
                         end
                         newMode(curMode) --makes sure nothing is left out
-
-                        local function trim(s)
-                            local l = 1
-                            while string.sub(s, l, l) == " " do
-                                l = l + 1
-                            end
-                            local r = #s
-                            while string.sub(s, r, r) == " " do
-                                r = r - 1
-                            end
-                            return string.sub(s, l, r)
-                        end
 
                         local function degradeMessage(str, quality)
                             local returnStr = ""
@@ -1248,6 +1277,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             local iCount = 1
                             local char
                             local effProf = 64 * math.log(prof / 3 + 1, 10)
+                            -- local effProf = 64 * math.log(prof / 5, 5) - 20 --attempt at tweaking value, low proficiency seems to bottom out too much
+                            if DEBUG then sb.logInfo(DEBUG_PREFIX .. "effProf is " .. effProf) end
                             local uniqueIdBytes = wordBytes(
                                 (xsb and isLocalPlayer(receiverEntityId)) and world.entityUniqueId(receiverEntityId)
                                     or player.uniqueId()
@@ -1256,8 +1287,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             if langColor == nil then
                                 local hexDigits =
                                     { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
-                                local randSource = sb.makeRandomSource()
-                                local hexMin = 1
+                                -- local randSource = sb.makeRandomSource()
+                                local hexMin = 3
 
                                 --not sure if there's an cleaner way to do this
                                 randSource:init(math.tointeger(byteLC + wordBytes("Red One")))
@@ -1273,6 +1304,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 randSource:init(math.tointeger(byteLC + wordBytes("Blue Six")))
                                 local rNumB2 = hexDigits[randSource:randInt(hexMin, 16)]
                                 langColor = "#" .. rNumR .. rNumG .. rNumB .. rNumR2 .. rNumG2 .. rNumB2
+                                if DEBUG then
+                                    sb.logInfo(DEBUG_PREFIX .. "langColor for " .. langCode .. " is " .. langColor)
+                                end
                             end
 
                             while iCount <= #str do
