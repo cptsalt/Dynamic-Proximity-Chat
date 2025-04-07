@@ -874,7 +874,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                             noPathVol = volTable[useRad] - 2 --set the volume to 1 (maybe 2 later on) level lower
                                         else --if the path isn't found
                                             if wallThickness <= 4 then
-                                                noPathVol = volTable[useRad] - (wallThickness == 1 and 2 or 3)
+                                                noPathVol = volTable[useRad] - (wallThickness <= 1 and 2 or 3)
                                             else
                                                 noPathVol = volTable[useRad] - 4 --set the volume to 4 levels lower
                                             end
