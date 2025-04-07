@@ -20,7 +20,7 @@
     "proxRadius": 200,
     "proxActionRadius": 200,
     "proxOocRadius": 400,
-    "proxTalkRadius": 50
+    "proxTalkRadius": 30
   },
 
   "script": "/interface/scripted/starcustomchat/plugins/dynamicprox/proximity.lua"
