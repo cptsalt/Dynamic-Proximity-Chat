@@ -741,16 +741,21 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             inSight = not world.lineTileCollision(authorPos, playerPos, { "Block", "Dynamic" }) --not doing dynamic, i think that's only for open doors
                         end
 
-                        -- this is for later, testing to see if i can calculate how many tiles are between a sender and receiver
-                        -- local testCol = world.lineTileCollisionPoint(authorPos, playerPos, { "Block", "Dynamic" })
-                        -- sb.logWarn("messageDistance is " .. messageDistance)
-                        -- if testCol ~= nil then
-                        --   sb.logInfo("testCol is " .. dump(testCol))
-                        --   local pos1 = testCol[1][1]
-                        --   local pos2 = testCol[1][2]
-                        --   sb.logInfo("pos1 "..pos1.." pos2 "..pos2)
-                        --   sb.logInfo("distance is " .. world.magnitude(pos1, pos2))
-                        -- end
+                        -- FezzedOne: Dynamic collision thickness calculation.
+                        local collision = inSight
+                                and world.lineTileCollisionPoint(authorPos, playerPos, { "Block", "Dynamic" })
+                            or nil
+                        local wallThickness = 0
+                        if collision then
+                            wallThickness = math.floor(math.sqrt(world.magnitude(collision[1], collision[2])))
+                        end
+                        if DEBUG then
+                            sb.logInfo(
+                                DEBUG_PREFIX .. "Wall thickness is %s %s.",
+                                tostring(wallThickness),
+                                wallThickness == 1 and "tile" or "tiles"
+                            )
+                        end
 
                         local actionRad = self.proxActionRadius -- FezzedOne: Un-hardcoded the action radius.
                         local loocRad = self.proxOocRadius -- actionRad * 2 -- FezzedOne: Un-hardcoded the local OOC radius.
@@ -851,16 +856,20 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     --check for path
                                     local noPathVol
                                     if authorPos then
-                                        if
-                                            world.findPlatformerPath(
-                                                authorPos,
-                                                playerPos,
-                                                root.monsterMovementSettings("smallflying")
-                                            )
-                                        then --if path is found
-                                            noPathVol = volTable[useRad] - 1 --set the volume to 1 (maybe 2 later on) level lower
-                                        else --if the path isn't found
-                                            noPathVol = volTable[useRad] - 4 --set the volume to 4 levels lower
+                                        if wallThickness <= 4 then
+                                            noPathVol = volTable[useRad] - (wallThickness == 1 and 1 or 2)
+                                        else
+                                            if
+                                                world.findPlatformerPath(
+                                                    authorPos,
+                                                    playerPos,
+                                                    root.monsterMovementSettings("smallflying")
+                                                )
+                                            then --if path is found
+                                                noPathVol = volTable[useRad] - 2 --set the volume to 1 (maybe 2 later on) level lower
+                                            else --if the path isn't found
+                                                noPathVol = volTable[useRad] - 4 --set the volume to 4 levels lower
+                                            end
                                         end
                                     else
                                         noPathVol = -4
