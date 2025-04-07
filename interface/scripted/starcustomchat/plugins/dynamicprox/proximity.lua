@@ -742,12 +742,18 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         end
 
                         -- FezzedOne: Dynamic collision thickness calculation.
-                        local collision = inSight
+                        local collisionA = inSight
                                 and world.lineTileCollisionPoint(authorPos, playerPos, { "Block", "Dynamic" })
                             or nil
                         local wallThickness = 0
-                        if collision then
-                            wallThickness = math.floor(math.sqrt(world.magnitude(collision[1], collision[2])))
+                        if collisionA then
+                            -- FezzedOne: To find wall thickness, run collision checks in opposite directions.
+                            local collisionB = world.lineTileCollisionPoint(
+                                playerPos,
+                                authorPos,
+                                { "Block", "Dynamic" }
+                            ) or { collisionA[1] }
+                            wallThickness = math.floor(math.sqrt(world.magnitude(collisionA[1], collisionB[1])))
                         end
                         if DEBUG then
                             sb.logInfo(
