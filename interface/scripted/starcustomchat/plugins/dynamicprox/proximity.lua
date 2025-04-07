@@ -736,7 +736,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         )
                         if authorRendered then
                             authorPos = world.entityPosition(authorEntityId)
-                            messageDistance = world.magnitude(playerPos, authorPos)
+                            messageDistance = math.sqrt(world.magnitude(playerPos, authorPos))
                             -- messageDistance = 30
                             inSight = not world.lineTileCollision(authorPos, playerPos, { "Block", "Dynamic" }) --not doing dynamic, i think that's only for open doors
                         end
