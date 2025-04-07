@@ -742,7 +742,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         end
 
                         -- FezzedOne: Dynamic collision thickness calculation.
-                        local collisionA = inSight
+                        local collisionA = not inSight
                                 and world.lineTileCollisionPoint(authorPos, playerPos, { "Block", "Dynamic" })
                             or nil
                         local wallThickness = 0
