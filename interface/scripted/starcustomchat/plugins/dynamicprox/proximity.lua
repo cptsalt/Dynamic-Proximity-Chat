@@ -584,7 +584,7 @@ function dynamicprox:onSendMessage(data)
                     .. TagSuffix
 
                 if root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
-                    chat.send(DynamicProxPrefix .. chatTags .. data.content, "Local", false)
+                    chat.send(DynamicProxPrefix .. chatTags .. data.content, "Local", not not xsb)
                 else
                     for _, pl in ipairs(players) do
                         if xsb then data.sourceId = world.primaryPlayer() end
@@ -602,7 +602,7 @@ function dynamicprox:onSendMessage(data)
                     globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
                     globalMsg = DynamicProxPrefix .. chatTags .. globalMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalMsg, "Broadcast", false)
+                    chat.send(globalMsg, "Broadcast", true)
                 end
                 if #globalOocStrings ~= 0 then
                     local globalOocMsg = ""
@@ -614,7 +614,7 @@ function dynamicprox:onSendMessage(data)
                     globalOocMsg = globalOocMsg:gsub("[ ]+", " ")
                     globalOocMsg = DynamicProxPrefix .. globalOocMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalOocMsg, "Broadcast", false)
+                    chat.send(globalOocMsg, "Broadcast", true)
                 end
                 return true
             end
