@@ -942,6 +942,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     local oocRad
                                     --local ooc
                                     local _, oocEnd = rawText:find(">>+", cInd)
+                                    if not oocEnd then
+                                        local _, oocEnd2 = rawText:find(">", cInd)
+                                        oocEnd = oocEnd2
+                                    end
                                     oocEnd = oocEnd or 0
                                     oocBump = 1
                                     oocType = "pOOC"
