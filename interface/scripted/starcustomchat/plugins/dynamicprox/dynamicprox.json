@@ -19,7 +19,7 @@
   "parameters": {
     "proxRadius": 200,
     "proxActionRadius": 200,
-    "proxOocRadius": 400,
+    "proxOocRadius": 200,
     "proxTalkRadius": 30
   },
 

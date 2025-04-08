@@ -737,7 +737,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         )
                         if authorRendered then
                             authorPos = world.entityPosition(authorEntityId)
-                            messageDistance = math.sqrt(world.magnitude(playerPos, authorPos))
+                            messageDistance = world.magnitude(playerPos, authorPos)
                             -- messageDistance = 30
                             inSight = not world.lineTileCollision(authorPos, playerPos, { "Block", "Dynamic" }) --not doing dynamic, i think that's only for open doors
                         end
@@ -756,7 +756,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 authorPos,
                                 { "Block", "Dynamic" }
                             ) or { collisionA[1] }
-                            wallThickness = math.floor(math.sqrt(world.magnitude(collisionA[1], collisionB[1])))
+                            wallThickness = math.floor(world.magnitude(collisionA[1], collisionB[1]))
                         end
                         if DEBUG then
                             sb.logInfo(
