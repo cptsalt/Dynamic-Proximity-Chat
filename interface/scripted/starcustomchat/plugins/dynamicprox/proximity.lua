@@ -25,18 +25,6 @@ local function trim(s)
     return string.sub(s, l, r)
 end
 
-local function trim(s)
-    local l = 1
-    while string.sub(s, l, l) == " " do
-        l = l + 1
-    end
-    local r = #s
-    while string.sub(s, r, r) == " " do
-        r = r - 1
-    end
-    return string.sub(s, l, r)
-end
-
 dynamicprox = PluginClass:new({
     name = "dynamicprox",
 })
