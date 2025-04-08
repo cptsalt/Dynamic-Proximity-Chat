@@ -264,13 +264,13 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     starcustomchat.utils.setMessageHandler("/proxooc", function(_, _, data)
         if string.lower(data) == "on" then
             root.setConfiguration("DynamicProxChat::proximityOoc", true)
-            return "^green;ENABLED^reset; proximity OOC chat"
+            return "^green;ENABLED^reset; handling (( )) as range-limited OOC chat"
         elseif string.lower(data) == "off" then
             root.setConfiguration("DynamicProxChat::proximityOoc", false)
-            return "^red;DISABLED^reset; proximity OOC chat"
+            return "^red;DISABLED^reset; handling (( )) as range-limited OOC chat"
         else
             local enabled = root.getConfiguration("DynamicProxChat::proximityOoc") or false
-            return "Proximity OOC chat is "
+            return "Handling (( )) as range-limited OOC chat is "
                 .. (enabled and "^green;ENABLED" or "^red;DISABLED")
                 .. "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
         end
@@ -935,12 +935,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 end
                             end,
                             ["<"] = function() --i could combine these two, but i don't want to
-                                if curMode ~= "sound" and curMode ~= "quote" then --added quotes here so people can do the cool combine vocoder thing <::Pick up that can.::>
-                                    newMode("sound")
-                                end
-                                parseDefault("")
-                            end,
-                            [">"] = function()
                                 local nextChar = rawSub(cInd + 1, cInd + 1)
                                 if nextChar == "<" then
                                     local oocBump = 0
@@ -965,9 +959,15 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                                     cInd = oocEnd + 1
                                 else
-                                    parseDefault("")
-                                    if curMode == "sound" then newMode(prevDiffMode) end
+                                    if curMode ~= "sound" and curMode ~= "quote" then --added quotes here so people can do the cool combine vocoder thing <::Pick up that can.::>
+                                        newMode("sound")
+                                    end
                                 end
+                                parseDefault("")
+                            end,
+                            [">"] = function()
+                                parseDefault("")
+                                if curMode == "sound" then newMode(prevDiffMode) end
                             end,
                             [":"] = function()
                                 local nextChar = rawSub(cInd + 1, cInd + 1)
