@@ -465,8 +465,8 @@ function dynamicprox:onSendMessage(data)
             end)
 
             local globalStrings = {}
-            -- FezzedOne: Global actions and radio. Does not support IC language tags.
-            data.text = data.text:gsub("\\<<", "<^;<"):gsub("\\{{", "{^;{"):gsub("[{<][{<](.-)[}>][}>]", function(s)
+            -- FezzedOne: Global actions and radio. Supports IC language tags now.
+            data.text = data.text:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
                 table.insert(globalStrings, s)
                 return ""
             end)
@@ -721,6 +721,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                 local handleMessage = function(receiverEntityId, copiedMessage)
                     local uncapRad = isGlobalChat
+                    local wasGlobal = isGlobalChat
                     local message = copiedMessage or message
                     if xsb then
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
@@ -816,6 +817,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             action = function() return actionRad end,
                             quote = function() return tVolRad end,
                             sound = function() return sVolRad end,
+                            pOOC = function() return loocRad end,
                             lOOC = function() return loocRad end,
                             gOOC = function() return -1 end,
                         }
@@ -939,8 +941,33 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 parseDefault("")
                             end,
                             [">"] = function()
-                                parseDefault("")
-                                if curMode == "sound" then newMode(prevDiffMode) end
+                                local nextChar = rawSub(cInd + 1, cInd + 1)
+                                if nextChar == "<" then
+                                    local oocBump = 0
+                                    local oocType
+                                    local oocRad
+                                    --local ooc
+                                    local _, oocEnd = rawText:find(">>+", cInd)
+                                    oocEnd = oocEnd or 0
+                                    oocBump = 1
+                                    oocType = "pOOC"
+                                    oocRad = actionRad * 2
+
+                                    if oocEnd ~= nil then
+                                        newMode(oocType)
+                                        charBuffer = charBuffer .. rawSub(cInd, oocEnd)
+                                        newMode(prevMode)
+                                    else
+                                        charBuffer = charBuffer .. rawSub(cInd, cInd + oocBump)
+                                        cInd = cInd + oocBump
+                                        oocEnd = cInd
+                                    end
+
+                                    cInd = oocEnd + 1
+                                else
+                                    parseDefault("")
+                                    if curMode == "sound" then newMode(prevDiffMode) end
+                                end
                             end,
                             [":"] = function()
                                 local nextChar = rawSub(cInd + 1, cInd + 1)
@@ -974,7 +1001,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                                     local doVolume = "none"
                                     --in these modes, ignore the volume controls
-                                    if curMode == "radio" or curMode == "gOOC" or curMode == "lOOC" then
+                                    if
+                                        curMode == "radio"
+                                        or curMode == "gOOC"
+                                        or curMode == "lOOC"
+                                        or curMode == "pOOC"
+                                    then
                                         cInd = nCEnd + 1
                                     elseif curMode == "action" then
                                         local nextInd = rawText:find('["<]', cInd)
@@ -1480,7 +1512,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                             for _, v in ipairs(textTable) do
                                 if v["hasLOS"] == false and chunkType == "action" then v["valid"] = false end
-                                if v["valid"] and v["type"] ~= "lOOC" and v["type"] ~= "gOOC" and not v["isRadio"] then
+                                if
+                                    v["valid"]
+                                    and v["type"] ~= "pOOC"
+                                    and v["type"] ~= "lOOC"
+                                    and v["type"] ~= "gOOC"
+                                    and not v["isRadio"]
+                                then
                                     hasValids = true
                                 end
                             end
@@ -1491,6 +1529,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 if
                                     v["radius"] == -1
                                     or v["isRadio"] == true
+                                    or (v["type"] == "pOOC" and wasGlobal)
                                     or (v["type"] == "lOOC" and uncapRad)
                                     or v["type"] == "gOOC"
                                 then
