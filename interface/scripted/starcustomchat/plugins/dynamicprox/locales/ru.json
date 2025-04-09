@@ -11,5 +11,6 @@
   "commands.showtypos.desc": "Returns a list of your saved typos and corrections",
   "commands.proxlocal.desc": "Sets whether received local chat will be handled as Dynamic chat. {on/off}",
   "commands.sendlocal.desc": "Sets whether chat sent in the Dynamic tab will be sent as local chat. {on/off}",
-  "commands.proxooc.desc": "Sets whether double-parentheses OOC chat - (( )) - received as Dynamic chat will be proximity-limited. {on/off}"
+  "commands.proxooc.desc": "Sets whether double-parentheses OOC chat - (( )) - received as Dynamic chat will be proximity-limited. {on/off}",
+  "commands.dynamicsccrp.desc": "Sets whether SCCRP proximity messages will be handled as dynamic proximity chat"
 }

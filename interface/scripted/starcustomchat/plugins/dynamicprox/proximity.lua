@@ -25,6 +25,14 @@ local function trim(s)
     return string.sub(s, l, r)
 end
 
+local function sccrpInstalled()
+    if root.assetExists then
+        return root.assetExists("/interface/scripted/starcustomchat/plugins/proximitychat/proximity.lua")
+    else
+        return not not root.assetOrigin("/interface/scripted/starcustomchat/plugins/proximitychat/proximity.lua")
+    end
+end
+
 dynamicprox = PluginClass:new({
     name = "dynamicprox",
 })
@@ -165,6 +173,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.sendlocal.desc",
             data = "/sendlocal",
         })
+    elseif string.find("/dynamicsccrp", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/dynamicsccrp",
+            description = "commands.dynamicsccrp.desc",
+            data = "/dynamicsccrp",
+        })
     elseif string.find("/proxooc", substr, nil, true) then
         table.insert(availableCommands, {
             name = "/proxooc",
@@ -246,6 +260,20 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         else
             return "Debug mode for Dynamic Proximity Chat is "
                 .. (DEBUG and "^green;ENABLED" or "^red;DISABLED")
+                .. "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/dynamicsccrp", function(_, _, data)
+        if string.lower(data) == "on" then
+            root.setConfiguration("DynamicProxChat::handleSccrpProx", true)
+            return "^green;ENABLED^reset; handling SCCRP Proximity messages as dynamic proximity chat"
+        elseif string.lower(data) == "off" then
+            root.setConfiguration("DynamicProxChat::handleSccrpProx", false)
+            return "^red;DISABLED^reset; handling SCCRP Proximity messages as dynamic proximity chat"
+        else
+            local enabled = root.getConfiguration("DynamicProxChat::handleSccrpProx") or false
+            return "Handling SCCRP Proximity messages as dynamic proximity chat is "
+                .. (enabled and "^green;ENABLED" or "^red;DISABLED")
                 .. "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
         end
     end)
@@ -576,7 +604,8 @@ function dynamicprox:onSendMessage(data)
                 else
                     for _, pl in ipairs(players) do
                         if xsb then data.sourceId = world.primaryPlayer() end
-                        data.targetId = pl -- Add the target player ID so we can filter received messages by target player on the other end on xStarbound clients.
+                        data.targetId = pl -- FezzedOne: Used to distinguish DPC messages from SCCRP messages *and* for filtering messages as seen by secondaries on xStarbound clients.
+                        data.mode = "Proximity"
                         world.sendEntityMessage(pl, "scc_add_message", data)
                     end
                 end
@@ -590,7 +619,7 @@ function dynamicprox:onSendMessage(data)
                     globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
                     globalMsg = DynamicProxPrefix .. chatTags .. globalMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalMsg, "Broadcast", true)
+                    chat.send(globalMsg, "Broadcast", not not xsb)
                 end
                 if #globalOocStrings ~= 0 then
                     local globalOocMsg = ""
@@ -602,7 +631,7 @@ function dynamicprox:onSendMessage(data)
                     globalOocMsg = globalOocMsg:gsub("[ ]+", " ")
                     globalOocMsg = DynamicProxPrefix .. globalOocMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalOocMsg, "Broadcast", true)
+                    chat.send(globalOocMsg, "Broadcast", not not xsb)
                 end
                 return true
             end
@@ -633,14 +662,35 @@ end
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
+        local dateTime = os.date("*t", os.time())
+        local hour = tostring(dateTime.hour)
+        if #hour == 1 then hour = "0" .. hour end
+        local minute = tostring(dateTime.min)
+        if #minute == 1 then minute = "0" .. minute end
+        message.time = hour .. ":" .. minute
         local isGlobalChat = message.mode == "Broadcast"
-        -- FezzedOne: Added a setting that allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
-        if hasPrefix or (root.getConfiguration("DynamicProxChat::localChatIsProx") and message.mode == "Local") then
-            message.mode = "Prox"
+        -- FezzedOne: Handle SCCRP Proximity messages if 1) SCCRP isn't installed or 2) it's explicitly enabled via a toggle and SCCRP is installed.
+        local skipHandling = false
+        local isSccrpMessage = message.mode == "Proximity" and not message.targetId
+        local showAsProximity = (sccrpInstalled() and isSccrpMessage)
+        local showAsLocal = message.mode == "Local"
+        if not root.getConfiguration("DynamicProxChat::handleSccrpProx") then skipHandling = showAsProximity end
+
+        -- FezzedOne: This setting allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
+        if
+            hasPrefix
+            or (
+                root.getConfiguration("DynamicProxChat::localChatIsProx")
+                and (message.mode == "Local" or message.isSccrp or isSccrpMessage)
+            )
+        then
+            message.mode = "Proximity"
             if hasPrefix and not message.processed then message.text = message.text:sub(#DynamicProxPrefix + 1, -1) end
             message.contentIsText = true
         end
-        if message.mode == "Prox" and not message.processed then
+        if message.mode == "Proximity" and not skipHandling and not message.processed then
+            message.isSccrp = isSccrpMessage or nil
+            message.mode = "Prox"
             if not message.contentIsText then message.text = message.content end
             message.content = ""
 
@@ -682,12 +732,18 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     message.text = message.text:sub(i, -1)
                 end
                 -- FezzedOne: Allows OpenStarbound and StarExtensions clients to correctly display received messages from xStarbound clients.
-                authorEntityId = authorEntityId or message.sourceId or (message.connection * -65536)
+                local basePlayerId = message.connection * -65536
+                authorEntityId = authorEntityId or message.sourceId or basePlayerId
                 local authorRendered = world.entityExists(authorEntityId)
                 -- FezzedOne: If the author ID has to be guessed from the connection ID and it's *not* the first ID, that means the author is using xStarbound,
                 -- so look for the first rendered player belonging to the author's client. Kinda kludgy, but this is what we have to do for xStarbound clients
                 -- that don't send the required information because they don't have this mod!
-                if not (authorRendered or hasAuthorPrefix or message.sourceId) then
+                if
+                    (message.isSccrp and not authorRendered)
+                    or not (authorRendered or hasAuthorPrefix or message.sourceId)
+                then
+                    -- FezzedOne: Workaround for an SCC bug in connection ID calculation that only shows up in messages sent from xStarbound clients after swapping players.
+                    if message.isSccrp then message.connection = message.connection + 1 end
                     for i = (message.connection * -65536 + 1), (message.connection * -65536 + 255), 1 do
                         if world.entityExists(i) and world.entityType(i) == "player" then
                             authorEntityId = i
@@ -1703,19 +1759,37 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     end
                 end
 
+                -- FezzedOne: If both SCCRP and Dynamic Proximity Chat are installed, always show SCCRP Proximity messages as such, even if handled by DPC.
+                if message.isSccrp then message.mode = "Proximity" end
+                -- FezzedOne: Show Local and Broadcast messages as such, even if formatted by DPC.
+                if showAsLocal then message.mode = "Local" end
+                if isGlobalChat then message.mode = "Broadcast" end
+
                 if xsb and message.contentIsText then
-                    for _, pId in ipairs(ownPlayers) do
-                        handleMessage(pId, copy(message))
+                    if message.isSccrp then
+                        handleMessage(receiverEntityId)
+                    else
+                        for _, pId in ipairs(ownPlayers) do
+                            handleMessage(pId, copy(message))
+                        end
+                        message.text = ""
                     end
-                    message.text = ""
                 elseif message.contentIsText then
-                    handleMessage(receiverEntityId, copy(message))
-                    message.text = ""
+                    if message.isSccrp then
+                        handleMessage(receiverEntityId)
+                    else
+                        handleMessage(receiverEntityId, copy(message))
+                        message.text = ""
+                    end
                 else
                     handleMessage(receiverEntityId)
                 end
             end
         end
+
+        if showAsProximity then message.mode = "Proximity" end
+        if showAsLocal then message.mode = "Local" end
+        if isGlobalChat then message.mode = "Broadcast" end
 
         return message
     end
