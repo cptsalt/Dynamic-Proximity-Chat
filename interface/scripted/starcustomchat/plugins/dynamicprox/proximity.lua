@@ -663,7 +663,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
         local dateTime = os.date("*t", os.time())
-        message.time = tostring(dateTime.hour) .. ":" .. tostring(dateTime.min)
+        local hour = tostring(dateTime.hour)
+        if #hour == 1 then hour = "0" .. hour end
+        local minute = tostring(dateTime.min)
+        if #minute == 1 then minute = "0" .. minute end
+        message.time = hour .. ":" .. minute
         local isGlobalChat = message.mode == "Broadcast"
         -- FezzedOne: Handle SCCRP Proximity messages if 1) SCCRP isn't installed or 2) it's explicitly enabled via a toggle and SCCRP is installed.
         local skipHandling = false
