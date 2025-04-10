@@ -829,7 +829,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     if xsb and not message.isSccrp then -- FezzedOne: Already handled in SCCRP with my PR.
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
                             if world.entityExists(receiverEntityId) then
-                                local receiverName = world.entityName(receiverEntityId)
+                                local receiverName = world.entityName(receiverEntityId) or "<n/a>"
                                 if #ownPlayers ~= 1 then
                                     message.nickname = message.nickname .. " -> " .. receiverName
                                 end
