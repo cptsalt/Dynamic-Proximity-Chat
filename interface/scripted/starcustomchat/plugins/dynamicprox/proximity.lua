@@ -745,6 +745,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         end
         if message.mode == "Proximity" and not skipHandling and not message.processed then
             message.isSccrp = isSccrpMessage or nil
+            message.contentIsText = isSccrpMessage or message.contentIsText
             -- FezzedOne: These are from my SCCRP PR. Ensures that SCCRP messages from and to xStarbound clients are always correctly handled.
             if message.isSccrp then
                 message.sourceId = message.senderId
@@ -825,7 +826,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     local uncapRad = isGlobalChat
                     local wasGlobal = isGlobalChat
                     local message = copiedMessage or message
-                    if xsb then
+                    if xsb and not message.isSccrp then -- FezzedOne: Already handled in SCCRP with my PR.
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
                             if world.entityExists(receiverEntityId) then
                                 local receiverName = world.entityName(receiverEntityId)
