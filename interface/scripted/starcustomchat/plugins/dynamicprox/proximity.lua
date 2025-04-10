@@ -800,7 +800,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 -- so look for the first rendered player belonging to the author's client. Kinda kludgy, but this is what we have to do for xStarbound clients
                 -- that don't send the required information because they don't have this mod or SCCRP!
                 if not (authorRendered or hasAuthorPrefix or message.sourceId) then
-                    for i = (message.connection * -65536 + 1), (message.connection * -65536 + 255), 1 do
+                    for i = (message.connection * -65536 + 1), (message.connection * -65536 + 65535), 1 do
                         if world.entityExists(i) and world.entityType(i) == "player" then
                             authorEntityId = i
                             authorRendered = true
