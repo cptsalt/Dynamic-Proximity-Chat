@@ -827,9 +827,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     local message = copiedMessage or message
                     if xsb then
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
-                            local receiverName = world.entityName(receiverEntityId)
-                            if #ownPlayers ~= 1 then message.nickname = message.nickname .. " -> " .. receiverName end
-                            if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
+                            if world.entityExists(receiverEntityId) then
+                                local receiverName = world.entityName(receiverEntityId)
+                                if #ownPlayers ~= 1 then
+                                    message.nickname = message.nickname .. " -> " .. receiverName
+                                end
+                                if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
+                            end
                         end
                     end
                     do
