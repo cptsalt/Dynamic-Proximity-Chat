@@ -811,6 +811,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 local receiverEntityId = message.targetId or player.id()
                 -- FezzedOne: DPC-side part of fix for SCCRP portraits in dynamically handled messages.
                 message.senderId = authorEntityId
+                message.sourceId = authorEntityId
                 message.receiverId = receiverEntityId
                 local ownPlayers = {}
                 if xsb then ownPlayers = world.ownPlayers() end
@@ -1875,7 +1876,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 end
 
 function dynamicprox:onReceiveMessage(message) --here for logging the message you receive, just in case you wanted to save it or something
-    if message.connection ~= 0 and (message.mode == "Prox" or message.mode == "ProxSecondary") then
+    if message.connection ~= 0 and (message.sourceId or message.mode == "Prox" or message.mode == "ProxSecondary") then
         sb.logInfo("Chat: <%s> %s", message.nickname:gsub("%^[^^;]-;", ""), message.text:gsub("%^[^^;]-;", ""))
     end
 end
