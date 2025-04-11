@@ -626,22 +626,6 @@ function dynamicprox:onSendMessage(data)
                     boundMode = "position",
                 })
 
-                -- if xsb then -- FezzedOne: On xStarbound, filter out local secondaries to avoid showing duplicate sent messages.
-                --     local localPlayers = world.ownPlayers()
-                --     local primaryPlayer = world.primaryPlayer()
-                --     for i = #localPlayers, 1, -1 do
-                --         if localPlayers[i] == primaryPlayer then
-                --             table.remove(localPlayers, i)
-                --             break
-                --         end
-                --     end
-                --     for i = #players, 1, -1 do
-                --         for j = 1, #localPlayers, 1 do
-                --             if players[i] == localPlayers[j] then table.remove(players, i) end
-                --         end
-                --     end
-                -- end
-
                 -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
                 -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
                 local chatTags = AuthorIdPrefix
@@ -729,7 +713,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         local isSccrpMessage = message.mode == "Proximity" and not message.targetId
         local showAsProximity = (sccrpInstalled() and isSccrpMessage)
         local showAsLocal = message.mode == "Local"
-        if not root.getConfiguration("DynamicProxChat::handleSccrpProx") then skipHandling = showAsProximity end
+        -- Fezzedone: Whoops. Forgot to actually handle (or rather, not handle) SCCRP announcement messages.
+        if message.text:sub(1, #AnnouncementPrefix) == AnnouncementPrefix then skipHandling = true end
+        if not root.getConfiguration("DynamicProxChat::handleSccrpProx") then
+            skipHandling = skipHandling or showAsProximity
+        end
 
         -- FezzedOne: This setting allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
         if
