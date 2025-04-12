@@ -191,6 +191,30 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.timezone.desc",
             data = "/timezone",
         })
+    elseif string.find("/commcode", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/commcode",
+            description = "commands.commcode.desc",
+            data = "/commcode",
+        })
+    elseif string.find("/commcodes", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/commcodes",
+            description = "commands.commcodes.desc",
+            data = "/commcodes",
+        })
+    elseif string.find("/addcommcode", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/addcommcode",
+            description = "commands.addcommcode.desc",
+            data = "/addcommcode",
+        })
+    elseif string.find("/removecommcode", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/removecommcode",
+            description = "commands.removecommcode.desc",
+            data = "/removecommcode",
+        })
     end
 end
 
@@ -480,6 +504,169 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         player.giveItem(itemData)
         return "Language " .. langName .. " added, use [" .. langKey .. "] to use it."
     end)
+    starcustomchat.utils.setMessageHandler("/commcodes", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+
+            local returnString = "Listening on comm codes:"
+            local numCodes = 0
+            for code, alias in pairs(playerCommCodes) do
+                local codeStr
+                if alias then
+                    codeStr = "[" .. alias .. "]" .. " -> [" .. code .. "]"
+                else
+                    codeStr = "[" .. code .. "]"
+                end
+                returnString = returnString .. "\n" .. codeStr
+                numCodes = numCodes + 1
+            end
+            if numCodes == 0 then
+                return "Not listening on any comm codes"
+            else
+                return returnString
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/commcode", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+            local newDefault = splitArgs[1] or nil
+            if newDefault == "" or not newDefault then
+                local currentDefault = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+                local alias = playerCommCodes[currentDefault]
+                if currentDefault == false then currentDefault = "-" end
+                if alias then
+                    return "Default comm code is [" .. tostring(currentDefault) .. "] (alias [" .. alias .. "])"
+                else
+                    return "Default comm code is [" .. tostring(currentDefault) .. "] (no alias)"
+                end
+            end
+            if math.tointeger(newDefault) and playerCommCodes[newDefault] ~= nil then
+                world.sendEntityMessage(player.id(), "setDefaultCommCode", newDefault)
+                local alias = playerCommCodes[newDefault]
+                return "Set default comm code to ["
+                    .. newDefault
+                    .. "]"
+                    .. (alias and (" (alias [" .. tostring(alias) .. "])") or " (no alias)")
+            elseif not tonumber(newDefault) then
+                if newDefault == "-" then
+                    world.sendEntityMessage(player.id(), "setDefaultCommCode", false)
+                    return "Set default comm code to [-]"
+                else
+                    local foundCode = nil
+                    for code, alias in pairs(playerCommCodes) do
+                        if alias == newDefault then
+                            foundCode = code
+                            break
+                        end
+                    end
+                    if foundCode then
+                        world.sendEntityMessage(player.id(), "setDefaultCommCode", foundCode)
+                        return "Set default comm code to [" .. foundCode .. "] (alias [" .. newDefault .. "])"
+                    else
+                        return "Could not find comm code alias '" .. newDefault .. "'; default not changed"
+                    end
+                end
+            else
+                return "Not listening to comm code; default not changed"
+                    .. "\n"
+                    .. "Use ^cyan;/addcommcode "
+                    .. newDefault
+                    .. " [optional alias]^reset; first"
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/addcommcode", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+            local newCommCode, newAlias = (splitArgs[1] or nil), (splitArgs[2] or nil)
+            if tonumber(newAlias) then newAlias = nil end
+            if newCommCode == "" or not newCommCode then return "Must specify a comm code to add or modify" end
+            if not math.tointeger(newCommCode) then return "Invalid comm code specified; must be an integer" end
+            local codeExists = playerCommCodes[newCommCode] ~= nil
+            playerCommCodes[newCommCode] = newAlias or false
+            world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
+            return (codeExists and "Modified" or "Added")
+                .. " comm code ["
+                .. newCommCode
+                .. "]"
+                .. (newAlias and (" (alias [" .. newAlias .. "])") or " (no alias)")
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/removecommcode", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+            local defaultCommCode = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+            if defaultCommCode == nil then defaultCommCode = "0" end
+            local commCodeOrAlias = (splitArgs[1] or nil)
+            if commCodeOrAlias == "" or not commCodeOrAlias then
+                return "Must specify a comm code or alias to remove"
+            end
+            if math.tointeger(commCodeOrAlias) and playerCommCodes[commCodeOrAlias] ~= nil then
+                local alias = playerCommCodes[commCodeOrAlias]
+                playerCommCodes[commCodeOrAlias] = nil
+                world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
+                if defaultCommCode == commCodeOrAlias then
+                    local newDefault = false
+                    -- FezzedOne: Check if the player has any other comm codes to default to. If not, disable comms.
+                    if playerCommCodes["0"] == nil then
+                        for code, _ in pairs(playerCommCodes) do
+                            newDefault = code
+                            break
+                        end
+                    else
+                        newDefault = "0"
+                    end
+                    world.sendEntityMessage(player.id(), "setDefaultCommCode", newDefault)
+                end
+                return "Removed comm code ["
+                    .. commCodeOrAlias
+                    .. "]"
+                    .. (alias and (" (alias [" .. tostring(alias) .. "])") or " (no alias)")
+            elseif not tonumber(commCodeOrAlias) then
+                local foundCode = nil
+                for code, alias in pairs(playerCommCodes) do
+                    if alias == commCodeOrAlias then
+                        foundCode = code
+                        break
+                    end
+                end
+                if not foundCode then return "Did not find alias to remove" end
+                playerCommCodes[foundCode] = nil
+                world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
+                return "Removed comm code [" .. foundCode .. "] (alias [" .. commCodeOrAlias .. "])"
+            else
+                return "Did not find comm code to remove"
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
 end
 
 function dynamicprox:onSendMessage(data)
@@ -543,6 +730,7 @@ function dynamicprox:onSendMessage(data)
                 local rawText = data.text
                 local sum = 0
                 local parenSum = 0
+                local inOoc = false
                 local iCount = 1
                 local globalFlag = false
                 local hasNoise = false
@@ -569,37 +757,73 @@ function dynamicprox:onSendMessage(data)
                     end
                     rawText = newText:sub(1, #newText - 1)
                 end
-                while iCount <= #rawText and not globalFlag do
+                local debugStr = ""
+                while iCount <= #rawText do -- Removed globalFlag check in this while loop. Caused parsing issues!
                     if parenSum == 3 then globalFlag = true end
 
                     local i = rawText:sub(iCount, iCount)
                     local langEnd = rawText:find("]", iCount)
+                    debugStr = debugStr .. i
                     -- if langEnd then langEnd = langEnd - 1 end
                     if i == "\\" then -- FezzedOne: Ignore escaped characters.
                         iCount = iCount + 1
                     elseif i == "+" then
                         sum = sum + 1
                     elseif i == "(" then
+                        if rawText:sub(iCount + 1, iCount + 1) == "(" then inOoc = true end
                         parenSum = parenSum + 1
+                    elseif i == "<" then
+                        if rawText:sub(iCount + 1, iCount + 1) == "<" then inOoc = true end
+                    elseif i == ")" then
+                        if rawText:sub(iCount + 1, iCount + 1) == ")" then inOoc = false end
+                    elseif i == ">" then
+                        if rawText:sub(iCount + 1, iCount + 1) == ">" then inOoc = false end
                     elseif i == "{" and rawText:find("}", iCount) ~= nil then
                         globalFlag = true
                     elseif i == "[" and langEnd ~= nil then --use this flag to check for default languages. A string without any noise won't have any language support
-                        if rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
-                            local langKey
+                        if (not inOoc) and rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
+                            local langKey, commKey
+                            local commKeySubstitute = nil
+                            local legalCommKey = true
                             if rawText:sub(iCount, langEnd) == "[]" then --checking for []
                                 langKey = defaultKey
                                 rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
                             else
-                                -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
-                                langKey = rawText:sub(iCount + 1, langEnd - 1)
-                                langKey = langKey:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                local rawCode = rawText:sub(iCount + 1, langEnd - 1)
+                                local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result()
+                                    or { ["0"] = false }
+                                if tonumber(rawCode) then
+                                    local rawCommKey = tostring(math.tointeger(rawCode) or "0")
+                                    legalCommKey = playerCommCodes[rawCommKey] ~= nil
+                                else
+                                    for key, alias in pairs(playerCommCodes) do
+                                        if alias == rawCode then
+                                            commKeySubstitute = key
+                                            legalCommKey = true
+                                            break
+                                        end
+                                    end
+                                end
+                                commKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                if not tonumber(rawCode) then
+                                    -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
+                                    langKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                end
                             end
-                            local upperKey = langKey:upper()
 
-                            local langItem = player.getItemWithParameter("langKey", upperKey)
-
-                            if langItem == nil and upperKey ~= "!!" then
-                                rawText = rawText:gsub("%[" .. langKey, "[" .. defaultKey)
+                            if commKeySubstitute or not legalCommKey then
+                                if not legalCommKey then
+                                    rawText = rawText:gsub("%[" .. commKey .. "%]", "[-]")
+                                elseif commKeySubstitute then
+                                    rawText = rawText:gsub("%[" .. commKey .. "%]", "[" .. commKeySubstitute .. "]")
+                                end
+                            end
+                            if langKey then
+                                local upperKey = langKey:upper()
+                                local langItem = player.getItemWithParameter("langKey", upperKey)
+                                if langItem == nil and upperKey ~= "!!" then
+                                    rawText = rawText:gsub("%[" .. langKey .. "%]", "[" .. defaultKey .. "]")
+                                end
                             end
                         else
                             iCount = iCount + 1
@@ -608,6 +832,16 @@ function dynamicprox:onSendMessage(data)
                         parenSum = 0
                     end
                     iCount = iCount + 1
+                end
+                if rawText:find("{.*}") then
+                    local defaultCommCode = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+                    if defaultCommCode == nil then
+                        defaultCommCode = "0"
+                    elseif defaultCommCode == false then
+                        defaultCommCode = "-"
+                    end
+                    defaultCommCode = "[" .. defaultCommCode .. "] "
+                    rawText = defaultCommCode .. rawText
                 end
                 data.content = rawText
                 data.text = ""
@@ -819,9 +1053,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
                             if world.entityExists(receiverEntityId) then
                                 local receiverName = world.entityName(receiverEntityId) or "<n/a>"
-                                if #ownPlayers ~= 1 then
-                                    message.nickname = message.nickname .. " -> " .. receiverName
-                                end
+                                if #ownPlayers ~= 1 then message.receiverName = receiverName end
                                 if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
                             end
                         end
@@ -837,6 +1069,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             -- messageDistance = 30
                             inSight = not world.lineTileCollision(authorPos, playerPos, { "Block", "Dynamic" }) --not doing dynamic, i think that's only for open doors
                         end
+
+                        -- FezzedOne: This will be used to determine whether to hide the nick and portrait.
+                        message.inSight = inSight
+
+                        -- FezzedOne: Get the player's comm codes for later.
+                        local playerCommCodes = world.sendEntityMessage(receiverEntityId, "getCommCodes"):result()
+                            or { ["0"] = false }
 
                         -- FezzedOne: Dynamic collision thickness calculation.
                         local collisionA = nil
@@ -908,6 +1147,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         local charBuffer = ""
                         local languageCode = defaultLangStr or message.defaultLang --the !! shouldn't need to be set, but i'll leave it anyway
                         local radioMode = false --radio flag
+                        local commCode = "0" -- FezzedOne: Comm code.
 
                         local modeRadTypes = {
                             action = function() return actionRad end,
@@ -922,7 +1162,17 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                         --use this to construct the components
                         --any component indications (like :+) that remain should stay, use them for coloring if they aren't picked up here and reset after each component
-                        local function formatInsert(str, radius, type, langKey, isValid, msgQuality, inSight, isRadio)
+                        local function formatInsert(
+                            str,
+                            radius,
+                            type,
+                            langKey,
+                            isValid,
+                            msgQuality,
+                            inSight,
+                            isRadio,
+                            commCode
+                        )
                             if langKey == nil then langKey = "!!" end
 
                             if msgQuality < 0 then msgQuality = 100 end
@@ -936,6 +1186,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 msgQuality = msgQuality,
                                 hasLOS = inSight,
                                 isRadio = isRadio,
+                                commCode = commCode,
                             })
                         end
 
@@ -1007,7 +1258,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 isValid,
                                 msgQuality,
                                 inSight,
-                                radioMode
+                                radioMode,
+                                commCode
                             )
                             charBuffer = ""
 
@@ -1284,8 +1536,15 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 elseif fStart ~= nil and fEnd ~= nil then
                                     local newCode = rawSub(fStart + 1, fEnd)
 
-                                    if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
-                                    languageCode = newCode:upper()
+                                    if tonumber(newCode) or newCode == "-" then -- FezzedOne: This is a comm code.
+                                        local newCommCode = newCode == "-" and "-"
+                                            or tostring(math.tointeger(newCode) or "0")
+                                        if commCode ~= newCommCode then newMode(curMode) end
+                                        commCode = newCommCode
+                                    else -- FezzedOne: This is a language code.
+                                        if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
+                                        languageCode = newCode:upper()
+                                    end
                                     cInd = rawText:find("%S", fEnd + 2) or #rawText --set index to the next non whitespace character after the code
                                 else
                                     parseDefault("[")
@@ -1590,6 +1849,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         local chunkType
                         local langBank = {} --populate with languages in inventory when you find them
                         local prevLang = getDefaultLang() --either the player's default language, or !!
+                        local prevCommCode = "0"
+                        local prevRadio = false
 
                         if not (uncapRad or maxRad == -1) and (messageDistance > maxRad and validSum == 0) then
                             message.text = ""
@@ -1607,8 +1868,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     langKey = ":(",
                                     valid = false,
                                     msgQuality = 0,
+                                    isRadio = false,
+                                    commCode = "0",
                                 }
                             )
+
+                            local numChunks = #textTable
 
                             for _, v in ipairs(textTable) do
                                 if v["hasLOS"] == false and chunkType == "action" then v["valid"] = false end
@@ -1622,18 +1887,30 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     hasValids = true
                                 end
                             end
-                            local numChunks = #textTable
+                            local receiverIsLocal = isLocalPlayer(receiverEntityId)
                             for k, v in ipairs(textTable) do
                                 local lastChunk = k == numChunks
 
                                 if
                                     v["radius"] == -1
-                                    or v["isRadio"] == true
                                     or (v["type"] == "pOOC" and wasGlobal)
                                     or (v["type"] == "lOOC" and uncapRad)
                                     or v["type"] == "gOOC"
                                 then
                                     v["valid"] = true
+                                end
+
+                                local rawStr = v["text"]
+                                -- FezzedOne: Strip out radio brackets. We'll re-add them later.
+                                v["text"] = rawStr:gsub("^{{", ""):gsub("^{", ""):gsub("}}$", ""):gsub("}$", "")
+
+                                -- FezzedOne: Check if the player is listening on a given comm code, for validity checks.
+                                if v["isRadio"] then
+                                    if v["commCode"] ~= "-" and playerCommCodes[v["commCode"]] ~= nil then
+                                        v["valid"] = true
+                                    else
+                                        v["isRadio"] = false
+                                    end
                                 end
 
                                 chunkStr = v["text"]
@@ -1671,7 +1948,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                                 langColor = langBank[langKey]["color"]
                                             end
                                             if langProf == nil then
-                                                local receiverIsLocal = isLocalPlayer(receiverEntityId)
                                                 local newLang
                                                 if xsb and receiverIsLocal then
                                                     newLang = world
@@ -1745,6 +2021,39 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     chunkType = "action"
                                 end
 
+                                -- FezzedOne: Add comm codes to chunks.
+                                if v["isRadio"] then
+                                    local msgColor = "#fff"
+                                    local commKey = v["commCode"]
+                                    if commKey ~= prevCommCode then
+                                        if v["commCode"] ~= "-" then
+                                            local commName, name = "", ""
+                                            local isUnknownCommCode = playerCommCodes[commKey] == nil
+                                            if not isUnknownCommCode then
+                                                name = playerCommCodes[commKey]
+                                                commName = name or commKey
+                                            end
+                                            chunkStr = "^"
+                                                .. (name and "#88f" or "#44f")
+                                                .. ";["
+                                                .. (isUnknownCommCode and "???" or commName)
+                                                .. "]^"
+                                                .. msgColor
+                                                .. "; "
+                                                .. chunkStr
+                                            prevCommCode = commKey
+                                        end
+                                    end
+                                end
+                                if chunkStr ~= "" then
+                                    if prevRadio and not v["isRadio"] then
+                                        chunkStr = "}}" .. chunkStr
+                                    elseif v["isRadio"] and not prevRadio then
+                                        chunkStr = "{{" .. chunkStr
+                                    end
+                                    prevRadio = v["isRadio"]
+                                end
+
                                 --after check, this puts formatted chunks in
                                 if chunkType ~= "quote" and prevType == "quote" then
                                     local checkCombo = quoteCombo:gsub("%[%w%w%]", "")
@@ -1757,14 +2066,40 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         end
                                         prevStr = quoteCombo
                                     else
-                                        quoteCombo = '"' .. quoteCombo .. '"'
+                                        local beginRadio, endRadio = false, false
+                                        if quoteCombo:sub(1, 2) == "{{" then
+                                            quoteCombo = quoteCombo:sub(3, -1)
+                                            beginRadio = true
+                                        end
+                                        if quoteCombo:sub(-2, -1) == "}}" then
+                                            quoteCombo = quoteCombo:sub(1, -3)
+                                            endRadio = true
+                                        end
+                                        quoteCombo = (beginRadio and "{{" or "")
+                                            .. '"'
+                                            .. quoteCombo
+                                            .. '"'
+                                            .. (endRadio and "}}" or "")
                                     end
                                     tableStr = tableStr .. " " .. quoteCombo
                                     quoteCombo = ""
                                 end
                                 if chunkType ~= "sound" and prevType == "sound" then
                                     if soundCombo:match("[%w%d]") then
-                                        soundCombo = "<" .. soundCombo .. ">"
+                                        local beginRadio, endRadio = false, false
+                                        if soundCombo:sub(1, 2) == "{{" then
+                                            soundCombo = soundCombo:sub(3, -1)
+                                            beginRadio = true
+                                        end
+                                        if soundCombo:sub(-2, -1) == "}}" then
+                                            soundCombo = soundCombo:sub(1, -3)
+                                            endRadio = true
+                                        end
+                                        soundCombo = (beginRadio and "{{" or "")
+                                            .. "<"
+                                            .. soundCombo
+                                            .. ">"
+                                            .. (endRadio and "}}" or "")
                                         tableStr = tableStr .. " " .. soundCombo
                                     end
                                     soundCombo = ""
@@ -1789,22 +2124,32 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     prevStr = chunkStr
                                 end
 
+                                if lastChunk and prevRadio then tableStr = tableStr .. "}}" end
+
                                 prevType = chunkType
                             end
                             tableStr = cleanDoubleSpaces(tableStr) --removes double spaces, ignores colors
                             tableStr = tableStr:gsub(' "%s', ' "')
-                            tableStr = tableStr:gsub("}}{{", "...") --for multiple radios
-                            tableStr = tableStr:gsub("}}{", "...") --for multiple radios
-                            tableStr = tableStr:gsub("}{{", "...") --for multiple radios
-                            tableStr = tableStr:gsub("}{", "...") --for multiple radios
+                            tableStr = tableStr:gsub("}}[ ]*{{", "...") --for multiple radios
                             tableStr = trim(tableStr)
 
                             message.text = tableStr
                         end
                     end
 
-                    message.portrait = message.portrait and message.portrait ~= "" and message.portrait
-                        or message.connection
+                    if message.inSight then
+                        message.portrait = message.portrait and message.portrait ~= "" and message.portrait
+                            or message.connection
+                    else -- FezzedOne: Remove the portrait from the message if the receiver can't see the sender.
+                        message.nickname = "???"
+                        -- Use a dummy negative connection ID so that a portrait is never "grabbed" by SCC.
+                        message.connection = -message.connection
+                        message.portrait = message.connection
+                        -- Don't need to process the sender ID anymore after this, so we can remove it so that a portrait is no longer displayed.
+                        message.senderId = nil
+                    end
+                    message.nickname = message.receiverName and (message.nickname .. " -> " .. message.receiverName)
+                        or message.nickname
                     if copiedMessage then
                         message.processed = true
                         world.sendEntityMessage(receiverEntityId, "scc_add_message", message)
