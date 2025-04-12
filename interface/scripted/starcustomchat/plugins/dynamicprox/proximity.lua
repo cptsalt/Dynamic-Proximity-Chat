@@ -1080,6 +1080,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                         -- FezzedOne: This will be used to determine whether to hide the nick and portrait.
                         message.inSight = inSight
+                        message.inEarShot = false
 
                         -- FezzedOne: Get the player's comm codes for later.
                         local playerCommCodes = world.sendEntityMessage(receiverEntityId, "getCommCodes"):result()
@@ -1923,6 +1924,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                                 chunkStr = v["text"]
                                 chunkType = v["type"]
+                                if chunkType == "quote" and v["valid"] then message.inEarShot = true end
                                 local langKey = v["langKey"]
                                 if
                                     v["valid"] == true
@@ -2149,7 +2151,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         message.portrait = message.portrait and message.portrait ~= "" and message.portrait
                             or message.connection
                     else -- FezzedOne: Remove the portrait from the message if the receiver can't see the sender.
-                        message.nickname = "???"
+                        if not message.inEarShot then message.nickname = "???" end
                         -- Use a dummy negative connection ID so that a portrait is never "grabbed" by SCC.
                         message.connection = -message.connection
                         message.portrait = message.connection
