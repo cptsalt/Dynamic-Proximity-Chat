@@ -833,6 +833,7 @@ function dynamicprox:onSendMessage(data)
                     end
                     iCount = iCount + 1
                 end
+                local commKey = ""
                 if rawText:find("{.*}") then
                     local defaultCommCode = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
                     if defaultCommCode == nil then
@@ -840,8 +841,8 @@ function dynamicprox:onSendMessage(data)
                     elseif defaultCommCode == false then
                         defaultCommCode = "-"
                     end
-                    if defaultCommCode ~= "0" then defaultCommCode = "[" .. defaultCommCode .. "] " end
-                    rawText = defaultCommCode .. rawText
+                    commKey = defaultCommCode ~= "0" and ("[" .. defaultCommCode .. "] ") or ""
+                    rawText = commKey .. rawText
                 end
                 data.content = rawText
                 data.text = ""
@@ -884,7 +885,7 @@ function dynamicprox:onSendMessage(data)
                         globalMsg = globalMsg .. str .. " "
                     end
                     globalMsg:sub(1, -2)
-                    globalMsg = "{{" .. globalMsg .. "}}"
+                    globalMsg = commKey .. "{{" .. globalMsg .. "}}"
                     globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
                     globalMsg = DynamicProxPrefix .. chatTags .. globalMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
