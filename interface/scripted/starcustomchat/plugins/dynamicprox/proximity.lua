@@ -321,9 +321,16 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             if curZone > 0 then zoneStr = "+" .. zoneStr end
             return "Current time offset is ^#fe7;" .. zoneStr .. "^reset;"
         elseif tzTable[zoneStr:upper()] == nil then
-            return 'Timezone "^#fe7;'
-                .. zoneStr
-                .. "^reset;\" doesn't exist or isn't supported. Try using a timezone abbreviation (UTC, CET, EST, CST, MST, PST, etc)"
+            local tzOffset = tonumber(zoneStr)
+            if tzOffset then
+                local offsetStr = string.format("%.0f:%.2d", math.floor(tzOffset), (tzOffset % 1 * 60))
+                root.setConfiguration("DynamicProxChat::timeZone", tzOffset)
+                return "Timezone offset set to ^#fe7;" .. offsetStr .. "^reset;"
+            else
+                return 'Timezone "^#fe7;'
+                    .. zoneStr
+                    .. "^reset;\" doesn't exist or isn't supported. Try using a timezone abbreviation (UTC, CET, EST, CST, MST, PST, etc.) or manually specifying an offset in decimal hours."
+            end
         else
             zoneStr = zoneStr:upper()
             local newTime = tzTable[zoneStr] or 0
