@@ -840,7 +840,7 @@ function dynamicprox:onSendMessage(data)
                     elseif defaultCommCode == false then
                         defaultCommCode = "-"
                     end
-                    defaultCommCode = "[" .. defaultCommCode .. "] "
+                    if defaultCommCode ~= "0" then defaultCommCode = "[" .. defaultCommCode .. "] " end
                     rawText = defaultCommCode .. rawText
                 end
                 data.content = rawText
