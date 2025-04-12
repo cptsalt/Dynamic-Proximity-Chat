@@ -2151,7 +2151,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         message.portrait = message.portrait and message.portrait ~= "" and message.portrait
                             or message.connection
                     else -- FezzedOne: Remove the portrait from the message if the receiver can't see the sender.
-                        if not message.inEarShot then message.nickname = "???" end
                         -- Use a dummy negative connection ID so that a portrait is never "grabbed" by SCC.
                         message.connection = -message.connection
                         message.portrait = message.connection
