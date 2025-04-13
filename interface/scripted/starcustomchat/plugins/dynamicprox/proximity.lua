@@ -191,6 +191,30 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.timezone.desc",
             data = "/timezone",
         })
+    elseif string.find("/commcode", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/commcode",
+            description = "commands.commcode.desc",
+            data = "/commcode",
+        })
+    elseif string.find("/commcodes", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/commcodes",
+            description = "commands.commcodes.desc",
+            data = "/commcodes",
+        })
+    elseif string.find("/addcommcode", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/addcommcode",
+            description = "commands.addcommcode.desc",
+            data = "/addcommcode",
+        })
+    elseif string.find("/removecommcode", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/removecommcode",
+            description = "commands.removecommcode.desc",
+            data = "/removecommcode",
+        })
     end
 end
 
@@ -289,7 +313,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             ["EET"] = 2,
             ["MSK"] = 3,
             ["ACST"] = 9.5,
-            ["AEST"] = 10
+            ["AEST"] = 10,
         }
         if zoneStr == nil or #zoneStr < 1 then
             local curZone = root.getConfiguration("DynamicProxChat::timeZone") or 0
@@ -297,9 +321,16 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             if curZone > 0 then zoneStr = "+" .. zoneStr end
             return "Current time offset is ^#fe7;" .. zoneStr .. "^reset;"
         elseif tzTable[zoneStr:upper()] == nil then
-            return "Timezone \"^#fe7;" ..
-                zoneStr ..
-                "^reset;\" doesn't exist or isn't supported. Try using a timezone abbreviation (UTC, CET, EST, CST, MST, PST, etc)"
+            local tzOffset = tonumber(zoneStr)
+            if tzOffset then
+                local offsetStr = string.format("%.0f:%.2d", math.floor(tzOffset), (tzOffset % 1 * 60))
+                root.setConfiguration("DynamicProxChat::timeZone", tzOffset)
+                return "Timezone offset set to ^#fe7;" .. offsetStr .. "^reset;"
+            else
+                return 'Timezone "^#fe7;'
+                    .. zoneStr
+                    .. "^reset;\" doesn't exist or isn't supported. Try using a timezone abbreviation (UTC, CET, EST, CST, MST, PST, etc.) or manually specifying an offset in decimal hours."
+            end
         else
             zoneStr = zoneStr:upper()
             local newTime = tzTable[zoneStr] or 0
@@ -480,6 +511,169 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         player.giveItem(itemData)
         return "Language " .. langName .. " added, use [" .. langKey .. "] to use it."
     end)
+    starcustomchat.utils.setMessageHandler("/commcodes", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+
+            local returnString = "Listening on comm codes:"
+            local numCodes = 0
+            for code, alias in pairs(playerCommCodes) do
+                local codeStr
+                if alias then
+                    codeStr = "[" .. alias .. "]" .. " -> [" .. code .. "]"
+                else
+                    codeStr = "[" .. code .. "]"
+                end
+                returnString = returnString .. "\n" .. codeStr
+                numCodes = numCodes + 1
+            end
+            if numCodes == 0 then
+                return "Not listening on any comm codes"
+            else
+                return returnString
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/commcode", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+            local newDefault = splitArgs[1] or nil
+            if newDefault == "" or not newDefault then
+                local currentDefault = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+                local alias = playerCommCodes[currentDefault]
+                if currentDefault == false then currentDefault = "-" end
+                if alias then
+                    return "Default comm code is [" .. tostring(currentDefault) .. "] (alias [" .. alias .. "])"
+                else
+                    return "Default comm code is [" .. tostring(currentDefault) .. "] (no alias)"
+                end
+            end
+            if math.tointeger(newDefault) and playerCommCodes[newDefault] ~= nil then
+                world.sendEntityMessage(player.id(), "setDefaultCommCode", newDefault)
+                local alias = playerCommCodes[newDefault]
+                return "Set default comm code to ["
+                    .. newDefault
+                    .. "]"
+                    .. (alias and (" (alias [" .. tostring(alias) .. "])") or " (no alias)")
+            elseif not tonumber(newDefault) then
+                if newDefault == "-" then
+                    world.sendEntityMessage(player.id(), "setDefaultCommCode", false)
+                    return "Set default comm code to [-]"
+                else
+                    local foundCode = nil
+                    for code, alias in pairs(playerCommCodes) do
+                        if alias == newDefault then
+                            foundCode = code
+                            break
+                        end
+                    end
+                    if foundCode then
+                        world.sendEntityMessage(player.id(), "setDefaultCommCode", foundCode)
+                        return "Set default comm code to [" .. foundCode .. "] (alias [" .. newDefault .. "])"
+                    else
+                        return "Could not find comm code alias '" .. newDefault .. "'; default not changed"
+                    end
+                end
+            else
+                return "Not listening to comm code; default not changed"
+                    .. "\n"
+                    .. "Use ^cyan;/addcommcode "
+                    .. newDefault
+                    .. " [optional alias]^reset; first"
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/addcommcode", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+            local newCommCode, newAlias = (splitArgs[1] or nil), (splitArgs[2] or nil)
+            if tonumber(newAlias) then newAlias = nil end
+            if newCommCode == "" or not newCommCode then return "Must specify a comm code to add or modify" end
+            if not math.tointeger(newCommCode) then return "Invalid comm code specified; must be an integer" end
+            local codeExists = playerCommCodes[newCommCode] ~= nil
+            playerCommCodes[newCommCode] = newAlias or false
+            world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
+            return (codeExists and "Modified" or "Added")
+                .. " comm code ["
+                .. newCommCode
+                .. "]"
+                .. (newAlias and (" (alias [" .. newAlias .. "])") or " (no alias)")
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/removecommcode", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+            local defaultCommCode = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+            if defaultCommCode == nil then defaultCommCode = "0" end
+            local commCodeOrAlias = (splitArgs[1] or nil)
+            if commCodeOrAlias == "" or not commCodeOrAlias then
+                return "Must specify a comm code or alias to remove"
+            end
+            if math.tointeger(commCodeOrAlias) and playerCommCodes[commCodeOrAlias] ~= nil then
+                local alias = playerCommCodes[commCodeOrAlias]
+                playerCommCodes[commCodeOrAlias] = nil
+                world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
+                if defaultCommCode == commCodeOrAlias then
+                    local newDefault = false
+                    -- FezzedOne: Check if the player has any other comm codes to default to. If not, disable comms.
+                    if playerCommCodes["0"] == nil then
+                        for code, _ in pairs(playerCommCodes) do
+                            newDefault = code
+                            break
+                        end
+                    else
+                        newDefault = "0"
+                    end
+                    world.sendEntityMessage(player.id(), "setDefaultCommCode", newDefault)
+                end
+                return "Removed comm code ["
+                    .. commCodeOrAlias
+                    .. "]"
+                    .. (alias and (" (alias [" .. tostring(alias) .. "])") or " (no alias)")
+            elseif not tonumber(commCodeOrAlias) then
+                local foundCode = nil
+                for code, alias in pairs(playerCommCodes) do
+                    if alias == commCodeOrAlias then
+                        foundCode = code
+                        break
+                    end
+                end
+                if not foundCode then return "Did not find alias to remove" end
+                playerCommCodes[foundCode] = nil
+                world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
+                return "Removed comm code [" .. foundCode .. "] (alias [" .. commCodeOrAlias .. "])"
+            else
+                return "Did not find comm code to remove"
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
 end
 
 function dynamicprox:onSendMessage(data)
@@ -543,6 +737,7 @@ function dynamicprox:onSendMessage(data)
                 local rawText = data.text
                 local sum = 0
                 local parenSum = 0
+                local inOoc = false
                 local iCount = 1
                 local globalFlag = false
                 local hasNoise = false
@@ -569,37 +764,73 @@ function dynamicprox:onSendMessage(data)
                     end
                     rawText = newText:sub(1, #newText - 1)
                 end
-                while iCount <= #rawText and not globalFlag do
+                local debugStr = ""
+                while iCount <= #rawText do -- Removed globalFlag check in this while loop. Caused parsing issues!
                     if parenSum == 3 then globalFlag = true end
 
                     local i = rawText:sub(iCount, iCount)
                     local langEnd = rawText:find("]", iCount)
+                    debugStr = debugStr .. i
                     -- if langEnd then langEnd = langEnd - 1 end
                     if i == "\\" then -- FezzedOne: Ignore escaped characters.
                         iCount = iCount + 1
                     elseif i == "+" then
                         sum = sum + 1
                     elseif i == "(" then
+                        if rawText:sub(iCount + 1, iCount + 1) == "(" then inOoc = true end
                         parenSum = parenSum + 1
+                    elseif i == "<" then
+                        if rawText:sub(iCount + 1, iCount + 1) == "<" then inOoc = true end
+                    elseif i == ")" then
+                        if rawText:sub(iCount + 1, iCount + 1) == ")" then inOoc = false end
+                    elseif i == ">" then
+                        if rawText:sub(iCount + 1, iCount + 1) == ">" then inOoc = false end
                     elseif i == "{" and rawText:find("}", iCount) ~= nil then
                         globalFlag = true
-                    elseif i == "[" and langEnd ~= nil then                --use this flag to check for default languages. A string without any noise won't have any language support
-                        if rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
-                            local langKey
-                            if rawText:sub(iCount, langEnd) == "[]" then   --checking for []
+                    elseif i == "[" and langEnd ~= nil then --use this flag to check for default languages. A string without any noise won't have any language support
+                        if (not inOoc) and rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
+                            local langKey, commKey
+                            local commKeySubstitute = nil
+                            local legalCommKey = true
+                            if rawText:sub(iCount, langEnd) == "[]" then --checking for []
                                 langKey = defaultKey
                                 rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
                             else
-                                -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
-                                langKey = rawText:sub(iCount + 1, langEnd - 1)
-                                langKey = langKey:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                local rawCode = rawText:sub(iCount + 1, langEnd - 1)
+                                local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result()
+                                    or { ["0"] = false }
+                                if tonumber(rawCode) then
+                                    local rawCommKey = tostring(math.tointeger(rawCode) or "0")
+                                    legalCommKey = playerCommCodes[rawCommKey] ~= nil
+                                else
+                                    for key, alias in pairs(playerCommCodes) do
+                                        if alias == rawCode then
+                                            commKeySubstitute = key
+                                            legalCommKey = true
+                                            break
+                                        end
+                                    end
+                                end
+                                commKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                if not tonumber(rawCode) then
+                                    -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
+                                    langKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                end
                             end
-                            local upperKey = langKey:upper()
 
-                            local langItem = player.getItemWithParameter("langKey", upperKey)
-
-                            if langItem == nil and upperKey ~= "!!" then
-                                rawText = rawText:gsub("%[" .. langKey, "[" .. defaultKey)
+                            if commKeySubstitute or not legalCommKey then
+                                if not legalCommKey then
+                                    rawText = rawText:gsub("%[" .. commKey .. "%]", "[-]")
+                                elseif commKeySubstitute then
+                                    rawText = rawText:gsub("%[" .. commKey .. "%]", "[" .. commKeySubstitute .. "]")
+                                end
+                            end
+                            if langKey then
+                                local upperKey = langKey:upper()
+                                local langItem = player.getItemWithParameter("langKey", upperKey)
+                                if langItem == nil and upperKey ~= "!!" then
+                                    rawText = rawText:gsub("%[" .. langKey .. "%]", "[" .. defaultKey .. "]")
+                                end
                             end
                         else
                             iCount = iCount + 1
@@ -608,6 +839,17 @@ function dynamicprox:onSendMessage(data)
                         parenSum = 0
                     end
                     iCount = iCount + 1
+                end
+                local commKey = ""
+                if rawText:find("{.*}") then
+                    local defaultCommCode = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+                    if defaultCommCode == nil then
+                        defaultCommCode = "0"
+                    elseif defaultCommCode == false then
+                        defaultCommCode = "-"
+                    end
+                    commKey = defaultCommCode ~= "0" and ("[" .. defaultCommCode .. "] ") or ""
+                    rawText = commKey .. rawText
                 end
                 data.content = rawText
                 data.text = ""
@@ -626,22 +868,6 @@ function dynamicprox:onSendMessage(data)
                     boundMode = "position",
                 })
 
-                -- if xsb then -- FezzedOne: On xStarbound, filter out local secondaries to avoid showing duplicate sent messages.
-                --     local localPlayers = world.ownPlayers()
-                --     local primaryPlayer = world.primaryPlayer()
-                --     for i = #localPlayers, 1, -1 do
-                --         if localPlayers[i] == primaryPlayer then
-                --             table.remove(localPlayers, i)
-                --             break
-                --         end
-                --     end
-                --     for i = #players, 1, -1 do
-                --         for j = 1, #localPlayers, 1 do
-                --             if players[i] == localPlayers[j] then table.remove(players, i) end
-                --         end
-                --     end
-                -- end
-
                 -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
                 -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
                 local chatTags = AuthorIdPrefix
@@ -655,8 +881,7 @@ function dynamicprox:onSendMessage(data)
                 else
                     for _, pl in ipairs(players) do
                         if xsb then data.sourceId = world.primaryPlayer() end
-                        data.targetId =
-                            pl -- FezzedOne: Used to distinguish DPC messages from SCCRP messages *and* for filtering messages as seen by secondaries on xStarbound clients.
+                        data.targetId = pl -- FezzedOne: Used to distinguish DPC messages from SCCRP messages *and* for filtering messages as seen by secondaries on xStarbound clients.
                         data.mode = "Proximity"
                         world.sendEntityMessage(pl, "scc_add_message", data)
                     end
@@ -667,7 +892,7 @@ function dynamicprox:onSendMessage(data)
                         globalMsg = globalMsg .. str .. " "
                     end
                     globalMsg:sub(1, -2)
-                    globalMsg = "{{" .. globalMsg .. "}}"
+                    globalMsg = commKey .. "{{" .. globalMsg .. "}}"
                     globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
                     globalMsg = DynamicProxPrefix .. chatTags .. globalMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
@@ -715,8 +940,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
 
-        local timestamp = os.time() +
-            ((root.getConfiguration("DynamicProxChat::timeZone") or 0) * 3600) -- UTC by default
+        local timestamp = os.time() + ((root.getConfiguration("DynamicProxChat::timeZone") or 0) * 3600) -- UTC by default
         local seconds_in_day = 86400
         local seconds = timestamp % seconds_in_day
         local hours = math.floor(seconds / 3600)
@@ -731,7 +955,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         local isSccrpMessage = message.mode == "Proximity" and not message.targetId
         local showAsProximity = (sccrpInstalled() and isSccrpMessage)
         local showAsLocal = message.mode == "Local"
-        if not root.getConfiguration("DynamicProxChat::handleSccrpProx") then skipHandling = showAsProximity end
+        -- Fezzedone: Whoops. Forgot to actually handle (or rather, not handle) SCCRP announcement messages.
+        if message.text:sub(1, #AnnouncementPrefix) == AnnouncementPrefix then skipHandling = true end
+        if not root.getConfiguration("DynamicProxChat::handleSccrpProx") then
+            skipHandling = skipHandling or showAsProximity
+        end
 
         -- FezzedOne: This setting allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
         if
@@ -747,6 +975,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         end
         if message.mode == "Proximity" and not skipHandling and not message.processed then
             message.isSccrp = isSccrpMessage or nil
+            message.contentIsText = isSccrpMessage or message.contentIsText
+            -- FezzedOne: These are from my SCCRP PR. Ensures that SCCRP messages from and to xStarbound clients are always correctly handled.
+            if message.isSccrp then
+                message.sourceId = message.senderId
+                message.targetId = message.receiverId
+            end
             message.mode = "Prox"
             if not message.contentIsText then message.text = message.content end
             message.content = ""
@@ -794,14 +1028,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 local authorRendered = world.entityExists(authorEntityId)
                 -- FezzedOne: If the author ID has to be guessed from the connection ID and it's *not* the first ID, that means the author is using xStarbound,
                 -- so look for the first rendered player belonging to the author's client. Kinda kludgy, but this is what we have to do for xStarbound clients
-                -- that don't send the required information because they don't have this mod!
-                if
-                    (message.isSccrp and not authorRendered)
-                    or not (authorRendered or hasAuthorPrefix or message.sourceId)
-                then
-                    -- FezzedOne: Workaround for an SCC bug in connection ID calculation that only shows up in messages sent from xStarbound clients after swapping players.
-                    if message.isSccrp then message.connection = message.connection + 1 end
-                    for i = (message.connection * -65536 + 1), (message.connection * -65536 + 255), 1 do
+                -- that don't send the required information because they don't have this mod or SCCRP!
+                if not (authorRendered or hasAuthorPrefix or message.sourceId) then
+                    for i = (message.connection * -65536 + 1), (message.connection * -65536 + 65535), 1 do
                         if world.entityExists(i) and world.entityType(i) == "player" then
                             authorEntityId = i
                             authorRendered = true
@@ -810,6 +1039,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     end
                 end
                 local receiverEntityId = message.targetId or player.id()
+                -- FezzedOne: DPC-side part of fix for SCCRP portraits in dynamically handled messages.
+                message.senderId = authorEntityId
+                message.sourceId = authorEntityId
+                message.receiverId = receiverEntityId
                 local ownPlayers = {}
                 if xsb then ownPlayers = world.ownPlayers() end
                 local isLocalPlayer = function(entityId)
@@ -824,11 +1057,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     local uncapRad = isGlobalChat
                     local wasGlobal = isGlobalChat
                     local message = copiedMessage or message
-                    if xsb then
+                    if xsb and not message.isSccrp then -- FezzedOne: Already handled in SCCRP with my PR.
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
-                            local receiverName = world.entityName(receiverEntityId)
-                            if #ownPlayers ~= 1 then message.nickname = message.nickname .. " -> " .. receiverName end
-                            if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
+                            if world.entityExists(receiverEntityId) then
+                                local receiverName = world.entityName(receiverEntityId) or "<n/a>"
+                                if #ownPlayers ~= 1 then message.receiverName = receiverName end
+                                if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
+                            end
                         end
                     end
                     do
@@ -842,6 +1077,14 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             -- messageDistance = 30
                             inSight = not world.lineTileCollision(authorPos, playerPos, { "Block", "Dynamic" }) --not doing dynamic, i think that's only for open doors
                         end
+
+                        -- FezzedOne: This will be used to determine whether to hide the nick and portrait.
+                        message.inSight = inSight
+                        message.inEarShot = false
+
+                        -- FezzedOne: Get the player's comm codes for later.
+                        local playerCommCodes = world.sendEntityMessage(receiverEntityId, "getCommCodes"):result()
+                            or { ["0"] = false }
 
                         -- FezzedOne: Dynamic collision thickness calculation.
                         local collisionA = nil
@@ -868,9 +1111,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         end
 
                         local actionRad = self.proxActionRadius -- FezzedOne: Un-hardcoded the action radius.
-                        local loocRad = self
-                            .proxOocRadius                      -- actionRad * 2 -- FezzedOne: Un-hardcoded the local OOC radius.
-                        local noiseRad = self.proxTalkRadius    -- FezzedOne: Un-hardcoded the talking radius.
+                        local loocRad = self.proxOocRadius -- actionRad * 2 -- FezzedOne: Un-hardcoded the local OOC radius.
+                        local noiseRad = self.proxTalkRadius -- FezzedOne: Un-hardcoded the talking radius.
 
                         --originally i made this a function, but tracking the values is difficult and it's easier to manually set them since there are only 9
                         local soundTable = {
@@ -905,16 +1147,16 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         local curMode = "action"
                         local prevMode = "action"
                         local prevDiffMode = "action"
-                        local maxRad = 0      -- Remove the maximum radius restriction from global messages.
+                        local maxRad = 0 -- Remove the maximum radius restriction from global messages.
                         local rawText = message.text
                         local debugTable = {} --this will eventually be smashed together to make filterText
-                        local textTable = {}  --this will eventually be smashed together to make filterText
-                        local validSum = 0    --number of valid entries in the table
-                        local cInd = 1        --lua starts at 1 >:(
+                        local textTable = {} --this will eventually be smashed together to make filterText
+                        local validSum = 0 --number of valid entries in the table
+                        local cInd = 1 --lua starts at 1 >:(
                         local charBuffer = ""
-                        local languageCode = defaultLangStr or
-                            message.defaultLang --the !! shouldn't need to be set, but i'll leave it anyway
+                        local languageCode = defaultLangStr or message.defaultLang --the !! shouldn't need to be set, but i'll leave it anyway
                         local radioMode = false --radio flag
+                        local commCode = "0" -- FezzedOne: Comm code.
 
                         local modeRadTypes = {
                             action = function() return actionRad end,
@@ -929,7 +1171,17 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                         --use this to construct the components
                         --any component indications (like :+) that remain should stay, use them for coloring if they aren't picked up here and reset after each component
-                        local function formatInsert(str, radius, type, langKey, isValid, msgQuality, inSight, isRadio)
+                        local function formatInsert(
+                            str,
+                            radius,
+                            type,
+                            langKey,
+                            isValid,
+                            msgQuality,
+                            inSight,
+                            isRadio,
+                            commCode
+                        )
                             if langKey == nil then langKey = "!!" end
 
                             if msgQuality < 0 then msgQuality = 100 end
@@ -943,6 +1195,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 msgQuality = msgQuality,
                                 hasLOS = inSight,
                                 isRadio = isRadio,
+                                commCode = commCode,
                             })
                         end
 
@@ -960,11 +1213,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                             local useRad
                             useRad = modeRadTypes[curMode]()
-                            local isValid = false                                                           --start with false
-                            if messageDistance <= useRad or useRad == -1 then                               --if in range
-                                isValid = true                                                              --the message is valid
-                                if inSight == false and curMode == "action" then                            --if i can't see you and the mode is action
-                                    isValid = false                                                         --the message isn't valid anymore
+                            local isValid = false --start with false
+                            if messageDistance <= useRad or useRad == -1 then --if in range
+                                isValid = true --the message is valid
+                                if inSight == false and curMode == "action" then --if i can't see you and the mode is action
+                                    isValid = false --the message isn't valid anymore
                                 elseif inSight == false and (curMode == "quote" or curMode == "sound") then --else, if i can't see you and the mode is quote or sound
                                     --check for path
                                     local noPathVol
@@ -975,10 +1228,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                                 playerPos,
                                                 root.monsterMovementSettings("smallflying")
                                             )
-                                        then      --if path is found
-                                            noPathVol = volTable[useRad] -
-                                                2 --set the volume to 1 (maybe 2 later on) level lower
-                                        else      --if the path isn't found
+                                        then --if path is found
+                                            noPathVol = volTable[useRad] - 2 --set the volume to 1 (maybe 2 later on) level lower
+                                        else --if the path isn't found
                                             if wallThickness <= 4 then
                                                 noPathVol = volTable[useRad] - (wallThickness <= 1 and 2 or 3)
                                             else
@@ -994,11 +1246,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         noPathVol = -4
                                         isValid = false
                                     end
-                                    useRad = soundTable
-                                        [noPathVol] --set the radius to whatever the soundelevel would be
-                                    isValid = isValid and
-                                        messageDistance <=
-                                        useRad --set isvalid to the new value if it's still true
+                                    useRad = soundTable[noPathVol] --set the radius to whatever the soundelevel would be
+                                    isValid = isValid and messageDistance <= useRad --set isvalid to the new value if it's still true
                                 end
                             end
 
@@ -1018,7 +1267,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 isValid,
                                 msgQuality,
                                 inSight,
-                                radioMode
+                                radioMode,
+                                commCode
                             )
                             charBuffer = ""
 
@@ -1295,10 +1545,16 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 elseif fStart ~= nil and fEnd ~= nil then
                                     local newCode = rawSub(fStart + 1, fEnd)
 
-                                    if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
-                                    languageCode = newCode:upper()
-                                    cInd = rawText:find("%S", fEnd + 2) or
-                                        #rawText --set index to the next non whitespace character after the code
+                                    if tonumber(newCode) or newCode == "-" then -- FezzedOne: This is a comm code.
+                                        local newCommCode = newCode == "-" and "-"
+                                            or tostring(math.tointeger(newCode) or "0")
+                                        if commCode ~= newCommCode then newMode(curMode) end
+                                        commCode = newCommCode
+                                    else -- FezzedOne: This is a language code.
+                                        if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
+                                        languageCode = newCode:upper()
+                                    end
+                                    cInd = rawText:find("%S", fEnd + 2) or #rawText --set index to the next non whitespace character after the code
                                 else
                                     parseDefault("[")
                                 end
@@ -1327,8 +1583,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             local returnStr = ""
                             local char
                             local iCount = 1
-                            local rMax = (#str - 2) -
-                                ((#str - 2) * (quality / 100)) --basically, how many characters can be "-", helps
+                            local rMax = (#str - 2) - ((#str - 2) * (quality / 100)) --basically, how many characters can be "-", helps
                             local rCount = 0
                             while iCount <= #str do
                                 char = str:sub(iCount, iCount)
@@ -1457,12 +1712,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             if DEBUG then sb.logInfo(DEBUG_PREFIX .. "effProf is " .. effProf) end
                             local uniqueIdBytes = wordBytes(
                                 (xsb and isLocalPlayer(receiverEntityId)) and world.entityUniqueId(receiverEntityId)
-                                or player.uniqueId()
+                                    or player.uniqueId()
                             )
 
                             if langColor == nil then
                                 local hexDigits =
-                                { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
+                                    { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
                                 -- local randSource = sb.makeRandomSource()
                                 local hexMin = 3
 
@@ -1504,7 +1759,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         if
                                             effProf < 5
                                             or (wordRoll + (wordLength ^ 2 / (math.max(1, effProf - 50) / 5)) - 10)
-                                            > effProf
+                                                > effProf
                                         then
                                             wordBuffer = langWordRep(trim(wordBuffer), effProf, byteLC)
                                             wordBuffer = "^" .. langColor .. ";" .. wordBuffer .. "^" .. msgColor .. ";"
@@ -1601,8 +1856,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         local hasValids = false
                         local chunkStr
                         local chunkType
-                        local langBank = {}               --populate with languages in inventory when you find them
+                        local langBank = {} --populate with languages in inventory when you find them
                         local prevLang = getDefaultLang() --either the player's default language, or !!
+                        local prevCommCode = "0"
+                        local prevRadio = false
 
                         if not (uncapRad or maxRad == -1) and (messageDistance > maxRad and validSum == 0) then
                             message.text = ""
@@ -1620,8 +1877,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     langKey = ":(",
                                     valid = false,
                                     msgQuality = 0,
+                                    isRadio = false,
+                                    commCode = "0",
                                 }
                             )
+
+                            local numChunks = #textTable
 
                             for _, v in ipairs(textTable) do
                                 if v["hasLOS"] == false and chunkType == "action" then v["valid"] = false end
@@ -1635,13 +1896,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     hasValids = true
                                 end
                             end
-                            local numChunks = #textTable
+                            local receiverIsLocal = isLocalPlayer(receiverEntityId)
                             for k, v in ipairs(textTable) do
                                 local lastChunk = k == numChunks
 
                                 if
                                     v["radius"] == -1
-                                    or v["isRadio"] == true
                                     or (v["type"] == "pOOC" and wasGlobal)
                                     or (v["type"] == "lOOC" and uncapRad)
                                     or v["type"] == "gOOC"
@@ -1649,8 +1909,22 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     v["valid"] = true
                                 end
 
+                                local rawStr = v["text"]
+                                -- FezzedOne: Strip out radio brackets. We'll re-add them later.
+                                v["text"] = rawStr:gsub("^{{", ""):gsub("^{", ""):gsub("}}$", ""):gsub("}$", "")
+
+                                -- FezzedOne: Check if the player is listening on a given comm code, for validity checks.
+                                if v["isRadio"] then
+                                    if v["commCode"] ~= "-" and playerCommCodes[v["commCode"]] ~= nil then
+                                        v["valid"] = true
+                                    else
+                                        v["isRadio"] = false
+                                    end
+                                end
+
                                 chunkStr = v["text"]
                                 chunkType = v["type"]
+                                if chunkType == "quote" and v["valid"] then message.inEarShot = true end
                                 local langKey = v["langKey"]
                                 if
                                     v["valid"] == true
@@ -1661,14 +1935,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                             or (k < #textTable and textTable[k + 1]["type"] == "quote")
                                         )
                                     )
-                                then                  --check if this is surrounded by quotes
+                                then --check if this is surrounded by quotes
                                     v["valid"] = true --this should be set to true in here, since everything in this block should show up on the screen
                                     -- remember, noiserad is a const and radius is for the message
 
-                                    local colorOverride = chunkStr:find("%^%#") ~=
-                                        nil                    --don't touch colors if this is true
+                                    local colorOverride = chunkStr:find("%^%#") ~= nil --don't touch colors if this is true
                                     local actionColor = "#fff" --white for non sound based chunks
-                                    local msgColor = "#fff"    --white for non sound based chunks
+                                    local msgColor = "#fff" --white for non sound based chunks
                                     --disguise unheard stuff
                                     if chunkType == "sound" then
                                         if not colorOverride then
@@ -1685,7 +1958,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                                 langColor = langBank[langKey]["color"]
                                             end
                                             if langProf == nil then
-                                                local receiverIsLocal = isLocalPlayer(receiverEntityId)
                                                 local newLang
                                                 if xsb and receiverIsLocal then
                                                     newLang = world
@@ -1748,7 +2020,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     )
 
                                     --recolors certain things for emphasis
-                                    if chunkType ~= "action" then                               --allow asterisks to stay in actions
+                                    if chunkType ~= "action" then --allow asterisks to stay in actions
                                         chunkStr = colorWithin(chunkStr, "*", "#fe7", msgColor) --yellow
                                     end
                                     -- FezzedOne: This now uses backticks.
@@ -1757,6 +2029,39 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     chunkStr = "Says something."
                                     v["valid"] = true
                                     chunkType = "action"
+                                end
+
+                                -- FezzedOne: Add comm codes to chunks.
+                                if v["isRadio"] then
+                                    local msgColor = "#fff"
+                                    local commKey = v["commCode"]
+                                    if commKey ~= prevCommCode then
+                                        if v["commCode"] ~= "-" then
+                                            local commName, name = "", ""
+                                            local isUnknownCommCode = playerCommCodes[commKey] == nil
+                                            if not isUnknownCommCode then
+                                                name = playerCommCodes[commKey]
+                                                commName = name or commKey
+                                            end
+                                            chunkStr = "^"
+                                                .. (name and "#88f" or "#44f")
+                                                .. ";["
+                                                .. (isUnknownCommCode and "???" or commName)
+                                                .. "]^"
+                                                .. msgColor
+                                                .. "; "
+                                                .. chunkStr
+                                            prevCommCode = commKey
+                                        end
+                                    end
+                                end
+                                if chunkStr ~= "" then
+                                    if prevRadio and not v["isRadio"] then
+                                        chunkStr = "}}" .. chunkStr
+                                    elseif v["isRadio"] and not prevRadio then
+                                        chunkStr = "{{" .. chunkStr
+                                    end
+                                    prevRadio = v["isRadio"]
                                 end
 
                                 --after check, this puts formatted chunks in
@@ -1771,14 +2076,40 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         end
                                         prevStr = quoteCombo
                                     else
-                                        quoteCombo = '"' .. quoteCombo .. '"'
+                                        local beginRadio, endRadio = false, false
+                                        if quoteCombo:sub(1, 2) == "{{" then
+                                            quoteCombo = quoteCombo:sub(3, -1)
+                                            beginRadio = true
+                                        end
+                                        if quoteCombo:sub(-2, -1) == "}}" then
+                                            quoteCombo = quoteCombo:sub(1, -3)
+                                            endRadio = true
+                                        end
+                                        quoteCombo = (beginRadio and "{{" or "")
+                                            .. '"'
+                                            .. quoteCombo
+                                            .. '"'
+                                            .. (endRadio and "}}" or "")
                                     end
                                     tableStr = tableStr .. " " .. quoteCombo
                                     quoteCombo = ""
                                 end
                                 if chunkType ~= "sound" and prevType == "sound" then
                                     if soundCombo:match("[%w%d]") then
-                                        soundCombo = "<" .. soundCombo .. ">"
+                                        local beginRadio, endRadio = false, false
+                                        if soundCombo:sub(1, 2) == "{{" then
+                                            soundCombo = soundCombo:sub(3, -1)
+                                            beginRadio = true
+                                        end
+                                        if soundCombo:sub(-2, -1) == "}}" then
+                                            soundCombo = soundCombo:sub(1, -3)
+                                            endRadio = true
+                                        end
+                                        soundCombo = (beginRadio and "{{" or "")
+                                            .. "<"
+                                            .. soundCombo
+                                            .. ">"
+                                            .. (endRadio and "}}" or "")
                                         tableStr = tableStr .. " " .. soundCombo
                                     end
                                     soundCombo = ""
@@ -1803,22 +2134,31 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     prevStr = chunkStr
                                 end
 
+                                if lastChunk and prevRadio then tableStr = tableStr .. "}}" end
+
                                 prevType = chunkType
                             end
-                            tableStr = cleanDoubleSpaces(tableStr)  --removes double spaces, ignores colors
+                            tableStr = cleanDoubleSpaces(tableStr) --removes double spaces, ignores colors
                             tableStr = tableStr:gsub(' "%s', ' "')
-                            tableStr = tableStr:gsub("}}{{", "...") --for multiple radios
-                            tableStr = tableStr:gsub("}}{", "...")  --for multiple radios
-                            tableStr = tableStr:gsub("}{{", "...")  --for multiple radios
-                            tableStr = tableStr:gsub("}{", "...")   --for multiple radios
+                            tableStr = tableStr:gsub("}}[ ]*{{", "...") --for multiple radios
                             tableStr = trim(tableStr)
 
                             message.text = tableStr
                         end
                     end
 
-                    message.portrait = message.portrait and message.portrait ~= "" and message.portrait
-                        or message.connection
+                    if message.inSight then
+                        message.portrait = message.portrait and message.portrait ~= "" and message.portrait
+                            or message.connection
+                    else -- FezzedOne: Remove the portrait from the message if the receiver can't see the sender.
+                        -- Use a dummy negative connection ID so that a portrait is never "grabbed" by SCC.
+                        message.connection = -message.connection
+                        message.portrait = message.connection
+                        -- Don't need to process the sender ID anymore after this, so we can remove it so that a portrait is no longer displayed.
+                        message.senderId = nil
+                    end
+                    message.nickname = message.receiverName and (message.nickname .. " -> " .. message.receiverName)
+                        or message.nickname
                     if copiedMessage then
                         message.processed = true
                         world.sendEntityMessage(receiverEntityId, "scc_add_message", message)
@@ -1878,7 +2218,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 end
 
 function dynamicprox:onReceiveMessage(message) --here for logging the message you receive, just in case you wanted to save it or something
-    if message.connection ~= 0 and (message.mode == "Prox" or message.mode == "ProxSecondary") then
+    if message.connection ~= 0 and (message.sourceId or message.mode == "Prox" or message.mode == "ProxSecondary") then
         sb.logInfo("Chat: <%s> %s", message.nickname:gsub("%^[^^;]-;", ""), message.text:gsub("%^[^^;]-;", ""))
     end
 end
