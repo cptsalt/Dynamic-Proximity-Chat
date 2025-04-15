@@ -844,6 +844,14 @@ function dynamicprox:onSendMessage(data)
                     commKey = defaultCommCode ~= "0" and ("[" .. defaultCommCode .. "] ") or ""
                     rawText = commKey .. rawText
                 end
+
+                -- FezzedOne: Global actions and radio. Supports IC language tags now.
+                local globalStrings = {}
+                rawText = rawText:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
+                    table.insert(globalStrings, s)
+                    return ""
+                end)
+
                 data.content = rawText
                 data.text = ""
                 if parenSum == 2 or globalFlag then
@@ -860,13 +868,6 @@ function dynamicprox:onSendMessage(data)
                 local players = world.playerQuery(position, estRad, {
                     boundMode = "position",
                 })
-
-                local globalStrings = {}
-                -- FezzedOne: Global actions and radio. Supports IC language tags now.
-                data.text = data.text:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
-                    table.insert(globalStrings, s)
-                    return ""
-                end)
 
                 -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
                 -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
@@ -925,7 +926,7 @@ function dynamicprox:onSendMessage(data)
                         errorMsg,
                         data
                     )
-                    return false
+                    return true -- FezzedOne: Fixed log spam whenever an error occurs on sending.
                 end
             end,
             succeeded = function() return true end,
@@ -1056,6 +1057,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 local handleMessage = function(receiverEntityId, copiedMessage)
                     local uncapRad = isGlobalChat
                     local wasGlobal = isGlobalChat
+                    message.global = wasGlobal
                     local message = copiedMessage or message
                     if xsb and not message.isSccrp then -- FezzedOne: Already handled in SCCRP with my PR.
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
@@ -1154,6 +1156,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         local validSum = 0 --number of valid entries in the table
                         local cInd = 1 --lua starts at 1 >:(
                         local charBuffer = ""
+                        local noScramble = false
                         local languageCode = defaultLangStr or message.defaultLang --the !! shouldn't need to be set, but i'll leave it anyway
                         local radioMode = false --radio flag
                         local commCode = "0" -- FezzedOne: Comm code.
@@ -1180,7 +1183,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             msgQuality,
                             inSight,
                             isRadio,
-                            commCode
+                            commCode,
+                            noScramble
                         )
                             if langKey == nil then langKey = "!!" end
 
@@ -1196,6 +1200,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 hasLOS = inSight,
                                 isRadio = isRadio,
                                 commCode = commCode,
+                                noScramble = noScramble,
                             })
                         end
 
@@ -1208,6 +1213,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             if #charBuffer < 1 or charBuffer == '"' or charBuffer == ">" or charBuffer == "<" then
                                 prevMode = curMode
                                 curMode = nextMode
+                                if curMode ~= nextMode then prevDiffMode = curMode end
                                 return
                             end
 
@@ -1268,7 +1274,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 msgQuality,
                                 inSight,
                                 radioMode,
-                                commCode
+                                commCode,
+                                noScramble
                             )
                             charBuffer = ""
 
@@ -1284,10 +1291,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 if curMode == "quote" then
                                     parseDefault("")
                                     newMode("action")
+                                    noScramble = false
                                 elseif curMode == "action" then
                                     newMode("quote")
+                                    noScramble = false
                                     parseDefault("")
                                 else
+                                    noScramble = false
                                     parseDefault('"')
                                 end
                             end,
@@ -1320,7 +1330,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                                     cInd = oocEnd + 1
                                 else
-                                    if curMode ~= "sound" and curMode ~= "quote" then --added quotes here so people can do the cool combine vocoder thing <::Pick up that can.::>
+                                    if curMode == "quote" then
+                                        newMode(curMode)
+                                        noScramble = true
+                                    elseif curMode ~= "sound" and curMode ~= "quote" then --added quotes here so people can do the cool combine vocoder thing <::Pick up that can.::>
                                         newMode("sound")
                                     end
                                 end
@@ -1328,7 +1341,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             end,
                             [">"] = function()
                                 parseDefault("")
-                                if curMode == "sound" then newMode(prevDiffMode) end
+                                if curMode == "quote" then
+                                    newMode(curMode)
+                                    noScramble = false
+                                elseif curMode == "sound" then
+                                    -- FezzedOne: Fixed parser bug where a quote was immediately assumed to follow the end of a sound, screwing up state.
+                                    newMode("action")
+                                end
                             end,
                             [":"] = function()
                                 local nextChar = rawSub(cInd + 1, cInd + 1)
@@ -1991,7 +2010,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                                 end
                                             end
 
-                                            if langProf < 100 then
+                                            if (not v["noScramble"]) and langProf < 100 then
                                                 --scramble the word
                                                 chunkStr =
                                                     langScramble(trim(chunkStr), langProf, langKey, msgColor, langColor)
@@ -2006,7 +2025,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                             chunkStr = "^" .. msgColor .. ";" .. chunkStr .. "^" .. actionColor .. ";"
                                         end
 
-                                        --add in languagee indicator
+                                        --add in language indicator
                                         if langKey ~= prevLang then
                                             chunkStr = "^#fff;[" .. langKey .. "]^" .. msgColor .. "; " .. chunkStr
                                             prevLang = langKey
@@ -2035,7 +2054,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 if v["isRadio"] then
                                     local msgColor = "#fff"
                                     local commKey = v["commCode"]
-                                    if commKey ~= prevCommCode then
+                                    if v["valid"] and commKey ~= prevCommCode then
                                         if v["commCode"] ~= "-" then
                                             local commName, name = "", ""
                                             local isUnknownCommCode = playerCommCodes[commKey] == nil
@@ -2055,11 +2074,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         end
                                     end
                                 end
-                                if chunkStr ~= "" then
+                                if v["valid"] and chunkStr ~= "" then
                                     if prevRadio and not v["isRadio"] then
-                                        chunkStr = "}}" .. chunkStr
+                                        chunkStr = (wasGlobal and "}}" or "}") .. chunkStr
                                     elseif v["isRadio"] and not prevRadio then
-                                        chunkStr = "{{" .. chunkStr
+                                        chunkStr = (wasGlobal and "{{" or "{") .. chunkStr
                                     end
                                     prevRadio = v["isRadio"]
                                 end
@@ -2077,19 +2096,28 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         prevStr = quoteCombo
                                     else
                                         local beginRadio, endRadio = false, false
+                                        if quoteCombo:sub(1, 2) == "}}" then
+                                            quoteCombo = quoteCombo:sub(3, -1)
+                                            endRadio = true
+                                        end
+                                        if quoteCombo:sub(1, 1) == "}" then
+                                            quoteCombo = quoteCombo:sub(2, -1)
+                                            endRadio = true
+                                        end
                                         if quoteCombo:sub(1, 2) == "{{" then
                                             quoteCombo = quoteCombo:sub(3, -1)
                                             beginRadio = true
                                         end
-                                        if quoteCombo:sub(-2, -1) == "}}" then
-                                            quoteCombo = quoteCombo:sub(1, -3)
-                                            endRadio = true
+                                        if quoteCombo:sub(1, 1) == "{" then
+                                            quoteCombo = quoteCombo:sub(2, -1)
+                                            beginRadio = true
                                         end
-                                        quoteCombo = (beginRadio and "{{" or "")
-                                            .. '"'
+                                        local isEmpty = #(quoteCombo:gsub("%^[^^;]-;", ""):gsub("%s", "")) == 0
+                                        quoteCombo = (endRadio and (wasGlobal and "}} " or "} ") or "")
+                                            .. (beginRadio and (wasGlobal and "{{" or "{") or "")
+                                            .. (isEmpty and "" or '"')
                                             .. quoteCombo
-                                            .. '"'
-                                            .. (endRadio and "}}" or "")
+                                            .. (isEmpty and "" or '"')
                                     end
                                     tableStr = tableStr .. " " .. quoteCombo
                                     quoteCombo = ""
@@ -2097,19 +2125,28 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 if chunkType ~= "sound" and prevType == "sound" then
                                     if soundCombo:match("[%w%d]") then
                                         local beginRadio, endRadio = false, false
+                                        if soundCombo:sub(1, 2) == "}}" then
+                                            soundCombo = soundCombo:sub(3, -1)
+                                            endRadio = true
+                                        end
+                                        if soundCombo:sub(1, 1) == "}" then
+                                            soundCombo = soundCombo:sub(2, -1)
+                                            endRadio = true
+                                        end
                                         if soundCombo:sub(1, 2) == "{{" then
                                             soundCombo = soundCombo:sub(3, -1)
                                             beginRadio = true
                                         end
-                                        if soundCombo:sub(-2, -1) == "}}" then
-                                            soundCombo = soundCombo:sub(1, -3)
-                                            endRadio = true
+                                        if soundCombo:sub(1, 1) == "{" then
+                                            soundCombo = soundCombo:sub(2, -1)
+                                            beginRadio = true
                                         end
-                                        soundCombo = (beginRadio and (wasGlobal and "{{" or "{") or "")
-                                            .. "<"
+                                        local isEmpty = #(soundCombo:gsub("%^[^^;]-;", ""):gsub("%s", "")) == 0
+                                        soundCombo = (endRadio and (wasGlobal and "}} " or "} ") or "")
+                                            .. (beginRadio and (wasGlobal and "{{" or "{") or "")
+                                            .. (isEmpty and "" or "<")
                                             .. soundCombo
-                                            .. ">"
-                                            .. (endRadio and (wasGlobal and "}}" or "}") or "")
+                                            .. (isEmpty and "" or ">")
                                         tableStr = tableStr .. " " .. soundCombo
                                     end
                                     soundCombo = ""
@@ -2134,13 +2171,14 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     prevStr = chunkStr
                                 end
 
-                                if lastChunk and prevRadio then tableStr = tableStr .. "}}" end
+                                if lastChunk and prevRadio then tableStr = tableStr .. (wasGlobal and "}}" or "}") end
 
                                 prevType = chunkType
                             end
                             tableStr = cleanDoubleSpaces(tableStr) --removes double spaces, ignores colors
                             tableStr = tableStr:gsub(' "%s', ' "')
-                            tableStr = tableStr:gsub("}}[ ]*{{", "...") --for multiple radios
+                            tableStr = tableStr:gsub("}}%s*{{", "...") --for multiple radios
+                            tableStr = tableStr:gsub("}%s*{", "...") --for multiple radios
                             tableStr = trim(tableStr)
 
                             message.text = tableStr
@@ -2195,7 +2233,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
         if showAsProximity then message.mode = "Proximity" end
         if showAsLocal then message.mode = "Local" end
-        if isGlobalChat then message.mode = "Broadcast" end
+        if isGlobalChat or message.global then message.mode = "Broadcast" end
 
         return message
     end
