@@ -725,13 +725,6 @@ function dynamicprox:onSendMessage(data)
                 return ""
             end)
 
-            local globalStrings = {}
-            -- FezzedOne: Global actions and radio. Supports IC language tags now.
-            data.text = data.text:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
-                table.insert(globalStrings, s)
-                return ""
-            end)
-
             if position then
                 local estRad = data.proxRadius
                 local rawText = data.text
@@ -867,6 +860,13 @@ function dynamicprox:onSendMessage(data)
                 local players = world.playerQuery(position, estRad, {
                     boundMode = "position",
                 })
+
+                local globalStrings = {}
+                -- FezzedOne: Global actions and radio. Supports IC language tags now.
+                data.text = data.text:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
+                    table.insert(globalStrings, s)
+                    return ""
+                end)
 
                 -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
                 -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
