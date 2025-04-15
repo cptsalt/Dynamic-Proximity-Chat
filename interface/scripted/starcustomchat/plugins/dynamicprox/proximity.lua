@@ -2105,11 +2105,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                             soundCombo = soundCombo:sub(1, -3)
                                             endRadio = true
                                         end
-                                        soundCombo = (beginRadio and "{{" or "")
+                                        soundCombo = (beginRadio and (wasGlobal and "{{" or "{") or "")
                                             .. "<"
                                             .. soundCombo
                                             .. ">"
-                                            .. (endRadio and "}}" or "")
+                                            .. (endRadio and (wasGlobal and "}}" or "}") or "")
                                         tableStr = tableStr .. " " .. soundCombo
                                     end
                                     soundCombo = ""
