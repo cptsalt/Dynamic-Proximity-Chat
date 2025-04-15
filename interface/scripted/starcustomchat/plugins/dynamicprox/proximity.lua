@@ -725,13 +725,6 @@ function dynamicprox:onSendMessage(data)
                 return ""
             end)
 
-            local globalStrings = {}
-            -- FezzedOne: Global actions and radio. Supports IC language tags now.
-            data.text = data.text:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
-                table.insert(globalStrings, s)
-                return ""
-            end)
-
             if position then
                 local estRad = data.proxRadius
                 local rawText = data.text
@@ -867,6 +860,13 @@ function dynamicprox:onSendMessage(data)
                 local players = world.playerQuery(position, estRad, {
                     boundMode = "position",
                 })
+
+                local globalStrings = {}
+                -- FezzedOne: Global actions and radio. Supports IC language tags now.
+                data.text = data.text:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
+                    table.insert(globalStrings, s)
+                    return ""
+                end)
 
                 -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
                 -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
@@ -2105,11 +2105,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                             soundCombo = soundCombo:sub(1, -3)
                                             endRadio = true
                                         end
-                                        soundCombo = (beginRadio and "{{" or "")
+                                        soundCombo = (beginRadio and (wasGlobal and "{{" or "{") or "")
                                             .. "<"
                                             .. soundCombo
                                             .. ">"
-                                            .. (endRadio and "}}" or "")
+                                            .. (endRadio and (wasGlobal and "}}" or "}") or "")
                                         tableStr = tableStr .. " " .. soundCombo
                                     end
                                     soundCombo = ""
