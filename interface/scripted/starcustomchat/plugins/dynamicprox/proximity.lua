@@ -2233,7 +2233,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
         if showAsProximity then message.mode = "Proximity" end
         if showAsLocal then message.mode = "Local" end
-        if isGlobalChat or message.global then message.mode = "Broadcast" end
+        if (isGlobalChat or message.global) and message.mode ~= "ProxSecondary" then message.mode = "Broadcast" end
 
         return message
     end
