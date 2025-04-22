@@ -1816,7 +1816,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
                         local function colorWithin(str, char, color, prevColor)
                             -- FezzedOne: Annoying that this function also has to handle escape syntax properly.
-                            sb.logInfo(DEBUG_PREFIX .. "Colouring chunk '" .. tostring(str) .. "'")
+                            -- sb.logInfo(DEBUG_PREFIX .. "Colouring chunk '" .. tostring(str) .. "'")
                             local colorOn = false
                             local escaped = false
                             local charBuffer = ""
@@ -1846,7 +1846,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     charBuffer = charBuffer .. i
                                 end
                             end
-                            sb.logInfo(DEBUG_PREFIX .. "Char buffer: '" .. charBuffer .. "'")
+                            -- sb.logInfo(DEBUG_PREFIX .. "Char buffer: '" .. charBuffer .. "'")
                             return charBuffer
                         end
 
