@@ -1842,6 +1842,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         end
                                     end
                                 else
+                                    -- Don't eat backslashes unnecessarily.
+                                    if escaped then charBuffer = charBuffer .. "\\" end
                                     escaped = false
                                     charBuffer = charBuffer .. i
                                 end
