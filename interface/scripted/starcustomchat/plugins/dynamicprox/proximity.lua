@@ -215,6 +215,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.removecommcode.desc",
             data = "/removecommcode",
         })
+    elseif string.find("/dpcserver", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/dpcserver",
+            description = "commands.dpcserver.desc",
+            data = "/dpcserver",
+        })
     end
 end
 
@@ -674,14 +680,43 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             return "^red;Error occurred while running command, check log"
         end
     end)
+    starcustomchat.utils.setMessageHandler("/dpcserver", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local clSetting = splitStr(data, " ")[1]
+            local retStr = ""
+            if clSetting == "true" or clSetting == "on" or clSetting == "enabled" then
+                root.setConfiguration("dpcOverServer", true)
+                retStr = "DPC server handling is ^green;enabled^reset;."
+            elseif #clSetting >= 1 then
+                root.setConfiguration("dpcOverServer", false)
+                retStr = "DPC server handling is ^red;disabled^reset;."
+            else
+                local curConfig = root.getConfiguration("dpcOverServer") or false
+                if curConfig then
+                    curConfig = "^green;enabled^reset;"
+                else
+                    curConfig = "^red;disabled^reset;"
+                end
+                retStr = "DPC server handling is " .. curConfig .. "."
+            end
+            return retStr
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
 end
 
 function dynamicprox:onSendMessage(data)
     --think about running this in local to allow players without the mod to still see messages
-
+    -- sb.logInfo(dump(data))
     if data.mode == "Prox" then
-        -- data.time = systemTime() this is where i'd add time if i wanted it
+        local sendOverServer = root.getConfiguration("dpcOverServer") or false
         data.proxRadius = self.proxRadius
+        -- data.time = systemTime() this is where i'd add time if i wanted it
         local function sendMessageToPlayers()
             local position = player.id() and world.entityPosition(player.id())
 
@@ -694,7 +729,7 @@ function dynamicprox:onSendMessage(data)
                 if c == "\\" then -- Handle escapes.
                     newStr = newStr .. "\\" .. rawText:sub(cInd + 1, cInd + 1)
                     cInd = cInd + 1
-                elseif c == "|" then
+                elseif not sendOverServer and c == "|" then
                     local fStart = cInd
                     local fEnd = rawText:find("|", cInd + 1)
 
@@ -780,7 +815,7 @@ function dynamicprox:onSendMessage(data)
                         if rawText:sub(iCount + 1, iCount + 1) == ">" then inOoc = false end
                     elseif i == "{" and rawText:find("}", iCount) ~= nil then
                         globalFlag = true
-                    elseif i == "[" and langEnd ~= nil then --use this flag to check for default languages. A string without any noise won't have any language support
+                    elseif i == "[" and langEnd ~= nil then                                --use this flag to check for default languages. A string without any noise won't have any language support
                         if (not inOoc) and rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
                             local langKey, commKey
                             local commKeySubstitute = nil
@@ -807,7 +842,8 @@ function dynamicprox:onSendMessage(data)
                                 commKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
                                 if not tonumber(rawCode) then
                                     -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
-                                    langKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                                    langKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]",
+                                        function(s) return "%" .. s end)
                                 end
                             end
 
@@ -865,9 +901,13 @@ function dynamicprox:onSendMessage(data)
                 --estrad should be pretty close to actual radius
 
                 --this is where i'd change players if needed
-                local players = world.playerQuery(position, estRad, {
-                    boundMode = "position",
-                })
+                local players = {}
+
+                if not sendOverServer then
+                    players = world.playerQuery(position, estRad, {
+                        boundMode = "position",
+                    })
+                end
 
                 -- FezzedOne: Added a setting that allows proximity chat to be sent as local chat for compatibility with «standard» local chat.
                 -- Chat sent this way is prefixed so that it always shows up as proximity chat for those with the mod installed.
@@ -877,12 +917,23 @@ function dynamicprox:onSendMessage(data)
                     .. tostring(data.defaultLang)
                     .. TagSuffix
 
-                if root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
+                if sendOverServer then
+                    data.playerId = player.id()
+                    data.playerUid = player.uniqueId()
+                    data.estRad = estRad
+                    data.globalFlag = globalFlag
+                    starcustomchat.utils.createStagehandWithData("dpcServerHandler",
+                        { message = "sendDynamicMessage", data = data })
+                    sb.logInfo("Sending message to server: "..data.content)
+                    return true --this should stop global strings from running (which i want in this case)
+                    --later on i may make this a client config setting
+                elseif root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
                     chat.send(DynamicProxPrefix .. chatTags .. data.content, "Local", false)
                 else
                     for _, pl in ipairs(players) do
                         if xsb then data.sourceId = world.primaryPlayer() end
-                        data.targetId = pl -- FezzedOne: Used to distinguish DPC messages from SCCRP messages *and* for filtering messages as seen by secondaries on xStarbound clients.
+                        data.targetId =
+                            pl -- FezzedOne: Used to distinguish DPC messages from SCCRP messages *and* for filtering messages as seen by secondaries on xStarbound clients.
                         data.mode = "Proximity"
                         world.sendEntityMessage(pl, "scc_add_message", data)
                     end
