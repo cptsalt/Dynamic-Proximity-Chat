@@ -1508,9 +1508,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                             end,
                             ["/"] = function() parseDefault("/") end,
                             ["`"] = function() parseDefault("`") end,
-                            ["\\"] = function() -- Allow escaping any specially parsed character with `\`.
+                            ["\\"] = function() -- Allow escaping any specially parsed character with `\`. Also allow escaping `\` itself.
                                 local nextChar = rawSub(cInd + 1, cInd + 1)
-                                parseDefault(nextChar)
+                                -- Since backtick and asterisk parsing are handled later, keep the escaping backslash for these special cases.
+                                if nextChar == "*" or nextChar == "`" then charBuffer = charBuffer .. "\\" end
+                                local prevChar = cInd ~= 1 and rawSub(cInd - 1, cInd - 1) or ""
+                                if prevChar ~= "\\" then parseDefault(nextChar) end
                                 cInd = cInd + 1
                             end,
                             ["("] = function() --check for number of parentheses
@@ -1863,23 +1866,40 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         }
 
                         local function colorWithin(str, char, color, prevColor)
+                            -- FezzedOne: Annoying that this function also has to handle escape syntax properly.
+                            -- sb.logInfo(DEBUG_PREFIX .. "Colouring chunk '" .. tostring(str) .. "'")
                             local colorOn = false
+                            local escaped = false
                             local charBuffer = ""
                             for i in str:gmatch(".") do
-                                if i == char then
-                                    if colorOn == false then
-                                        charBuffer = charBuffer .. "^" .. color .. ";"
-                                        colorOn = true
+                                if i == "\\" then
+                                    if escaped then -- Have to handle printing escaped backslashes a *second* time.
+                                        escaped = false
+                                        charBuffer = charBuffer .. i
                                     else
-                                        charBuffer = charBuffer .. "^" .. prevColor .. ";"
-                                        colorOn = false
+                                        escaped = true
+                                    end
+                                elseif i == char then
+                                    if escaped then
+                                        escaped = false
+                                        charBuffer = charBuffer .. i
+                                    else
+                                        if colorOn == false then
+                                            charBuffer = charBuffer .. "^" .. color .. ";"
+                                            colorOn = true
+                                        else
+                                            charBuffer = charBuffer .. "^" .. prevColor .. ";"
+                                            colorOn = false
+                                        end
                                     end
                                 else
-                                    --put this outside the if statement to make the characters appear as well as colors
+                                    -- Don't eat backslashes unnecessarily.
+                                    if escaped then charBuffer = charBuffer .. "\\" end
+                                    escaped = false
                                     charBuffer = charBuffer .. i
                                 end
                             end
-                            -- print("Charbuffer is " .. charBuffer)
+                            -- sb.logInfo(DEBUG_PREFIX .. "Char buffer: '" .. charBuffer .. "'")
                             return charBuffer
                         end
 
@@ -2090,11 +2110,19 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     )
 
                                     --recolors certain things for emphasis
-                                    if chunkType ~= "action" then --allow asterisks to stay in actions
+                                    -- Remove emphasis colouring from OOC chunks.
+                                    if
+                                        chunkType ~= "action"
+                                        and chunkType ~= "gOOC"
+                                        and chunkType ~= "lOOC"
+                                        and chunkType ~= "pOOC"
+                                    then --allow asterisks to stay in actions
                                         chunkStr = colorWithin(chunkStr, "*", "#fe7", msgColor) --yellow
                                     end
-                                    -- FezzedOne: This now uses backticks.
-                                    chunkStr = colorWithin(chunkStr, "`", "#d80", msgColor) --orange
+                                    -- FezzedOne: This now uses backticks. Also removed emphasis colouring from OOC chunks.
+                                    if chunkType ~= "gOOC" and chunkType ~= "lOOC" and chunkType ~= "pOOC" then
+                                        chunkStr = colorWithin(chunkStr, "`", "#d80", msgColor) --orange
+                                    end
                                 elseif chunkType == "quote" and hasValids and prevType ~= "quote" then
                                     chunkStr = "Says something."
                                     v["valid"] = true
