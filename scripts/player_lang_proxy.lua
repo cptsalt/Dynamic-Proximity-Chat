@@ -12,6 +12,28 @@ function init()
     message.setHandler("setCommCodes", function(_, isLocal, newCommCodes)
         if isLocal then return player.setProperty("DynProxChat::commCodes", newCommCodes or { ["0"] = false }) end
     end)
+    message.setHandler("dpcServerMessage", function(_, _, status)
+        if status then
+            chat.addMessage(status)
+        end
+    end)
+    message.setHandler("dpcLearnLangReturn", function(_, _, data)
+        if data then
+            local langKey = data.langKey
+            local langName = data.langName
+            local langLevel = data.langLevel
+            local message = data.message
+
+            local learnedLangs = player.getProperty("DPC::learnedLangs") or {}
+            learnedLangs[langKey] = {
+                name = langName,
+                prof = langLevel
+            }
+            player.setProperty("DPC::learnedLangs", learnedLangs)
+
+            chat.addMessage(message)
+        end
+    end)
     message.setHandler("getDefaultCommCode", function(_, isLocal, newDefault)
         if isLocal then
             local default = player.getProperty("DynProxChat::defaultCommCode")
