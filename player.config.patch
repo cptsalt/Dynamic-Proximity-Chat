@@ -1,0 +1,7 @@
+[
+  {
+    "op": "add",
+    "path": "/genericScriptContexts/sccDynamicChat",
+    "value": "/scripts/player_lang_proxy.lua"
+  }
+]
