@@ -172,12 +172,17 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.checktypo.desc",
             data = "/checktypo",
         })
-        --this one is broken, not sure why
     elseif string.find("/showtypos", substr, nil, true) then
         table.insert(availableCommands, {
             name = "/showtypos",
             description = "commands.showtypos.desc",
             data = "/showtypos",
+        })
+    elseif string.find("/togglehints", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/togglehints",
+            description = "commands.togglehints.desc",
+            data = "/togglehints",
         })
     elseif string.find("/proxlocal", substr, nil, true) then
         table.insert(availableCommands, {
@@ -242,29 +247,6 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
     end
 end
 
-local function checktypo(toggle)
-    local typoTable = player.getProperty("typos", {})
-    local typoStatus
-
-    if typoTable["typosActive"] == true then
-        if toggle then
-            typoTable["typosActive"] = false
-            typoStatus = "off"
-        else
-            typoStatus = "on"
-        end
-    else
-        if toggle then
-            typoTable["typosActive"] = true
-            typoStatus = "on"
-        else
-            typoStatus = "off"
-        end
-    end
-    player.setProperty("typos", typoTable)
-    return "Typo correction is " .. typoStatus
-end
-
 local function splitStr(inputstr, sep) --replaced this with a less efficient linear search in order to be system agnostic
     if sep == nil then sep = "%s" end
     local arg = ""
@@ -291,15 +273,57 @@ local function splitStr(inputstr, sep) --replaced this with a less efficient lin
     return t
 end
 
-local function getDefaultLang()
-    local langItem = player.getItemWithParameter("defaultLang", true) --checks for an item with the "defaultLang" parameter
+local function getDefaultLang(onServer)
     local defaultKey
-    if langItem == nil then
-        defaultKey = "!!"
+    if onServer or false then
+        defaultKey = player.getProperty("DPC::defualtLang") or "!!"
     else
-        defaultKey = langItem["parameters"]["langKey"] or "!!"
+        local langItem = player.getItemWithParameter("defaultLang", true) --checks for an item with the "defaultLang" parameter
+        if langItem == nil then
+            defaultKey = "!!"
+        else
+            defaultKey = langItem["parameters"]["langKey"] or "!!"
+        end
     end
     return defaultKey
+end
+
+local function setTextHint(mode)
+    if mode ~= "Prox" then
+        widget.setText("lblTextboxHint", starcustomchat.utils.getTranslation("chat.textbox.hint"))
+        return
+    end
+    if not root.getConfiguration("DPC::showHints") then
+        return
+    end
+
+    local defaultLang = getDefaultLang(root.getConfiguration("dpcOverServer") or false)
+
+    local hintStr = ""
+    if defaultLang ~= "!!" then
+        hintStr = hintStr .. "Default Lang: [" .. defaultLang .. "], "
+    end
+    local autoCorVal = (player.getProperty("typos")["typosActive"] and "on") or "off"
+    hintStr = hintStr .. "Autocorrect " .. autoCorVal
+
+    hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
+
+    widget.setText("lblTextboxHint", hintStr)
+end
+
+local function checktypo(toggle)
+    local typoTable = player.getProperty("typos", {})
+    local typoStatus
+
+
+    if toggle then
+        typoTable["typosActive"] = not typoTable["typosActive"]
+    end
+
+    player.setProperty("typos", typoTable)
+    setTextHint("Prox")
+    local typoStatus = (typoTable["typosActive"] and "on") or "off"
+    return "Typo correction is " .. typoStatus
 end
 
 --this messagehandler function runs if the chat preview exists
@@ -644,7 +668,15 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
 
         player.setProperty("DPC::defualtLang", defaultCode)
+        setTextHint("Prox")
         return "Default langauge set to \"" .. learnedLangs[defaultCode]["name"] .. "\""
+    end)
+    starcustomchat.utils.setMessageHandler("/togglehints", function(_, _, data)
+        local newHintsVal = not root.getConfiguration("DPC::showHints")
+        local hintsDisplay = (newHintsVal and "on") or "off"
+        root.setConfiguration("DPC::showHints", newHintsVal)
+        setTextHint("Prox")
+        return "Hint display " .. hintsDisplay
     end)
     starcustomchat.utils.setMessageHandler("/commcodes", function(_, _, data)
         local status, resultOrError = pcall(function(data)
@@ -1015,7 +1047,9 @@ function dynamicprox:onSendMessage(data)
                             end
                             if langKey then
                                 local upperKey = langKey:upper()
-                                local langItem = player.getItemWithParameter("langKey", upperKey)
+                                --if sendoverserver is on, this returns a prof value. Otherwise it returns an item. Either way it doesn't get checked later so that's fine
+                                local langItem = (sendOverServer and player.getProperty("DPC::learnedLangs")) or
+                                    player.getItemWithParameter("langKey", upperKey)
                                 if langItem == nil and upperKey ~= "!!" then
                                     rawText = rawText:gsub("%[" .. langKey .. "%]", "[" .. defaultKey .. "]")
                                 end
@@ -2296,7 +2330,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                         and chunkType ~= "gOOC"
                                         and chunkType ~= "lOOC"
                                         and chunkType ~= "pOOC"
-                                    then --allow asterisks to stay in actions
+                                    then                                                        --allow asterisks to stay in actions
                                         chunkStr = colorWithin(chunkStr, "*", "#fe7", msgColor) --yellow
                                     end
                                     -- FezzedOne: This now uses backticks. Also removed emphasis colouring from OOC chunks.
@@ -2518,4 +2552,13 @@ function dynamicprox:onReceiveMessage(message) --here for logging the message yo
     if message.connection ~= 0 and (message.sourceId or message.mode == "Prox" or message.mode == "ProxSecondary") then
         sb.logInfo("Chat: <%s> %s", message.nickname:gsub("%^[^^;]-;", ""), message.text:gsub("%^[^^;]-;", ""))
     end
+end
+
+function dynamicprox:onModeChange(mode)
+    if mode == "Prox" and not (player.getProperty("DPC::firstLoad") or false) then
+        chat.addMessage(
+            "Dynamic Prox Chat: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. Then, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
+        player.setProperty("DPC::firstLoad", true)
+    end
+    setTextHint(mode)
 end
