@@ -303,7 +303,7 @@ local function setTextHint(mode)
     if defaultLang ~= "!!" then
         hintStr = hintStr .. "Default Lang: [" .. defaultLang .. "], "
     end
-    local autoCorVal = (player.getProperty("typos")["typosActive"] and "on") or "off"
+    local autoCorVal = (player.getProperty("typos") and player.getProperty("typos")["typosActive"] and "on") or "off"
     hintStr = hintStr .. "Autocorrect " .. autoCorVal
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
@@ -629,6 +629,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             { message = "addLang", data = addInfo })
     end)
     starcustomchat.utils.setMessageHandler("/resetlangs", function(_, _, data)
+        local sendOverServer = root.getConfiguration("dpcOverServer") or false
+        if not sendOverServer then
+            return "Lang commands aren't supported for client processing, use /newlangitem instead."
+        end
         local resetCheck = splitStr(data, " ")[1]
         local playerSecret = player.getProperty("DPC::playerCheck") or false
 
@@ -651,6 +655,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
     end)
     starcustomchat.utils.setMessageHandler("/defaultlang", function(_, _, data)
+        local sendOverServer = root.getConfiguration("dpcOverServer") or false
+        if not sendOverServer then
+            return "Lang commands aren't supported for client processing, use /newlangitem instead."
+        end
         local defaultCode = splitStr(data, " ")[1] or false
 
         if not defaultCode then
@@ -659,17 +667,27 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         --set the default key in the learnedlangs table
         defaultCode = defaultCode:upper()
         defaultCode = defaultCode:gsub("[%[%]]", "")
-
+        local playerSecret = player.getProperty("DPC::playerCheck") or false
         local learnedLangs = player.getProperty("DPC::learnedLangs") or false
-        if not learnedLangs then
+
+        if not learnedLangs or not playerSecret then
             return "No languages set. Use /learnlang to learn languages."
         elseif not learnedLangs[defaultCode] then
             return "Langauge \"" .. defaultCode .. "\" not known, aborting assignment."
         end
 
+        local playerSecret = player.getProperty("DPC::playerCheck") or false
+        local addInfo = {
+            player = player.id(),
+            uuid = player.uniqueId(),
+            playerSecret = playerSecret,
+            dCode = defaultCode
+        }
+        starcustomchat.utils.createStagehandWithData("dpcServerHandler",
+        { message = "defaultLang", data = addInfo })
+        
         player.setProperty("DPC::defualtLang", defaultCode)
-        setTextHint("Prox")
-        return "Default langauge set to \"" .. learnedLangs[defaultCode]["name"] .. "\""
+        setTextHint("Prox") --we're gonna assume that the server works
     end)
     starcustomchat.utils.setMessageHandler("/togglehints", function(_, _, data)
         local newHintsVal = not root.getConfiguration("DPC::showHints")
@@ -960,7 +978,7 @@ function dynamicprox:onSendMessage(data)
                 local iCount = 1
                 local globalFlag = false
                 local hasNoise = false
-                local defaultKey = getDefaultLang()
+                local defaultKey = getDefaultLang(sendOverServer)
                 data.defaultLang = defaultKey
                 local typoTable = player.getProperty("typos", {})
                 local typoVar = typoTable["typosActive"]
@@ -2528,6 +2546,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if showAsLocal then message.mode = "Local" end
         if (isGlobalChat or message.global) and message.mode ~= "ProxSecondary" then message.mode = "Broadcast" end
 
+        setTextHint("Prox")
         return message
     end
     -- return messageFormatter(rawMessage)
