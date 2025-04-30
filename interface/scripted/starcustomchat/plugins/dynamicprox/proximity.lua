@@ -244,6 +244,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.dpcserver.desc",
             data = "/dpcserver",
         })
+    elseif string.find("/chatbubble", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/chatbubble",
+            description = "commands.chatbubble.desc",
+            data = "/chatbubble",
+        })
     end
 end
 
@@ -313,7 +319,6 @@ end
 
 local function checktypo(toggle)
     local typoTable = player.getProperty("typos", {})
-    local typoStatus
 
 
     if toggle then
@@ -684,8 +689,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             dCode = defaultCode
         }
         starcustomchat.utils.createStagehandWithData("dpcServerHandler",
-        { message = "defaultLang", data = addInfo })
-        
+            { message = "defaultLang", data = addInfo })
+
         player.setProperty("DPC::defualtLang", defaultCode)
         setTextHint("Prox") --we're gonna assume that the server works
     end)
@@ -909,6 +914,23 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 retStr = "DPC server handling is " .. curConfig .. "."
             end
             return retStr
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/chatbubble", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local bubbleSetting = not (root.getConfiguration("DPC::chatBubble") or false)
+            root.setConfiguration("DPC::chatBubble",bubbleSetting)
+
+            local retStr = "not "
+            if bubbleSetting then retStr = "" end
+
+            return "Chat bubbles will ".. (retStr) .. "appear when sending messages."
         end, data)
         if status then
             return resultOrError
@@ -1206,7 +1228,9 @@ function dynamicprox:onSendMessage(data)
         }
 
         promises:add(sendMessagePromise)
-        player.say("...")
+        if root.getConfiguration("DPC::chatBubble") or false then
+            player.say("...")
+        end
     end
 end
 
