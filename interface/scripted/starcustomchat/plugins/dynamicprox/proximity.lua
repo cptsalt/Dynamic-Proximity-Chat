@@ -282,7 +282,7 @@ end
 local function getDefaultLang(onServer)
     local defaultKey
     if onServer or false then
-        defaultKey = player.getProperty("DPC::defualtLang") or "!!"
+        defaultKey = player.getProperty("DPC::defaultLang") or "!!"
     else
         local langItem = player.getItemWithParameter("defaultLang", true) --checks for an item with the "defaultLang" parameter
         if langItem == nil then
@@ -577,14 +577,23 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
 
         local splitArgs = splitStr(data, " ")
-        local langName, langKey, langLevel, color =
+        local langKey, langLevel, langName, color =
             (splitArgs[1] or nil),
-            (splitArgs[2] or nil),
-            (tonumber(splitArgs[3]) or 10),
+            (tonumber(splitArgs[2]) or 10),
+            (splitArgs[3] or nil),
             (splitArgs[4] or nil)
 
-        if langKey == nil or langName == nil then
+
+        if langKey == nil then
             return "Missing arguments for /learnlang, need {name, code, prof, [hex color]}"
+        end
+
+        langKey = langKey:upper()
+        langKey = langKey:gsub("[%[%]]", "")
+
+        local learnedLangs = player.getProperty("DPC::learnedLangs") or {}
+        if langName == nil and not learnedLangs[langKey] then
+            chat.addMessage("Language name not provided. Use /langedit (not implemented yet) to add one later.")
         end
         if color == nil then
             local hexDigits =
@@ -605,13 +614,11 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             if not color:match("#") then color = "#" .. color end
             if #color > 7 then color = color:sub(1, 7) end
         end
-        langKey = langKey:upper()
-        langKey = langKey:gsub("[%[%]]", "")
 
         langLevel = math.max(0, math.min(langLevel, 10))
 
         local langInfo = {
-            name = langName,
+            name = langName or langKey,
             code = langKey,
             prof = langLevel,
             color = color
@@ -647,7 +654,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
         if resetCheck == "reset" then
             player.setProperty("DPC::learnedLangs", nil)
-            player.setProperty("DPC::defualtLang", nil)
+            player.setProperty("DPC::defaultLang", nil)
             local addInfo = {
                 player = player.id(),
                 uuid = player.uniqueId(),
@@ -677,7 +684,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
         if not learnedLangs or not playerSecret then
             return "No languages set. Use /learnlang to learn languages."
-        elseif not learnedLangs[defaultCode] then
+        elseif defaultCode ~= "!!" and not learnedLangs[defaultCode] then
             return "Langauge \"" .. defaultCode .. "\" not known, aborting assignment."
         end
 
@@ -691,7 +698,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         starcustomchat.utils.createStagehandWithData("dpcServerHandler",
             { message = "defaultLang", data = addInfo })
 
-        player.setProperty("DPC::defualtLang", defaultCode)
+        player.setProperty("DPC::defaultLang", defaultCode)
         setTextHint("Prox") --we're gonna assume that the server works
     end)
     starcustomchat.utils.setMessageHandler("/togglehints", function(_, _, data)
@@ -925,12 +932,12 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     starcustomchat.utils.setMessageHandler("/chatbubble", function(_, _, data)
         local status, resultOrError = pcall(function(data)
             local bubbleSetting = not (root.getConfiguration("DPC::chatBubble") or false)
-            root.setConfiguration("DPC::chatBubble",bubbleSetting)
+            root.setConfiguration("DPC::chatBubble", bubbleSetting)
 
             local retStr = "not "
             if bubbleSetting then retStr = "" end
 
-            return "Chat bubbles will ".. (retStr) .. "appear when sending messages."
+            return "Chat bubbles will " .. (retStr) .. "appear when sending messages."
         end, data)
         if status then
             return resultOrError
