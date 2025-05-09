@@ -1123,10 +1123,12 @@ function dynamicprox:onSendMessage(data)
 
                 -- FezzedOne: Global actions and radio. Supports IC language tags now.
                 local globalStrings = {}
-                rawText = rawText:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
-                    table.insert(globalStrings, s)
-                    return ""
-                end)
+                if not sendOverServer then
+                    rawText = rawText:gsub("\\{{", "{^;{"):gsub("{{(.-)}}", function(s)
+                        table.insert(globalStrings, s)
+                        return ""
+                    end)
+                end
 
                 data.content = rawText
                 data.text = ""
