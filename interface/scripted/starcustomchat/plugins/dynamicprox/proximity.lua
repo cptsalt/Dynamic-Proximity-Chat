@@ -309,7 +309,7 @@ local function setTextHint(mode)
     if defaultLang ~= "!!" then
         hintStr = hintStr .. "Default Lang: [" .. defaultLang .. "], "
     end
-    local autoCorVal = (player.getProperty("typos") and player.getProperty("typos")["typosActive"] and "on") or "off"
+    local autoCorVal = (root.getConfiguration("DPC::typos") and root.getConfiguration("DPC::typos")["typosActive"] and "on") or "off"
     hintStr = hintStr .. "Autocorrect " .. autoCorVal
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
@@ -318,14 +318,14 @@ local function setTextHint(mode)
 end
 
 local function checktypo(toggle)
-    local typoTable = player.getProperty("typos", {})
+    local typoTable = root.getConfiguration("DPC::typos") or {}
 
 
     if toggle then
         typoTable["typosActive"] = not typoTable["typosActive"]
     end
 
-    player.setProperty("typos", typoTable)
+    root.setConfiguration("DPC::typos", typoTable)
     setTextHint("Prox")
     local typoStatus = (typoTable["typosActive"] and "on") or "off"
     return "Typo correction is " .. typoStatus
@@ -456,7 +456,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
     end)
     starcustomchat.utils.setMessageHandler("/showtypos", function(_, _, data)
-        local typoTable = player.getProperty("typos", {})
+        local typoTable = root.getConfiguration("DPC::typos") or {}
         if typoTable == nil then return "You have no corrections or typos saved. Use /addtypo to make one." end
 
         local rtStr = "Typos and corrections:^#2ee;"
@@ -484,10 +484,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         local typo, correction = splitArgs[1], splitArgs[2]
 
         if typo == nil or correction == nil then return "Missing arguments for /addtypo, need {typo, correction}" end
-        local typoTable = player.getProperty("typos", {})
+        local typoTable = root.getConfiguration("DPC::typos") or {}
 
         typoTable[typo] = correction
-        player.setProperty("typos", typoTable)
+        root.setConfiguration("DPC::typos", typoTable)
         return 'Typo "' .. typo .. '" added as "' .. correction .. '".'
     end)
     starcustomchat.utils.setMessageHandler("/removetypo", function(_, _, data)
@@ -500,7 +500,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
         if typoTable then
             typoTable[typo] = nil
-            player.setProperty("typos", typoTable)
+            root.setConfiguration("DPC::typos", typoTable)
             return 'Typo "' .. typo .. '" removed.'
         else
             return "No typos found."
@@ -1009,7 +1009,7 @@ function dynamicprox:onSendMessage(data)
                 local hasNoise = false
                 local defaultKey = getDefaultLang(sendOverServer)
                 data.defaultLang = defaultKey
-                local typoTable = player.getProperty("typos", {})
+                local typoTable = root.getConfiguration("DPC::typos") or {}
                 local typoVar = typoTable["typosActive"]
                 if typoVar then
                     local newText = ""
@@ -2608,6 +2608,10 @@ end
 
 function dynamicprox:onModeChange(mode)
     if mode == "Prox" and not (player.getProperty("DPC::firstLoad") or false) then
+        if self.serverDefault then
+            sb.logInfo("Setting dpcOverServer to true for first load")
+            root.setConfiguration("dpcOverServer", true)
+        end
         chat.addMessage(
             "Dynamic Prox Chat: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. Then, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
         player.setProperty("DPC::firstLoad", true)
