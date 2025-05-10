@@ -250,6 +250,18 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.chatbubble.desc",
             data = "/chatbubble",
         })
+    elseif string.find("/skiprecog", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/skiprecog",
+            description = "commands.skiprecog.desc",
+            data = "/skiprecog",
+        })
+    elseif string.find("/resetrecog", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/resetrecog",
+            description = "commands.resetrecog.desc",
+            data = "/resetrecog",
+        })
     end
 end
 
@@ -309,7 +321,8 @@ local function setTextHint(mode)
     if defaultLang ~= "!!" then
         hintStr = hintStr .. "Default Lang: [" .. defaultLang .. "], "
     end
-    local autoCorVal = (root.getConfiguration("DPC::typos") and root.getConfiguration("DPC::typos")["typosActive"] and "on") or "off"
+    local autoCorVal = (root.getConfiguration("DPC::typos") and root.getConfiguration("DPC::typos")["typosActive"] and "on") or
+        "off"
     hintStr = hintStr .. "Autocorrect " .. autoCorVal
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
@@ -937,7 +950,42 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local retStr = "not "
             if bubbleSetting then retStr = "" end
 
-            return "Chat bubbles will " .. (retStr) .. "appear when sending messages."
+            return "Chat bubbles will " .. retStr .. "appear when sending messages."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/skiprecog", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local skipStatus = not (player.getProperty("DPC::skipRecog") or false)
+            player.setProperty("DPC::skipRecog", skipStatus)
+
+            local retStr = "not "
+            if skipStatus then retStr = "" end
+
+            return "Your character's name will " .. retStr .. "be automatically recognized by other players."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/resetrecog", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local resetConf = splitStr(data, " ")[1]
+            if resetConf ~= "reset" then
+                return
+                "Are you sure you want to reset recognized characters? Repeat this command with \"reset\" as the argument to confirm."
+            end
+
+            player.setProperty("DPC::recognizedPlayers", nil)
+            return "Your recognized characters have been reset."
         end, data)
         if status then
             return resultOrError
@@ -1175,6 +1223,7 @@ function dynamicprox:onSendMessage(data)
                     data.playerUid = player.uniqueId()
                     data.estRad = estRad
                     data.globalFlag = globalFlag
+                    data.skipRecog = player.getProperty("DPC::skipRecog") or false
                     starcustomchat.utils.createStagehandWithData("dpcServerHandler",
                         { message = "sendDynamicMessage", data = data })
                     sb.logInfo("Sending message to server: " .. data.content)
@@ -1281,6 +1330,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             if hasPrefix and not message.processed then message.text = message.text:sub(#DynamicProxPrefix + 1, -1) end
             message.contentIsText = true
         end
+        sb.logWarn("message: %s", message)
         if message.mode == "Proximity" and not skipHandling and not message.processed then
             message.isSccrp = isSccrpMessage or nil
             message.contentIsText = isSccrpMessage or message.contentIsText
@@ -2574,6 +2624,36 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 end
             end
         end
+
+        sb.logInfo("Checking author uuid %s against player uuid %s. Mode is %s", message.playerUid, player.uniqueId(),
+            message.mode)
+        if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and root.getConfiguration("dpcOverServer") then
+            --recognition system will go here
+            local recoged = player.getProperty("DPC::recognizedPlayers") or {}
+            sb.logInfo("recoged is %s", recoged)
+            if not recoged[message.playerUid] then
+                --recog doesnt exist, do one more check on this msg
+                --if it still doesnt exist then no name for you :)
+                local msgName = message.nickname or "^#999;???^reset;"
+                local msgWords = splitStr(msgName:gsub("%^[^^;]-;", ""):lower(), " ")
+                local textCleaned = message.text:gsub("%^[^^;]-;", ""):lower()
+                sb.logInfo("textCleaned is %s, msgWords is %s", textCleaned, msgWords)
+                for _, word in ipairs(msgWords) do
+                    if textCleaned:match(word) then
+                        recoged[message.playerUid] = true
+                        player.setProperty("DPC::recognizedPlayers", recoged)
+                        break
+                    end
+                end
+            end
+
+            --do a second check
+            if not recoged[message.playerUid] then
+                --replace the nickname with ???
+                message.nickname = "^#999;???^reset;"
+            end
+        end
+
 
         if showAsProximity then message.mode = "Proximity" end
         if showAsLocal then message.mode = "Local" end
