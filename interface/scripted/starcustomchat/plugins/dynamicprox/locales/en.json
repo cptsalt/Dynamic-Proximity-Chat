@@ -18,12 +18,13 @@
   "commands.addcommcode.desc": "Adds or modifies a comm code (or alias) your character is listening on. {comm code, [alias]}",
   "commands.removecommcode.desc": "Removes a comm code your character is listening on. {comm code or alias}",
   "commands.dpcserver.desc": "Dictates whether or not dynamic messages are sent via a server, default is off. {true, false}",
-  "commands.learnlang.desc": "Commit unspent language points to a language, {name, code, points, [hex color]}",
+  "commands.learnlang.desc": "Commit unspent language points to a language, {code, points, [name], [hex color]}",
   "commands.resetlangs.desc": "Resets your language allocations, requires 1st argument to be 'reset'",
   "commands.defaultlang.desc": "Assign a language to automatically apply in chat {lang code}",
   "commands.togglehints.desc": "Toggle text hints shown in the input bar",
   "commands.chatbubble.desc": "Toggles whether or not a chat bubble appears with a message",
   "commands.skiprecog.desc": "Toggles whether or not your character's name automatically appears for others",
   "commands.resetrecog.desc": "Resets characters that this character recognizes",
-  "commands.grouprecog.desc": "Allows you to check or assign a group to bypass recognition"
+  "commands.grouprecog.desc": "Allows you to check or assign a group to bypass recognition",
+  "commands.showlangs.desc": "Lists your learned languages"
 }

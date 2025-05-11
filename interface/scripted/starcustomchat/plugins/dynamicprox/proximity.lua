@@ -136,6 +136,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.learnlang.desc",
             data = "/learnlang",
         })
+    elseif string.find("/showlangs", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/showlangs",
+            description = "commands.showlangs.desc",
+            data = "/showlangs",
+        })
     elseif string.find("/resetlangs", substr, nil, true) then
         table.insert(availableCommands, {
             name = "/resetlangs",
@@ -658,6 +664,22 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         }
         starcustomchat.utils.createStagehandWithData("dpcServerHandler",
             { message = "addLang", data = addInfo })
+    end)
+    starcustomchat.utils.setMessageHandler("/showlangs", function(_, _, data)
+
+        local learnedLangs = player.getProperty("DPC::learnedLangs") or false
+        local defaultLang = player.getProperty("DPC::defaultLang") or false
+
+        if not learnedLangs then
+            return "You have no learned languages."
+        end
+
+        local rtStr = "Languages:^#2ee;"
+        for k, v in pairs(learnedLangs) do
+            rtStr = rtStr .. " " .. v["name"] .. " ["..k.."]" .. ": " .. v["prof"] * 10 .. "%,"
+        end
+        rtStr = rtStr .. "^reset; Default language: ^#2ee;["..defaultLang.."]^reset;"
+        return rtStr
     end)
     starcustomchat.utils.setMessageHandler("/resetlangs", function(_, _, data)
         local sendOverServer = root.getConfiguration("dpcOverServer") or false
@@ -1256,7 +1278,7 @@ function dynamicprox:onSendMessage(data)
                     data.recogGroup = player.getProperty("DPC::recogGroup") or false
                     starcustomchat.utils.createStagehandWithData("dpcServerHandler",
                         { message = "sendDynamicMessage", data = data })
-                    sb.logInfo("Sending message to server: " .. data.content)
+                    sb.logWarn("Sending message to server: " .. data.content)
                     return true --this should stop global strings from running (which i want in this case)
                     --later on i may make this a client config setting
                 elseif root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
@@ -2678,12 +2700,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             return returnStr
         end
 
-        sb.logInfo("Checking author uuid %s against player uuid %s. Mode is %s, group is %s", message.playerUid, player.uniqueId(),
+        sb.logWarn("Checking author uuid %s against player uuid %s. Mode is %s, group is %s", message.playerUid, player.uniqueId(),
             message.mode, message.recogGroup)
         if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
             --recognition system will go here
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
-            sb.logInfo("recoged is %s", recoged)
+            sb.logWarn("recoged is %s", recoged)
             if not recoged[message.playerUid] then
                 --recog doesnt exist, do one more check on this msg
                 --if it still doesnt exist then no name for you :)
@@ -2691,7 +2713,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 local textCleaned = message.text:gsub("%^[^^;]-;", ""):lower()
                 textCleaned = getQuotes(textCleaned)
                 local nameWords = splitStr(msgName:gsub("%^[^^;]-;", ""):lower(), " ")
-                sb.logInfo("textCleaned is %s, nameWords is %s", textCleaned, nameWords)
+                sb.logWarn("textCleaned is %s, nameWords is %s", textCleaned, nameWords)
                 for _, word in ipairs(nameWords) do
                     if textCleaned:match(word) then
                         recoged[message.playerUid] = true
@@ -2747,7 +2769,7 @@ function dynamicprox:onModeChange(mode)
             root.setConfiguration("dpcOverServer", true)
         end
         chat.addMessage(
-            "Dynamic Prox Chat: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. Then, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
+            "Dynamic Prox Chat: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. To use the language system, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
         player.setProperty("DPC::firstLoad", true)
     end
     setTextHint(mode)
