@@ -24,5 +24,6 @@
   "commands.togglehints.desc": "Toggle text hints shown in the input bar",
   "commands.chatbubble.desc": "Toggles whether or not a chat bubble appears with a message",
   "commands.skiprecog.desc": "Toggles whether or not your character's name automatically appears for others",
-  "commands.resetrecog.desc": "Resets characters that this character recognizes"
+  "commands.resetrecog.desc": "Resets characters that this character recognizes",
+  "commands.grouprecog.desc": "Allows you to check or assign a group to bypass recognition"
 }

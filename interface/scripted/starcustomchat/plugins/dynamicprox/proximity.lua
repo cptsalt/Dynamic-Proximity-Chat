@@ -262,6 +262,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.resetrecog.desc",
             data = "/resetrecog",
         })
+    elseif string.find("/grouprecog", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/grouprecog",
+            description = "commands.grouprecog.desc",
+            data = "/grouprecog",
+        })
     end
 end
 
@@ -985,7 +991,29 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             end
 
             player.setProperty("DPC::recognizedPlayers", nil)
-            return "Your recognized characters have been reset."
+            player.setProperty("DPC::recogGroup", nil)
+            return "Your recognized characters and groups have been reset."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/grouprecog", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local group = splitStr(data, " ")[1] or nil
+            local curGroup = player.getProperty("DPC::recogGroup") or "none"
+            
+            if not group or #group<1 then
+                return "Your current recognition group is "..curGroup
+            elseif group == "none" or group == "reset" then
+            player.setProperty("DPC::recogGroup", nil)
+            return "Your recognition group was reset."
+            end
+            player.setProperty("DPC::recogGroup", group)
+            return "Your recognition group was changed from "..curGroup.." to "..group.."."
         end, data)
         if status then
             return resultOrError
@@ -1223,7 +1251,9 @@ function dynamicprox:onSendMessage(data)
                     data.playerUid = player.uniqueId()
                     data.estRad = estRad
                     data.globalFlag = globalFlag
+                    data.isOSB = root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
                     data.skipRecog = player.getProperty("DPC::skipRecog") or false
+                    data.recogGroup = player.getProperty("DPC::recogGroup") or false
                     starcustomchat.utils.createStagehandWithData("dpcServerHandler",
                         { message = "sendDynamicMessage", data = data })
                     sb.logInfo("Sending message to server: " .. data.content)
@@ -2625,9 +2655,32 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
         end
 
-        sb.logInfo("Checking author uuid %s against player uuid %s. Mode is %s", message.playerUid, player.uniqueId(),
-            message.mode)
-        if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and root.getConfiguration("dpcOverServer") then
+        local function getQuotes(str)
+            local returnStr, quoteBuffer = "", ""
+
+            local isQuote = false
+            for c in str:gmatch(".") do
+                if c == '"' then
+                    if isQuote then
+                        --close out quote and add to return string
+                        returnStr = returnStr .. quoteBuffer
+                        quoteBuffer = ""
+                        isQuote = false
+                    else
+                        --turn quote collection on
+                        isQuote = true
+                        quoteBuffer = quoteBuffer .. " "
+                    end
+                elseif isQuote then
+                    quoteBuffer = quoteBuffer .. c
+                end
+            end
+            return returnStr
+        end
+
+        sb.logInfo("Checking author uuid %s against player uuid %s. Mode is %s, group is %s", message.playerUid, player.uniqueId(),
+            message.mode, message.recogGroup)
+        if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
             --recognition system will go here
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
             sb.logInfo("recoged is %s", recoged)
@@ -2635,10 +2688,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 --recog doesnt exist, do one more check on this msg
                 --if it still doesnt exist then no name for you :)
                 local msgName = message.nickname or "^#999;???^reset;"
-                local msgWords = splitStr(msgName:gsub("%^[^^;]-;", ""):lower(), " ")
                 local textCleaned = message.text:gsub("%^[^^;]-;", ""):lower()
-                sb.logInfo("textCleaned is %s, msgWords is %s", textCleaned, msgWords)
-                for _, word in ipairs(msgWords) do
+                textCleaned = getQuotes(textCleaned)
+                local nameWords = splitStr(msgName:gsub("%^[^^;]-;", ""):lower(), " ")
+                sb.logInfo("textCleaned is %s, nameWords is %s", textCleaned, nameWords)
+                for _, word in ipairs(nameWords) do
                     if textCleaned:match(word) then
                         recoged[message.playerUid] = true
                         player.setProperty("DPC::recognizedPlayers", recoged)
