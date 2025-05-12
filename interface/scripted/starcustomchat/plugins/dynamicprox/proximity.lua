@@ -666,7 +666,6 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             { message = "addLang", data = addInfo })
     end)
     starcustomchat.utils.setMessageHandler("/showlangs", function(_, _, data)
-
         local learnedLangs = player.getProperty("DPC::learnedLangs") or false
         local defaultLang = player.getProperty("DPC::defaultLang") or false
 
@@ -676,9 +675,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
         local rtStr = "Languages:^#2ee;"
         for k, v in pairs(learnedLangs) do
-            rtStr = rtStr .. " " .. v["name"] .. " ["..k.."]" .. ": " .. v["prof"] * 10 .. "%,"
+            rtStr = rtStr .. " " .. v["name"] .. " [" .. k .. "]" .. ": " .. v["prof"] * 10 .. "%,"
         end
-        rtStr = rtStr .. "^reset; Default language: ^#2ee;["..defaultLang.."]^reset;"
+        rtStr = rtStr .. "^reset; Default language: ^#2ee;[" .. defaultLang .. "]^reset;"
         return rtStr
     end)
     starcustomchat.utils.setMessageHandler("/resetlangs", function(_, _, data)
@@ -1027,15 +1026,15 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         local status, resultOrError = pcall(function(data)
             local group = splitStr(data, " ")[1] or nil
             local curGroup = player.getProperty("DPC::recogGroup") or "none"
-            
-            if not group or #group<1 then
-                return "Your current recognition group is "..curGroup
+
+            if not group or #group < 1 then
+                return "Your current recognition group is " .. curGroup
             elseif group == "none" or group == "reset" then
-            player.setProperty("DPC::recogGroup", nil)
-            return "Your recognition group was reset."
+                player.setProperty("DPC::recogGroup", nil)
+                return "Your recognition group was reset."
             end
             player.setProperty("DPC::recogGroup", group)
-            return "Your recognition group was changed from "..curGroup.." to "..group.."."
+            return "Your recognition group was changed from " .. curGroup .. " to " .. group .. "."
         end, data)
         if status then
             return resultOrError
@@ -1090,11 +1089,13 @@ function dynamicprox:onSendMessage(data)
             data.text = newStr
 
             -- FezzedOne: Global OOC chat.
-            local globalOocStrings = {}
-            data.text = data.text:gsub("\\%(%(%(", "(^;(("):gsub("%(%(%((.-)%)%)%)", function(s)
-                table.insert(globalOocStrings, s)
-                return ""
-            end)
+            if not sendOverServer then
+                local globalOocStrings = {}
+                data.text = data.text:gsub("\\%(%(%(", "(^;(("):gsub("%(%(%((.-)%)%)%)", function(s)
+                    table.insert(globalOocStrings, s)
+                    return ""
+                end)
+            end
 
             if position then
                 local estRad = data.proxRadius
@@ -2700,7 +2701,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             return returnStr
         end
 
-        sb.logWarn("Checking author uuid %s against player uuid %s. Mode is %s, group is %s", message.playerUid, player.uniqueId(),
+        sb.logWarn("Checking author uuid %s against player uuid %s. Mode is %s, group is %s", message.playerUid,
+            player.uniqueId(),
             message.mode, message.recogGroup)
         if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
             --recognition system will go here
