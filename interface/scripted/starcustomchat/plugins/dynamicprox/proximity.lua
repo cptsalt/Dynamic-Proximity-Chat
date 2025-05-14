@@ -1047,7 +1047,6 @@ end
 
 function dynamicprox:onSendMessage(data)
     --think about running this in local to allow players without the mod to still see messages
-    -- sb.logInfo(dump(data))
     if data.mode == "Prox" then
         local sendOverServer = root.getConfiguration("dpcOverServer") or false
         data.proxRadius = self.proxRadius
@@ -2698,7 +2697,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
             return returnStr
         end
-        
+
         if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
             --recognition system will go here
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
