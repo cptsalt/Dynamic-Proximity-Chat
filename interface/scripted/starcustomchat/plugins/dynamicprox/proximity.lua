@@ -1279,7 +1279,6 @@ function dynamicprox:onSendMessage(data)
                     data.recogGroup = player.getProperty("DPC::recogGroup") or false
                     starcustomchat.utils.createStagehandWithData("dpcServerHandler",
                         { message = "sendDynamicMessage", data = data })
-                    sb.logWarn("Sending message to server: " .. data.content)
                     return true --this should stop global strings from running (which i want in this case)
                     --later on i may make this a client config setting
                 elseif root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
@@ -1383,7 +1382,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             if hasPrefix and not message.processed then message.text = message.text:sub(#DynamicProxPrefix + 1, -1) end
             message.contentIsText = true
         end
-        sb.logWarn("message: %s", message)
         if message.mode == "Proximity" and not skipHandling and not message.processed then
             message.isSccrp = isSccrpMessage or nil
             message.contentIsText = isSccrpMessage or message.contentIsText
@@ -2700,14 +2698,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
             return returnStr
         end
-
-        sb.logWarn("Checking author uuid %s against player uuid %s. Mode is %s, group is %s", message.playerUid,
-            player.uniqueId(),
-            message.mode, message.recogGroup)
+        
         if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
             --recognition system will go here
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
-            sb.logWarn("recoged is %s", recoged)
             if not recoged[message.playerUid] then
                 --recog doesnt exist, do one more check on this msg
                 --if it still doesnt exist then no name for you :)
@@ -2715,7 +2709,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 local textCleaned = message.text:gsub("%^[^^;]-;", ""):lower()
                 textCleaned = getQuotes(textCleaned)
                 local nameWords = splitStr(msgName:gsub("%^[^^;]-;", ""):lower(), " ")
-                sb.logWarn("textCleaned is %s, nameWords is %s", textCleaned, nameWords)
                 for _, word in ipairs(nameWords) do
                     if textCleaned:match(word) then
                         recoged[message.playerUid] = true
