@@ -714,7 +714,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         local defaultCode = splitStr(data, " ")[1] or false
 
         if not defaultCode then
-            return "Resetting default to no language."
+            defaultCode = "!!"
         end
         --set the default key in the learnedlangs table
         defaultCode = defaultCode:upper()
