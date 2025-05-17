@@ -1369,6 +1369,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             skipHandling = skipHandling or showAsProximity
         end
 
+        if self.serverDefault and message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
+            message.text = ""
+        end
+
         -- FezzedOne: This setting allows local chat to be «funneled» into proximity chat and appropriately formatted and filtered automatically.
         if
             hasPrefix
@@ -2729,7 +2733,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if showAsLocal then message.mode = "Local" end
         if (isGlobalChat or message.global) and message.mode ~= "ProxSecondary" then message.mode = "Broadcast" end
 
-        setTextHint("Prox")
+        setTextHint(message.mode)
         return message
     end
     -- return messageFormatter(rawMessage)
@@ -2761,6 +2765,7 @@ function dynamicprox:onModeChange(mode)
         if self.serverDefault then
             sb.logInfo("Setting dpcOverServer to true for first load")
             root.setConfiguration("dpcOverServer", true)
+            -- root.setConfiguration("scc_autohide_ignore_server_messages",true)
         end
         chat.addMessage(
             "Dynamic Prox Chat: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. To use the language system, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
