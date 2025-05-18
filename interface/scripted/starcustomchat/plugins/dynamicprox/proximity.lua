@@ -2733,7 +2733,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if showAsLocal then message.mode = "Local" end
         if (isGlobalChat or message.global) and message.mode ~= "ProxSecondary" then message.mode = "Broadcast" end
 
-        setTextHint(message.mode)
+        -- setTextHint(message.mode)
         return message
     end
     -- return messageFormatter(rawMessage)
