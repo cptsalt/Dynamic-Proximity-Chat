@@ -944,7 +944,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
     starcustomchat.utils.setMessageHandler("/dpcserver", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local clSetting = splitStr(data, " ")[1]
+            local splitArgs = splitStr(data, " ")
+            local clSetting = splitArgs[1]
+            local clientForced = splitArgs[2] == "forced"
             local retStr = ""
             if clSetting == "true" or clSetting == "on" or clSetting == "enabled" then
                 root.setConfiguration("dpcOverServer", true)
@@ -960,6 +962,13 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                     curConfig = "^red;disabled^reset;"
                 end
                 retStr = "DPC server handling is " .. curConfig .. "."
+            end
+
+            if clientForced then
+                retStr = retStr .. " Client mode forced."
+                root.setConfiguration("DPC::forcedClient", true)
+            else
+                root.setConfiguration("DPC::forcedClient", nil)
             end
             return retStr
         end, data)
@@ -2763,14 +2772,18 @@ end
 
 function dynamicprox:onModeChange(mode)
     if mode == "Prox" and not (player.getProperty("DPC::firstLoad") or false) then
-        if self.serverDefault then
-            sb.logInfo("Setting dpcOverServer to true for first load")
-            root.setConfiguration("dpcOverServer", true)
-            -- root.setConfiguration("scc_autohide_ignore_server_messages",true)
-        end
         chat.addMessage(
-            "Dynamic Prox Chat: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. To use the language system, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. To use the language system, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
+        if self.serverDefault then
+            root.setConfiguration("dpcOverServer", true)
+        end
         player.setProperty("DPC::firstLoad", true)
+    elseif mode == "Prox" and self.serverDefault and not root.getConfiguration("dpcOverServer") and not root.getConfiguration("DPC::forcedClient") then
+        sb.logInfo("Setting dpcOverServer to true")
+        chat.addMessage(
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: You have a mod installed that has ^green;enabled^reset; server handling for messages. If you want to keep server handling disabled, use \"^cyan;/dpcserver off forced^reset;\" to force the mod to ignore this configuration.")
+        root.setConfiguration("dpcOverServer", true)
+        -- root.setConfiguration("scc_autohide_ignore_server_messages",true)
     end
     setTextHint(mode)
 end
