@@ -603,15 +603,16 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
 
         local splitArgs = splitStr(data, " ")
-        local langKey, langLevel, langName, color =
+        local langKey, langLevel, langName, preset, color =
             (splitArgs[1] or nil),
             (tonumber(splitArgs[2]) or 10),
             (splitArgs[3] or nil),
-            (splitArgs[4] or nil)
+            (splitArgs[4] or nil),
+            (splitArgs[5] or nil)
 
 
         if langKey == nil then
-            return "Missing arguments for /learnlang, need {name, code, prof, [hex color]}"
+            return "Missing arguments for /learnlang, need {code, prof, [name], [preset], [hex color]}"
         end
 
         langKey = langKey:upper()
@@ -625,17 +626,18 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local hexDigits =
             { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
             -- local randSource = sb.makeRandomSource()
-            local hexMin = 1
+            local hexMin = 4 --make the minimum so people can still see stuff in case of weird random shit where you get lots of low values
 
             --totally random value here, since it's generating for a server file
             randSource:init()
-            local rNumR = hexDigits[randSource:randInt(hexMin, 16)]
-            local rNumG = hexDigits[randSource:randInt(hexMin, 16)]
-            local rNumB = hexDigits[randSource:randInt(hexMin, 16)]
-            local rNumR2 = hexDigits[randSource:randInt(hexMin, 16)]
-            local rNumG2 = hexDigits[randSource:randInt(hexMin, 16)]
-            local rNumB2 = hexDigits[randSource:randInt(hexMin, 16)]
-            color = "#" .. rNumR .. rNumG .. rNumB .. rNumR2 .. rNumG2 .. rNumB2
+            color = ""
+            while #color < 6 do
+                local randNum1 = randSource:randInt(hexMin, #hexDigits)
+                local randNum2 = randSource:randInt(hexMin, #hexDigits)
+                color = color .. hexDigits[randNum1] .. hexDigits[randNum2]
+                table.remove(hexDigits, randNum1) --remove the primary value, since the secondary is not as strong i'm okay with it being re-used
+            end
+            color = "#" .. color
         else
             if not color:match("#") then color = "#" .. color end
             if #color > 7 then color = color:sub(1, 7) end
@@ -647,7 +649,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             name = langName or langKey,
             code = langKey,
             prof = langLevel,
-            color = color
+            color = color,
+            preset = preset
         }
 
         local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -703,6 +706,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             }
             starcustomchat.utils.createStagehandWithData("dpcServerHandler",
                 { message = "resetLangs", data = addInfo })
+            setTextHint("Prox")
         else
             return "Missing confirmation: Ensure that \"reset\" is included in this command to confirm the reset."
         end
@@ -712,10 +716,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         if not sendOverServer then
             return "Lang commands aren't supported for client processing, use /newlangitem instead."
         end
-        local defaultCode = splitStr(data, " ")[1] or false
+        local defaultCode = splitStr(data, " ")[1] or nil
 
-        if not defaultCode then
-            defaultCode = "!!"
+        if #defaultCode < 1 or not defaultCode then
+            return "Current default language code is [" .. player.getProperty("DPC::defaultLang") .. "]."
         end
         --set the default key in the learnedlangs table
         defaultCode = defaultCode:upper()

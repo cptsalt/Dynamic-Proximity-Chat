@@ -18,7 +18,7 @@
   "commands.addcommcode.desc": "Adds or modifies a comm code (or alias) your character is listening on. {comm code, [alias]}",
   "commands.removecommcode.desc": "Removes a comm code your character is listening on. {comm code or alias}",
   "commands.dpcserver.desc": "Dictates whether or not dynamic messages are sent via a server, default is off. {true, false}",
-  "commands.learnlang.desc": "Commit unspent language points to a language, {code, points, [name], [hex color]}",
+  "commands.learnlang.desc": "Commit unspent language points to a language, {code, points, [name], [preset], [hex color]}",
   "commands.resetlangs.desc": "Resets your language allocations, requires 1st argument to be 'reset'",
   "commands.defaultlang.desc": "Assign a language to automatically apply in chat {lang code}",
   "commands.togglehints.desc": "Toggle text hints shown in the input bar",
