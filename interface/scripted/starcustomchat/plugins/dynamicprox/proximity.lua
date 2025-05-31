@@ -274,6 +274,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.grouprecog.desc",
             data = "/grouprecog",
         })
+    elseif string.find("/font", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/font",
+            description = "commands.font.desc",
+            data = "/font",
+        })
     end
 end
 
@@ -1057,6 +1063,25 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             return "^red;Error occurred while running command, check log"
         end
     end)
+    starcustomchat.utils.setMessageHandler("/font", function(_, _, data)
+        --1st arg is type, 2nd arg is font
+        local splitArgs = splitStr(data, " ")
+        local type, font = splitArgs[1]:lower() or nil, splitArgs[2]:lower() or nil
+
+        if type ~= "general" and type ~= "quote" then
+            return "Incorrect type supplied, use \"general\" or \"quote\"."
+        end
+
+        if self.fontLib and self.fontLib[font] then
+            --apply player property to tell people what font is used for general/quotes
+            player.setProperty("DPC::" .. type .. "Font", self.fontLib[font]["font"])
+            if self.fontLib[font]["weight"] then
+                player.setProperty("DPC::" .. type .. "Weight", self.fontLib[font]["weight"])
+            end
+            return "Set " .. type .. " font to: ^font=" .. font .. ";"
+        end
+        return "Font \""..font.."\" not found."
+    end)
 end
 
 function dynamicprox:onSendMessage(data)
@@ -1102,8 +1127,8 @@ function dynamicprox:onSendMessage(data)
             data.text = newStr
 
             -- FezzedOne: Global OOC chat.
+            local globalOocStrings = {}
             if not sendOverServer then
-                local globalOocStrings = {}
                 data.text = data.text:gsub("\\%(%(%(", "(^;(("):gsub("%(%(%((.-)%)%)%)", function(s)
                     table.insert(globalOocStrings, s)
                     return ""
@@ -1290,6 +1315,10 @@ function dynamicprox:onSendMessage(data)
                     data.isOSB = root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
                     data.skipRecog = player.getProperty("DPC::skipRecog") or false
                     data.recogGroup = player.getProperty("DPC::recogGroup") or false
+                    -- player.setProperty("DPC::"..type.."Font",self.fontLib[font])
+                    data.actionFont = player.getProperty("DPC::generalFont") or nil
+                    data.quoteFont = player.getProperty("DPC::quoteFont") or nil
+                    data.fontW8 = player.getProperty("DPC::quoteWeight") or nil
                     starcustomchat.utils.createStagehandWithData("dpcServerHandler",
                         { message = "sendDynamicMessage", data = data })
                     return true --this should stop global strings from running (which i want in this case)
