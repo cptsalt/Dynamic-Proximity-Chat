@@ -26,5 +26,6 @@
   "commands.skiprecog.desc": "Toggles whether or not your character's name automatically appears for others",
   "commands.resetrecog.desc": "Resets characters that this character recognizes",
   "commands.grouprecog.desc": "Allows you to check or assign a group to bypass recognition",
-  "commands.showlangs.desc": "Lists your learned languages"
+  "commands.showlangs.desc": "Lists your learned languages",
+  "commands.font.desc": "Allows you to change your selected fonts for general messages, and quotes/sounds. {type, font}"
 }
