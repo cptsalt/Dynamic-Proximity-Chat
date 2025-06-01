@@ -142,6 +142,18 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.showlangs.desc",
             data = "/showlangs",
         })
+    elseif string.find("/langlist", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/langlist",
+            description = "commands.langlist.desc",
+            data = "/langlist",
+        })
+    elseif string.find("/editlang", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/editlang",
+            description = "commands.editlang.desc",
+            data = "/editlang",
+        })
     elseif string.find("/resetlangs", substr, nil, true) then
         table.insert(availableCommands, {
             name = "/resetlangs",
@@ -609,7 +621,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
 
         local splitArgs = splitStr(data, " ")
-        local langKey, langLevel, langName, preset, color =
+        local langKey, langLevel, langName, color, preset =
             (splitArgs[1] or nil),
             (tonumber(splitArgs[2]) or 10),
             (splitArgs[3] or nil),
@@ -617,7 +629,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             (splitArgs[5] or nil)
 
 
-        if langKey == nil then
+        if not langKey or #langKey < 1 then
             return "Missing arguments for /learnlang, need {code, prof, [name], [preset], [hex color]}"
         end
 
@@ -625,10 +637,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         langKey = langKey:gsub("[%[%]]", "")
 
         local learnedLangs = player.getProperty("DPC::learnedLangs") or {}
-        if langName == nil and not learnedLangs[langKey] then
-            chat.addMessage("Language name not provided. Use /langedit (not implemented yet) to add one later.")
-        end
-        if color == nil then
+        if color == "random" or color == "false" or color == nil then
             local hexDigits =
             { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" }
             -- local randSource = sb.makeRandomSource()
@@ -676,8 +685,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             { message = "addLang", data = addInfo })
     end)
     starcustomchat.utils.setMessageHandler("/showlangs", function(_, _, data)
-        local learnedLangs = player.getProperty("DPC::learnedLangs") or false
-        local defaultLang = player.getProperty("DPC::defaultLang") or false
+        local learnedLangs = player.getProperty("DPC::learnedLangs") or nil
+        local defaultLang = player.getProperty("DPC::defaultLang") or nil
 
         if not learnedLangs then
             return "You have no learned languages."
@@ -687,8 +696,51 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         for k, v in pairs(learnedLangs) do
             rtStr = rtStr .. " " .. v["name"] .. " [" .. k .. "]" .. ": " .. v["prof"] * 10 .. "%,"
         end
-        rtStr = rtStr .. "^reset; Default language: ^#2ee;[" .. defaultLang .. "]^reset;"
+        if defaultLang then
+            rtStr = rtStr .. "^reset; Default language: ^#2ee;[" .. defaultLang .. "]^reset;"
+        end
         return rtStr
+    end)
+    starcustomchat.utils.setMessageHandler("/langlist", function(_, _, data)
+        --send a stagehand request to see a list of all languages on the server
+        local addInfo = {
+            player = player.id(),
+            uuid = player.uniqueId()
+        }
+        starcustomchat.utils.createStagehandWithData("dpcServerHandler",
+            { message = "langlist", data = addInfo })
+    end)
+    starcustomchat.utils.setMessageHandler("/editlang", function(_, _, data)
+        --send a stagehand request to see a list of all languages on the server
+        local splitArgs = splitStr(data, " ")
+        local dCode, subject, newVal, extra = splitArgs[1]:upper() or nil, splitArgs[2]:lower() or nil,
+            splitArgs[3] or nil, splitArgs[4] or nil
+
+        if not dCode or (subject ~= "color" and subject ~= "name" and subject ~= "preset") or not newVal then
+            return "Bad arguments, use (code, subject, new value)."
+        end
+
+        if extra then
+            return "Extra argument provided, remember to use quotes if making changes with multiple words."
+        end
+
+        local playerSecret = player.getProperty("DPC::playerCheck") or false
+        if not playerSecret then
+            playerSecret = sb.makeUuid()
+            player.setProperty("DPC::playerCheck", playerSecret)
+            player.setProperty("DPC:playerCheck", nil)
+        end
+
+        local addInfo = {
+            player = player.id(),
+            uuid = player.uniqueId(),
+            playerSecret = playerSecret,
+            dCode = dCode,
+            subject = subject,
+            newVal = newVal
+        }
+        starcustomchat.utils.createStagehandWithData("dpcServerHandler",
+            { message = "editlang", data = addInfo })
     end)
     starcustomchat.utils.setMessageHandler("/resetlangs", function(_, _, data)
         local sendOverServer = root.getConfiguration("dpcOverServer") or false
@@ -722,10 +774,15 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         if not sendOverServer then
             return "Lang commands aren't supported for client processing, use /newlangitem instead."
         end
-        local defaultCode = splitStr(data, " ")[1] or nil
+        local splitArgs = splitStr(data, " ") or nil
+        local defaultCode = splitArgs[1] or nil
 
         if #defaultCode < 1 or not defaultCode then
-            return "Current default language code is [" .. player.getProperty("DPC::defaultLang") .. "]."
+            local defLang = player.getProperty("DPC::defaultLang") or nil
+            if defLang then
+                return "Current default language code is [" .. player.getProperty("DPC::defaultLang") .. "]."
+            end
+            return "You have no default language set."
         end
         --set the default key in the learnedlangs table
         defaultCode = defaultCode:upper()
@@ -1080,7 +1137,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             end
             return "Set " .. type .. " font to: ^font=" .. font .. ";"
         end
-        return "Font \""..font.."\" not found."
+        return "Font \"" .. font .. "\" not found."
     end)
 end
 
