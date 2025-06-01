@@ -226,12 +226,6 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.proxooc.desc",
             data = "/proxooc",
         })
-    elseif string.find("/timezone", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/timezone",
-            description = "commands.timezone.desc",
-            data = "/timezone",
-        })
     elseif string.find("/commcode", substr, nil, true) then
         table.insert(availableCommands, {
             name = "/commcode",
@@ -388,59 +382,6 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             return "Debug mode for Dynamic Proximity Chat is "
                 .. (DEBUG and "^green;ENABLED" or "^red;DISABLED")
                 .. "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
-        end
-    end)
-    starcustomchat.utils.setMessageHandler("/timezone", function(_, _, data)
-        local splitArgs = splitStr(data, " ")
-        local daylight = true
-        local zoneStr = splitArgs[1] or nil
-        if splitArgs[2] ~= "true" then daylight = false end
-        local tzTable = {
-            ["HST"] = -10,
-            ["AKST"] = -9,
-            ["PST"] = -8,
-            ["MST"] = -7,
-            ["CST"] = -6,
-            ["EST"] = -5,
-            ["AST"] = -4,
-            ["UTC"] = 0,
-            ["Z"] = 0,
-            ["AFT"] = 4.5,
-            ["CET"] = 1,
-            ["EET"] = 2,
-            ["MSK"] = 3,
-            ["ACST"] = 9.5,
-            ["AEST"] = 10,
-        }
-        if zoneStr == nil or #zoneStr < 1 then
-            local curZone = root.getConfiguration("DynamicProxChat::timeZone") or 0
-            zoneStr = string.format("%.0f:%.2d", math.floor(curZone), (curZone % 1 * 60))
-            if curZone > 0 then zoneStr = "+" .. zoneStr end
-            return "Current time offset is ^#fe7;" .. zoneStr .. "^reset;"
-        elseif tzTable[zoneStr:upper()] == nil then
-            local tzOffset = tonumber(zoneStr)
-            if tzOffset then
-                local offsetStr = string.format("%.0f:%.2d", math.floor(tzOffset), (tzOffset % 1 * 60))
-                root.setConfiguration("DynamicProxChat::timeZone", tzOffset)
-                return "Timezone offset set to ^#fe7;" .. offsetStr .. "^reset;"
-            else
-                return 'Timezone "^#fe7;'
-                    .. zoneStr
-                    ..
-                    "^reset;\" doesn't exist or isn't supported. Try using a timezone abbreviation (UTC, CET, EST, CST, MST, PST, etc.) or manually specifying an offset in decimal hours."
-            end
-        else
-            zoneStr = zoneStr:upper()
-            local newTime = tzTable[zoneStr] or 0
-            local timingStr = ""
-            if daylight then
-                zoneStr = zoneStr .. "+1 (DST)"
-                newTime = newTime + 1
-            end
-            if newTime > 0 then timingStr = "+" end
-            timingStr = timingStr .. string.format("%.0f:%.2d", math.floor(newTime), (newTime % 1 * 60))
-            root.setConfiguration("DynamicProxChat::timeZone", newTime)
-            return "Timezone set to " .. zoneStr .. " (^#fe7;" .. timingStr .. "^reset;)"
         end
     end)
     starcustomchat.utils.setMessageHandler("/dynamicsccrp", function(_, _, data)
@@ -630,7 +571,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
 
         if not langKey or #langKey < 1 then
-            return "Missing arguments for /learnlang, need {code, prof, [name], [preset], [hex color]}"
+            return "Missing arguments for /learnlang, need {code, prof, [name], [hex color], [preset]}"
         end
 
         langKey = langKey:upper()
@@ -1447,16 +1388,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         local hasPrefix = message.text:sub(1, #DynamicProxPrefix) == DynamicProxPrefix
 
-        local timestamp = os.time() +
-            ((root.getConfiguration("DynamicProxChat::timeZone") or 0) * 3600) -- UTC by default
-        local seconds_in_day = 86400
-        local seconds = timestamp % seconds_in_day
-        local hours = math.floor(seconds / 3600)
-        local minutes = math.floor((seconds % 3600) / 60)
-        local hourStr = (hours < 10 and "0" or "") .. tostring(hours)
-        local minuteStr = (minutes < 10 and "0" or "") .. tostring(minutes)
-
-        message.time = hourStr .. ":" .. minuteStr
         local isGlobalChat = message.mode == "Broadcast"
         -- FezzedOne: Handle SCCRP Proximity messages if 1) SCCRP isn't installed or 2) it's explicitly enabled via a toggle and SCCRP is installed.
         local skipHandling = false
