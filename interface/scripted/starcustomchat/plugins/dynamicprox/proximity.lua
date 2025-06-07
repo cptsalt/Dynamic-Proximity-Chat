@@ -1356,9 +1356,7 @@ function dynamicprox:onSendMessage(data)
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
                     chat.send(globalOocMsg, "Broadcast", false)
                 end
-                if root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil then
-                     player.emote("Blabbering")
-                end
+                player.emote("Blabbering")
                 return true
             end
         end
