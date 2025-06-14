@@ -1370,9 +1370,6 @@ function dynamicprox:onSendMessage(data)
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
                     chat.send(globalOocMsg, "Broadcast", false)
                 end
-                if data.text:find("\"") then
-                    player.emote("Blabbering")
-                end
                 return true
             end
         end
@@ -1397,6 +1394,9 @@ function dynamicprox:onSendMessage(data)
         promises:add(sendMessagePromise)
         if root.getConfiguration("DPC::chatBubble") or false then
             player.say("...")
+        end
+        if data.text:find("\"") then
+            player.emote("Blabbering")
         end
     end
 end
