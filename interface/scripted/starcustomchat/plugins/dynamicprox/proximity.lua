@@ -1062,13 +1062,27 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
     end)
     starcustomchat.utils.setMessageHandler("/font", function(_, _, data)
+        --no font support yet
+        if true then
+            return "Fonts aren't supported (yet), wait until [next version]"
+        end
         --1st arg is type, 2nd arg is font
         local splitArgs = splitStr(data, " ")
-        local type, font = splitArgs[1]:lower() or nil, splitArgs[2]:lower() or nil
+        local type, font = splitArgs[1] or nil, splitArgs[2] or nil
+
 
         if type ~= "general" and type ~= "quote" then
             return "Incorrect type supplied, use \"general\" or \"quote\"."
         end
+
+        if font == "reset" or font == "exo" then
+            --apply player property to tell people what font is used for general/quotes
+            player.setProperty("DPC::" .. type .. "Font", nil)
+            player.setProperty("DPC::" .. type .. "Weight", nil)
+            return "Reset " .. type .. " font."
+        end
+
+        sb.logInfo("font is %s, lib entry is %s", font, self.fontLib[font])
 
         if self.fontLib and self.fontLib[font] then
             --apply player property to tell people what font is used for general/quotes
@@ -1076,7 +1090,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             if self.fontLib[font]["weight"] then
                 player.setProperty("DPC::" .. type .. "Weight", self.fontLib[font]["weight"])
             end
-            return "Set " .. type .. " font to: ^font=" .. font .. ";"
+            return "Set " .. type .. " font to: ^font=" .. self.fontLib[font]["font"] .. ";" .. font .. "^reset;"
         end
         return "Font \"" .. font .. "\" not found."
     end)
@@ -1380,6 +1394,9 @@ function dynamicprox:onSendMessage(data)
         promises:add(sendMessagePromise)
         if root.getConfiguration("DPC::chatBubble") or false then
             player.say("...")
+        end
+        if data.text:find("\"") then 
+            player.emote("Blabbering")
         end
     end
 end
