@@ -1248,10 +1248,16 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             if (not alias or #alias < 1) or (not aliasPrio) then
                 return "Missing arguments, you must include an alias and priority."
             end
+            if alias == 0 then
+                return "Cannot assign a priority 0 alias (this is reserved for your character's name)."
+            end
+            if alias == "?" then
+                player.setProperty("DPC::unknownAlias",alias)
+                return "Unknown alias set as: "..alias
+            end
             local playerAliases = player.getProperty("DPC::aliases") or {}
             playerAliases[aliasPrio] = alias
             playerAliases[0] = world.entityName(player.id())
-            sb.logInfo("playerAliases is %s", playerAliases)
             player.setProperty("DPC::aliases", playerAliases)
             return "Alias " .. alias .. " added with priority " .. aliasPrio
         end, data)
@@ -1600,6 +1606,7 @@ function dynamicprox:onSendMessage(data)
 
                 --check for alias stuff here
                 local playerAliases = player.getProperty("DPC::aliases") or {}
+                data.fakeName = player.getProperty("DPC::unknownAlias") or nil
 
                 local recogName = false
                 local recogPrio = 100
@@ -3077,7 +3084,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             }
             ]]
             local charRecInfo = recoged[message.playerUid] or nil
-            local useName = "^#999;???^reset;"
+            local useName = message.fakeName or "^#999;???^reset;"
 
             if message.alias and (not charRecInfo) or (charRecInfo and not charRecInfo.manName and message.aliasPrio < charRecInfo.aliasPrio) then --if conditions are met
                 --apply new thing or create entry, should work either way
