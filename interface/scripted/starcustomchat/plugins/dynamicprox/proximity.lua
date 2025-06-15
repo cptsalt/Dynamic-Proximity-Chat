@@ -120,7 +120,11 @@ local function rollDice(die) -- From https://github.com/brianherbert/dice/, with
     end
 end
 
-function dynamicprox:init() self:_loadConfig() end
+function dynamicprox:init()
+    self:_loadConfig()
+    player.setNametag("")
+    root.setConfiguration("DPC::cursorChar", nil)
+end
 
 function dynamicprox:addCustomCommandPreview(availableCommands, substr)
     if string.find("/newlangitem", substr, nil, true) then
@@ -286,6 +290,48 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.font.desc",
             data = "/font",
         })
+    elseif string.find("/chid", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/chid",
+            description = "commands.chid.desc",
+            data = "/chid",
+        })
+    elseif string.find("/addnick", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/addnick",
+            description = "commands.addnick.desc",
+            data = "/addnick",
+        })
+    elseif string.find("/clearnick", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/clearnick",
+            description = "commands.clearnick.desc",
+            data = "/clearnick",
+        })
+    elseif string.find("/addalias", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/addalias",
+            description = "commands.addalias.desc",
+            data = "/addalias",
+        })
+    elseif string.find("/resetalias", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/resetalias",
+            description = "commands.resetalias.desc",
+            data = "/resetalias",
+        })
+    elseif string.find("/showalias", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/showalias",
+            description = "commands.showalias.desc",
+            data = "/showalias",
+        })
+    elseif string.find("/apply", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/apply",
+            description = "commands.apply.desc",
+            data = "/apply",
+        })
     end
 end
 
@@ -336,7 +382,7 @@ local function setTextHint(mode, override)
         widget.setText("lblTextboxHint", starcustomchat.utils.getTranslation("chat.textbox.hint"))
         return
     end
-    if not root.getConfiguration("DPC::showHints") then
+    if root.getConfiguration("DPC::hideHints") then
         return
     end
 
@@ -751,9 +797,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         setTextHint("Prox") --we're gonna assume that the server works
     end)
     starcustomchat.utils.setMessageHandler("/togglehints", function(_, _, data)
-        local newHintsVal = not root.getConfiguration("DPC::showHints")
-        local hintsDisplay = (newHintsVal and "on") or "off"
-        root.setConfiguration("DPC::showHints", newHintsVal)
+        local newHintsVal = not root.getConfiguration("DPC::hideHints")
+        local hintsDisplay = (newHintsVal and "off") or "on"
+        root.setConfiguration("DPC::hideHints", newHintsVal)
         setTextHint("Prox", not newHintsVal)
         return "Hint display " .. hintsDisplay
     end)
@@ -1062,38 +1108,281 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
     end)
     starcustomchat.utils.setMessageHandler("/font", function(_, _, data)
-        --no font support yet
-        if true then
-            return "Fonts aren't supported (yet), wait until [next version]"
-        end
-        --1st arg is type, 2nd arg is font
-        local splitArgs = splitStr(data, " ")
-        local type, font = splitArgs[1] or nil, splitArgs[2] or nil
-
-
-        if type ~= "general" and type ~= "quote" then
-            return "Incorrect type supplied, use \"general\" or \"quote\"."
-        end
-
-        if font == "reset" or font == "exo" then
-            --apply player property to tell people what font is used for general/quotes
-            player.setProperty("DPC::" .. type .. "Font", nil)
-            player.setProperty("DPC::" .. type .. "Weight", nil)
-            return "Reset " .. type .. " font."
-        end
-
-        sb.logInfo("font is %s, lib entry is %s", font, self.fontLib[font])
-
-        if self.fontLib and self.fontLib[font] then
-            --apply player property to tell people what font is used for general/quotes
-            player.setProperty("DPC::" .. type .. "Font", self.fontLib[font]["font"])
-            if self.fontLib[font]["weight"] then
-                player.setProperty("DPC::" .. type .. "Weight", self.fontLib[font]["weight"])
+        local status, resultOrError = pcall(function(data)
+            --no font support yet
+            if true then
+                return "Fonts aren't supported (yet), wait until [next version]"
             end
-            return "Set " .. type .. " font to: ^font=" .. self.fontLib[font]["font"] .. ";" .. font .. "^reset;"
+            --1st arg is type, 2nd arg is font
+            local splitArgs = splitStr(data, " ")
+            local type, font = splitArgs[1] or nil, splitArgs[2] or nil
+
+
+            if type ~= "general" and type ~= "quote" then
+                return "Incorrect type supplied, use \"general\" or \"quote\"."
+            end
+
+            if font == "reset" or font == "exo" then
+                --apply player property to tell people what font is used for general/quotes
+                player.setProperty("DPC::" .. type .. "Font", nil)
+                player.setProperty("DPC::" .. type .. "Weight", nil)
+                return "Reset " .. type .. " font."
+            end
+
+            sb.logInfo("font is %s, lib entry is %s", font, self.fontLib[font])
+
+            if self.fontLib and self.fontLib[font] then
+                --apply player property to tell people what font is used for general/quotes
+                player.setProperty("DPC::" .. type .. "Font", self.fontLib[font]["font"])
+                if self.fontLib[font]["weight"] then
+                    player.setProperty("DPC::" .. type .. "Weight", self.fontLib[font]["weight"])
+                end
+                return "Set " .. type .. " font to: ^font=" .. self.fontLib[font]["font"] .. ";" .. font .. "^reset;"
+            end
+            return "Font \"" .. font .. "\" not found."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
         end
-        return "Font \"" .. font .. "\" not found."
     end)
+    starcustomchat.utils.setMessageHandler("/chid", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            -- do a playerQuery at the aim position , then use world.entityUniqueId
+            local cursorPlayer = world.playerQuery(player.aimPosition(), 0)[1] or nil
+            if not cursorPlayer then
+                return "No player detected on the cursor, try again."
+            end
+
+            if cursorPlayer == player.id() then
+                return "You can't select yourself for /chid, pick someone else."
+            end
+
+            local chidName = world.entityName(cursorPlayer)
+            local chidTable = {
+                ["entityId"] = cursorPlayer,
+                ["UUID"] = world.entityUniqueId(cursorPlayer),
+                ["name"] = chidName
+            }
+            root.setConfiguration("DPC::cursorChar", chidTable)
+            return "Character " .. chidName .. " selected."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    --add a nickanme command that lets you apply a custom name to the selected chid character
+    starcustomchat.utils.setMessageHandler("/addnick", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local newNick = splitStr(data, " ")[1] or nil
+            if not newNick or #newNick < 1 then
+                return "No nickname provided, try again."
+            end
+
+            local chid = root.getConfiguration("DPC::cursorChar") or nil
+            if not chid then
+                return "No character selected, move your cursor over one and use /chid to select them."
+            end
+            chid = chid.UUID
+            --add the nickname
+            --[[
+            {
+            uuid: {
+                savedName: "name",
+                manName: "/addnick name", (if populated, prevent alias overwrites for higher priority aliases)
+                aliasPrio: int (0 is for real name, can make negative ints)
+            },
+            }
+        ]]
+            local recoged = player.getProperty("DPC::recognizedPlayers") or {}
+            recoged[chid] = {
+                ["savedName"] = newNick,
+                ["manName"] = true,
+                ["aliasPrio"] = -10
+            }
+            player.setProperty("DPC::recognizedPlayers", recoged)
+            root.setConfiguration("DPC::cursorChar", nil)
+
+            return "Character assigned nickanme " .. newNick .. ", selection released."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/clearnick", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local chid = root.getConfiguration("DPC::cursorChar") or nil
+            if not chid then
+                return "No character selected, move your cursor over one and use /chid to select them."
+            end
+            chid = chid.UUID
+            local recoged = player.getProperty("DPC::recognizedPlayers") or {}
+            if recoged[chid] then
+                recoged[chid] = nil
+                player.setProperty("DPC::recognizedPlayers", recoged)
+                root.setConfiguration("DPC::cursorChar", nil)
+                return "Reset nickname for character, selection released."
+            else
+                return "No nickname for this character exists."
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/addalias", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local alias, aliasPrio = splitArgs[1] or nil, splitArgs[2] or nil
+            if (not alias or #alias < 1) or (not aliasPrio) then
+                return "Missing arguments, you must include an alias and priority."
+            end
+            local playerAliases = player.getProperty("DPC::aliases") or {}
+            playerAliases[aliasPrio] = alias
+            playerAliases[0] = world.entityName(player.id())
+            sb.logInfo("playerAliases is %s", playerAliases)
+            player.setProperty("DPC::aliases", playerAliases)
+            return "Alias " .. alias .. " added with priority " .. aliasPrio
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/resetalias", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local resetConf = splitStr(data, " ")[1]
+            if resetConf == "reset" then
+                player.setProperty("DPC::aliases", nil)
+                return "Aliases reset."
+            else
+                return "Missing confirmation, use \"reset\" to confirm the reset."
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/showalias", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            --print out all of the aliases
+            local retStr = ""
+            local playerAliases = player.getProperty("DPC::aliases") or nil
+            if not playerAliases then
+                return "No aliases exist, use /addalias to make some."
+            end
+
+            table.sort(playerAliases)
+            for prio, alias in pairs(playerAliases) do
+                if prio == 0 then
+                    retStr = retStr .. "[" .. prio .. ": " .. world.entityName(player.id()) .. "] "
+                else
+                    retStr = retStr .. "[" .. prio .. ": " .. alias .. "] "
+                end
+            end
+
+            return "Aliases are: " .. retStr
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    --add /apply with the ability to use the chid or everyone within LOS and 30 tiles
+    starcustomchat.utils.setMessageHandler("/apply", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local aliasPrio = splitStr(data, " ")[1] or 0
+            local chid = root.getConfiguration("DPC::cursorChar") or nil
+            if not chid then
+                return "No character selected, move your cursor over one and use /chid to select them."
+            end
+            local playerAliases = player.getProperty("DPC::aliases") or {}
+            local aliasInfo = {}
+
+            if playerAliases then
+                aliasInfo = {
+                    ["alias"] = playerAliases[aliasPrio],
+                    ["priority"] = aliasPrio,
+                    ["UUID"] = player.uniqueId()
+                }
+            end
+
+
+            if world.sendEntityMessage(chid.entityId, "showRecog", aliasInfo):result() then
+                return chid.name .. " now recognizes you."
+            else
+                return "Recognition failed (this is bad it shouldn't happen)."
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+end
+
+local function getQuotes(str)
+    local returnStr, quoteBuffer = "", ""
+
+    local isQuote = false
+    for c in str:gmatch(".") do
+        if c == '"' then
+            if isQuote then
+                --close out quote and add to return string
+                returnStr = returnStr .. quoteBuffer
+                quoteBuffer = ""
+                isQuote = false
+            else
+                --turn quote collection on
+                isQuote = true
+                quoteBuffer = quoteBuffer .. " "
+            end
+        elseif isQuote then
+            quoteBuffer = quoteBuffer .. c
+        end
+    end
+    return returnStr
+end
+
+local function quoteMap(str)
+    local quotes = getQuotes(str)
+    local arg = ""
+    local t = {}
+    for c in quotes:gmatch(".") do
+        if c:match("%s") then
+            -- arg = trim(arg) --shouldn't be necessary
+            if #arg > 0 then
+                t[arg] = true
+            end
+            arg = ""
+        else
+            arg = arg .. c
+        end
+    end
+    if #arg > 0 then
+        t[arg] = true
+    end
+    return t
 end
 
 function dynamicprox:onSendMessage(data)
@@ -1102,6 +1391,7 @@ function dynamicprox:onSendMessage(data)
         local sendOverServer = root.getConfiguration("dpcOverServer") or false
         data.proxRadius = self.proxRadius
         -- data.time = systemTime() this is where i'd add time if i wanted it
+
         local function sendMessageToPlayers()
             local position = player.id() and world.entityPosition(player.id())
 
@@ -1307,6 +1597,34 @@ function dynamicprox:onSendMessage(data)
                     .. DefaultLangPrefix
                     .. tostring(data.defaultLang)
                     .. TagSuffix
+
+                --check for alias stuff here
+                local playerAliases = player.getProperty("DPC::aliases") or {}
+
+                local recogName = false
+                local recogPrio = 100
+
+
+                playerAliases[0] = data.nickname
+                --check for any aliases here and set the highest priority one as the name
+                table.sort(playerAliases)
+                local quoteTbl = quoteMap(data.text)
+                local minPrio = 100
+                for prio, alias in pairs(playerAliases) do
+                    if quoteTbl[alias] and prio < minPrio then
+                        recogName = alias
+                        recogPrio = prio
+                        minPrio = prio
+                    end
+                end
+                --data.alias is for the alias
+                --data.aliasPrio is for the priority
+
+                if recogName then
+                    data.alias = recogName
+                    data.aliasPrio = recogPrio
+                end
+
 
                 if sendOverServer then
                     -- local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -2727,53 +3045,55 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
         end
 
-        local function getQuotes(str)
-            local returnStr, quoteBuffer = "", ""
+        --this is disabled for now since i'd prefer the nickname to appear if it's just you
+        if false and message.mode == "Prox" and message.playerUid == player.uniqueId() then
+            --allow higher (negative) priority aliases to appear on the message
+            --take from player config instead of the message
+            --in the future, allow players to use the nickname feature on themselves. right now i dont see why it'd be useful to do but whatever
+            local aliases = player.getProperty("DPC::aliases") or {}
+            local useName = world.entityName(player.id())
+            local minPrio = 0
 
-            local isQuote = false
-            for c in str:gmatch(".") do
-                if c == '"' then
-                    if isQuote then
-                        --close out quote and add to return string
-                        returnStr = returnStr .. quoteBuffer
-                        quoteBuffer = ""
-                        isQuote = false
-                    else
-                        --turn quote collection on
-                        isQuote = true
-                        quoteBuffer = quoteBuffer .. " "
-                    end
-                elseif isQuote then
-                    quoteBuffer = quoteBuffer .. c
+            for prio, alias in pairs(aliases) do
+                if prio < minPrio then
+                    useName = alias
                 end
             end
-            return returnStr
-        end
-
-        if message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
-            --recognition system will go here
+            message.nickname = useName
+        elseif message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
-            if not recoged[message.playerUid] then
-                --recog doesnt exist, do one more check on this msg
-                --if it still doesnt exist then no name for you :)
-                local msgName = message.nickname or "^#999;???^reset;"
-                local textCleaned = message.text:gsub("%^[^^;]-;", ""):lower()
-                textCleaned = getQuotes(textCleaned)
-                local nameWords = splitStr(msgName:gsub("%^[^^;]-;", ""):lower(), " ")
-                for _, word in ipairs(nameWords) do
-                    if textCleaned:match(word) then
-                        recoged[message.playerUid] = true
-                        player.setProperty("DPC::recognizedPlayers", recoged)
-                        break
-                    end
-                end
+            --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
+            --this will just apply it if it exists and is higher priority
+            --if the entry doesn't exist and the message has no value filled in then apply the ???
+            --[[
+            table should be:
+            {
+            uuid: {
+                savedName: "name",
+                manName: "/addnick name", (if populated, prevent alias overwrites for higher priority aliases)
+                aliasPrio: int (0 is for real name, can make negative ints)
+            },
+            uuid:{etc}
+            }
+            ]]
+            local charRecInfo = recoged[message.playerUid] or nil
+            local useName = "^#999;???^reset;"
+
+            if message.alias and (not charRecInfo) or (charRecInfo and not charRecInfo.manName and message.aliasPrio < charRecInfo.aliasPrio) then --if conditions are met
+                --apply new thing or create entry, should work either way
+                charRecInfo = {
+                    ["savedName"] = message.alias,
+                    ["manName"] = false,
+                    ["aliasPrio"] = message.aliasPrio
+                }
+                recoged[message.playerUid] = charRecInfo
+                player.setProperty("DPC::recognizedPlayers", recoged)
             end
 
-            --do a second check
-            if not recoged[message.playerUid] then
-                --replace the nickname with ???
-                message.nickname = "^#999;???^reset;"
+            if charRecInfo then
+                useName = charRecInfo.savedName
             end
+            message.nickname = useName
         end
 
 
