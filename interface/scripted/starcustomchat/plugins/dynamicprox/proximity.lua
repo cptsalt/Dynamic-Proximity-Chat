@@ -1544,9 +1544,10 @@ local function quoteMap(str)
 end
 
 function dynamicprox:onSendMessage(data)
+    local currentPlayerName = ""
     if xsb then -- FezzedOne: Needed to ensure the correct default alias is sent on DPC after swapping characters on xStarbound.
         local _, defaultName = getNames()
-        self.currentPlayerName = defaultName
+        currentPlayerName = defaultName or ""
     end
 
     --think about running this in local to allow players without the mod to still see messages
@@ -1772,11 +1773,10 @@ function dynamicprox:onSendMessage(data)
 
                 -- FezzedOne: Fixed the default priority 0 alias not getting changed after character swaps on xStarbound, OpenStarbound and StarExtensions.
                 -- Shouldn't need to use the stock chat nickname (`data.nickname`) anyway in this alias system.
-                playerAliases["0"] = xsb and self.currentPlayerName or
-                    ( (isOSB or starExtensions) and player.name() or world.entityName(player.id()) )
+                playerAliases["0"] = xsb and currentPlayerName or world.entityName(player.id())
                 --check for any aliases here and set the highest priority one as the name
                 table.sort(playerAliases)
-                local quoteTbl = quoteMap(data.text)
+                local quoteTbl = quoteMap(data.content or "")
                 local minPrio = 100
                 for prio, alias in pairs(playerAliases) do
                     -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
@@ -1797,6 +1797,7 @@ function dynamicprox:onSendMessage(data)
                     data.aliasPrio = recogPrio
                 end
 
+                data.playerName = xsb and currentPlayerName or world.entityName(player.id())
                 -- FezzedOne: Moved these to ensure full recog support in client-side mode.
                 data.playerId = player.id()
                 data.playerUid = player.uniqueId()
@@ -1849,7 +1850,7 @@ function dynamicprox:onSendMessage(data)
                     globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
                     globalMsg = DynamicProxPrefix .. chatTags .. globalMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalMsg, "Broadcast", false)
+                    chat.send(globalMsg, "Broadcast", false, data)
                 end
                 if #globalOocStrings ~= 0 then
                     local globalOocMsg = ""
@@ -1861,7 +1862,7 @@ function dynamicprox:onSendMessage(data)
                     globalOocMsg = globalOocMsg:gsub("[ ]+", " ")
                     globalOocMsg = DynamicProxPrefix .. globalOocMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalOocMsg, "Broadcast", false)
+                    chat.send(globalOocMsg, "Broadcast", false, data)
                 end
                 return true
             end
@@ -3190,6 +3191,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     end
                 end
 
+                message.isDpc = true
                 -- FezzedOne: If both SCCRP and Dynamic Proximity Chat are installed, always show SCCRP Proximity messages as such, even if handled by DPC.
                 if message.isSccrp then message.mode = "Proximity" end
                 -- FezzedOne: Show Local and Broadcast messages as such, even if formatted by DPC.
@@ -3218,6 +3220,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
         end
 
+        message.nickname = message.playerName or message.nickname
+
         --this is disabled for now since i'd prefer the nickname to appear if it's just you
         -- FezzedOne: The stock nickname is not changed after character swaps. Fixed that issue by not using the stock nickname.
         -- It's now recommended that the character's main name (set with `/setname` on xStarbound or `/identity set name` on
@@ -3226,7 +3230,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         -- Tip: With this change, you can now save the stock nickname for your OOC username (or whatever else) in non-Dynamic chat,
         -- since it's now completely disconnected from DPC messages. Wanted to add auto-nick for this reason, but that'd cause issues
         -- with servers running StarryPy3k.
-        if message.mode == "Prox" and message.playerUid == player.uniqueId() then
+        if message.isDpc and message.playerUid == player.uniqueId() then
             --allow higher (negative) priority aliases to appear on the message
             --take from player config instead of the message
             --in the future, allow players to use the nickname feature on themselves. right now i dont see why it'd be useful to do but whatever
@@ -3241,7 +3245,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             --     end
             -- end
             message.nickname = useName
-        elseif message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
+        elseif message.isDpc and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
             -- FezzedOne: Removed this check to add recog support in client-side modes: and root.getConfiguration("dpcOverServer")
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
             --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
@@ -3261,26 +3265,30 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             local charRecInfo = recoged[message.playerUid] or nil
             local useName = message.fakeName or "^#999;???^reset;"
 
-            if message.alias and (not charRecInfo) or (charRecInfo and not charRecInfo.manName and message.aliasPrio < charRecInfo.aliasPrio) then --if conditions are met
-                --apply new thing or create entry, should work either way
-                charRecInfo = {
-                    ["savedName"] = message.alias,
-                    ["manName"] = false,
-                    ["aliasPrio"] = message.aliasPrio
-                }
-                recoged[message.playerUid] = charRecInfo
-                player.setProperty("DPC::recognizedPlayers", recoged)
+            if message.alias and (not charRecInfo) or (charRecInfo and not charRecInfo.manName and message.aliasPrio > charRecInfo.aliasPrio) then --if conditions are met
+                if quoteMap(message.text or "")[message.alias] then -- FezzedOne: Check that the alias isn't garbled first.
+                    --apply new thing or create entry, should work either way
+                    charRecInfo = {
+                        ["savedName"] = message.alias,
+                        ["manName"] = false,
+                        ["aliasPrio"] = message.aliasPrio
+                    }
+                    recoged[message.playerUid] = charRecInfo
+                    player.setProperty("DPC::recognizedPlayers", recoged)
+                end
             end
 
             if charRecInfo then
                 useName = charRecInfo.savedName
             end
 
-            -- FezzedOne's note: Messages sent with `/proxlocal` on will not automatically «proc» recog on a player unless
-            -- all three of the sending client, receiving client *and* server are running the same mod (i.e., either 
-            -- xStarbound or OpenStarbound) *and* are not connected in legacy mode, due to the alias only being sent in 
-            -- chat metadata in this case. Players should consider using the manual recognition commands on stock servers.
             message.nickname = useName
+
+            -- FezzedOne's note: Messages sent with `/proxlocal` enabled will *not* automatically «proc» recog or handle recog groups
+            -- or skips on a player unless all three of the sending client, receiving client *and* server are running the same
+            -- mod (i.e., either xStarbound or OpenStarbound) *and* are not connected in legacy mode, due to the alias and
+            -- character name being sent in chat metadata in this case. Players should consider using `/addnick` or disabling
+            -- `/proxlocal` on stock servers.
         end
 
         if message.nickname == "" then message.nickname = "^#999;???^reset;" end
