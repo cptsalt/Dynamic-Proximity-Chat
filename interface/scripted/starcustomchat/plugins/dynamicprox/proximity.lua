@@ -1508,7 +1508,7 @@ local function quoteMap(str)
     local quotes = getQuotes(str)
     -- Normalize spaces and trim
     quotes = quotes:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
-    
+
     -- Split quotes into individual words
     local words = {}
     for word in quotes:gmatch("%S+") do
@@ -1518,28 +1518,28 @@ local function quoteMap(str)
             table.insert(words, word)
         end
     end
-    
+
     local tokens = {}
     local numWords = #words
-    
+
     -- Generate all 1-5 word n-grams (overlapping)
     for startIdx = 1, numWords do
         local currentToken = ""
         for n = 1, 5 do  -- n-gram length (1 to 5 words)
             local endIdx = startIdx + n - 1
             if endIdx > numWords then break end
-            
+
             -- Build token by adding next word
             if n == 1 then
                 currentToken = words[startIdx]
             else
                 currentToken = currentToken .. " " .. words[endIdx]
             end
-            
+
             tokens[currentToken] = true
         end
     end
-    
+
     return tokens
 end
 
