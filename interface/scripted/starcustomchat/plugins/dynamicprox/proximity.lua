@@ -1409,22 +1409,22 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 local newName = splitArgs[1]
                 if (not newName) or newName == "" then
                     player.setName("")
-                    player.setStatusProperty("currentName", nil)
+                    status.setStatusProperty("currentName", nil)
                     return "Cleared name tag."
                 else
                     player.setName(tostring(newName))
-                    player.setStatusProperty("currentName", tostring(newName))
+                    status.setStatusProperty("currentName", tostring(newName))
                     return "Set name tag to '" .. tostring(newName) .. "'."
                 end
             elseif root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil and player.setNametag then
                 local newName = chat.parseArguments(data)
                 if (not newName) or newName == "" then
                     player.setNametag("")
-                    player.setStatusProperty("currentName", nil)
+                    status.setStatusProperty("currentName", nil)
                     return "Cleared name tag."
                 else
                     player.setNametag(tostring(newName))
-                    player.setStatusProperty("currentName", tostring(newName))
+                    status.setStatusProperty("currentName", tostring(newName))
                     return "Set name tag to '" .. tostring(newName) .. "'."
                 end
             else
@@ -1448,7 +1448,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 if not newName then
                     return "Must specify a character name!"
                 else
-                    player.setStatusProperty("defaultName", tostring(newName))
+                    status.setStatusProperty("defaultName", tostring(newName))
                     return "Set character name to '" .. tostring(newName) .. "'."
                 end
             else
