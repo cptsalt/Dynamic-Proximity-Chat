@@ -1512,7 +1512,7 @@ local function quoteMap(str)
     for c in quotes:gmatch(".") do
         if c:match("%s") then
             -- arg = trim(arg) --shouldn't be necessary
-            arg = arg:gsub("%p", "") -- Strip periods.
+            arg = arg:gsub("%p", "") -- Strip punctuation.
             if #arg > 0 then
                 t[arg] = true
             end
