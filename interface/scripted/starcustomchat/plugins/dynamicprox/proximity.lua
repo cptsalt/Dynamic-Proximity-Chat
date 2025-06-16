@@ -1289,7 +1289,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 splitArgs = splitStr(data, " ")
             end
             local alias, aliasPrio = splitArgs[1] or nil, splitArgs[2] or nil
-            if (not alias or #alias < 1) or (not aliasPrio) then
+            if (not alias or #tostring(alias) < 1) or (not aliasPrio) then
                 return "Missing arguments, you must include an alias and priority."
             end
 
@@ -1311,7 +1311,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             end
             aliasPrio = aliasPrio:format("%i")
 
-            playerAliases[aliasPrio] = alias
+            playerAliases[aliasPrio] = tostring(alias)
             playerAliases[0] = world.entityName(player.id())
             player.setProperty("DPC::aliases", playerAliases)
             return "Alias " .. alias .. " added with priority " .. aliasPrio
