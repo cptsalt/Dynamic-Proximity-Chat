@@ -1163,11 +1163,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local chidName = world.entityName(cursorPlayer)
             local chidTable = {
                 ["entityId"] = cursorPlayer,
-                ["UUID"] = world.entityUniqueId(cursorPlayer),
-                ["name"] = chidName
+                ["UUID"] = world.entityUniqueId(cursorPlayer)
             }
             root.setConfiguration("DPC::cursorChar", chidTable)
-            return "Character " .. chidName .. " selected."
+            return "Character selected."
         end, data)
         if status then
             return resultOrError
@@ -1248,14 +1247,25 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             if (not alias or #alias < 1) or (not aliasPrio) then
                 return "Missing arguments, you must include an alias and priority."
             end
-            if alias == 0 then
+
+            if tonumber(aliasPrio) and (tonumber(aliasPrio) < -9 or tonumber(aliasPrio) > 9) then
+                return "Priority out of bounds, select a priority between -9 and 9."
+            end
+
+            if tonumber(aliasPrio) == 0 then
                 return "Cannot assign a priority 0 alias (this is reserved for your character's name)."
             end
-            if alias == "?" then
-                player.setProperty("DPC::unknownAlias",alias)
-                return "Unknown alias set as: "..alias
+            if aliasPrio == "?" then
+                player.setProperty("DPC::unknownAlias", alias)
+                return "Unknown alias set as: " .. alias
             end
             local playerAliases = player.getProperty("DPC::aliases") or {}
+
+            if not tonumber(aliasPrio) then
+                return "Invalid priority, use a number or '?' for assignment."
+            end
+            aliasPrio = aliasPrio:format("%i")
+
             playerAliases[aliasPrio] = alias
             playerAliases[0] = world.entityName(player.id())
             player.setProperty("DPC::aliases", playerAliases)
@@ -1273,6 +1283,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local resetConf = splitStr(data, " ")[1]
             if resetConf == "reset" then
                 player.setProperty("DPC::aliases", nil)
+                player.setProperty("DPC::unknownAlias", nil)
                 return "Aliases reset."
             else
                 return "Missing confirmation, use \"reset\" to confirm the reset."
@@ -1294,8 +1305,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "No aliases exist, use /addalias to make some."
             end
 
-            table.sort(playerAliases)
-            for prio, alias in pairs(playerAliases) do
+            sb.logInfo("aliases are: %s", playerAliases)
+
+            local aliasKeys = {}
+            for k in pairs(playerAliases) do table.insert(aliasKeys, k) end
+            table.sort(aliasKeys)
+
+            for _, prio in ipairs(aliasKeys) do
+                local alias = playerAliases[prio]
                 if prio == 0 then
                     retStr = retStr .. "[" .. prio .. ": " .. world.entityName(player.id()) .. "] "
                 else
@@ -1303,7 +1320,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 end
             end
 
-            return "Aliases are: " .. retStr
+            retStr = trim(retStr)
+            local unknownAlias = player.getProperty("DPC::unknownAlias") or "^#999;???^reset;"
+            return "Aliases are: " .. retStr .. ". Unknown alias is: " .. unknownAlias
         end, data)
         if status then
             return resultOrError
