@@ -1503,66 +1503,44 @@ local function getQuotes(str)
     return returnStr
 end
 
+-- FezzedOne: Used DeepSeek for this one.
 local function quoteMap(str)
     local quotes = getQuotes(str)
-    -- FezzedOne: Adding a space at the end simplifies the code below.
-    quotes = quotes .. " "
-    local arg = ""
-    local t = {}
-    for c in quotes:gmatch(".") do
-        if c:match("%s") then
-            -- arg = trim(arg) --shouldn't be necessary
-            arg = arg:gsub("%p", "") -- Strip punctuation.
-            if #arg > 0 then
-                t[arg] = true
-            end
-            arg = ""
-        else
-            arg = arg .. c
+    -- Normalize spaces and trim
+    quotes = quotes:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+    
+    -- Split quotes into individual words
+    local words = {}
+    for word in quotes:gmatch("%S+") do
+        -- Remove punctuation from each word
+        word = word:gsub("%p", "")
+        if #word > 0 then
+            table.insert(words, word)
         end
     end
-    -- if #arg > 0 then
-    --     t[arg] = true
-    -- end
-    local spaces = 0
-    -- FezzedOne: Now do two-word combinations.
-    arg = ""
-    for c in quotes:gmatch(".") do
-        if c:match("%s") then
-            if spaces >= 1 then
-                arg = arg:gsub("%p", "")
-                if #arg > 0 then
-                    t[arg] = true
-                end
-                arg = ""
-                spaces = 0
+    
+    local tokens = {}
+    local numWords = #words
+    
+    -- Generate all 1-5 word n-grams (overlapping)
+    for startIdx = 1, numWords do
+        local currentToken = ""
+        for n = 1, 5 do  -- n-gram length (1 to 5 words)
+            local endIdx = startIdx + n - 1
+            if endIdx > numWords then break end
+            
+            -- Build token by adding next word
+            if n == 1 then
+                currentToken = words[startIdx]
             else
-                spaces = spaces + 1
+                currentToken = currentToken .. " " .. words[endIdx]
             end
-        else
-            arg = arg .. c
+            
+            tokens[currentToken] = true
         end
     end
-    -- FezzedOne: Lastly, three-worders.
-    spaces = 0
-    arg = ""
-    for c in quotes:gmatch(".") do
-        if c:match("%s") then
-            if spaces >= 2 then
-                arg = arg:gsub("%p", "")
-                if #arg > 0 then
-                    t[arg] = true
-                end
-                arg = ""
-                spaces = 0
-            else
-                spaces = spaces + 1
-            end
-        else
-            arg = arg .. c
-        end
-    end
-    return t
+    
+    return tokens
 end
 
 function dynamicprox:onSendMessage(data)
@@ -1787,7 +1765,7 @@ function dynamicprox:onSendMessage(data)
                 local playerAliases = player.getProperty("DPC::aliases") or {}
                 data.fakeName = player.getProperty("DPC::unknownAlias") or nil
 
-                local recogName = false
+                local recogName = nil
                 local recogPrio = 100
 
                 local isOSB = root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
@@ -1804,8 +1782,9 @@ function dynamicprox:onSendMessage(data)
                     -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
                     local prioNum = tonumber(prio)
                     -- Ignore punctuation in alias comparisons. Fixes an issue where «I'm Jonny.» wouldn't proc for the alias «Jonny».
-                    if prioNum and quoteTbl[tostring(alias):gsub("%p", "")] and prioNum < minPrio then
-                        recogName = alias
+                    local normalisedAlias = tostring(alias):gsub("%p", ""):gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+                    if prioNum and quoteTbl[normalisedAlias] and prioNum < minPrio then
+                        recogName = tostring(alias)
                         recogPrio = prioNum
                         minPrio = prioNum
                     end
