@@ -3233,7 +3233,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         -- Tip: With this change, you can now save the stock nickname for your OOC username (or whatever else) in non-Dynamic chat,
         -- since it's now completely disconnected from DPC messages. Wanted to add auto-nick for this reason, but that'd cause issues
         -- with servers running StarryPy3k.
-        if message.isDpc and (message.receiverUid or message.playerUid) == player.uniqueId() then
+        if message.isDpc and message.playerUid == (message.receiverUid or player.uniqueId()) then
             --allow higher (negative) priority aliases to appear on the message
             --take from player config instead of the message
             --in the future, allow players to use the nickname feature on themselves. right now i dont see why it'd be useful to do but whatever
@@ -3248,9 +3248,16 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             --     end
             -- end
             message.nickname = useName
-        elseif message.isDpc and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
+        elseif message.isDpc and message.playerUid ~= (message.receiverUid or player.uniqueId()) and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
             -- FezzedOne: Removed this check to add recog support in client-side modes: and root.getConfiguration("dpcOverServer")
-            local recoged = player.getProperty("DPC::recognizedPlayers") or {}
+            local recoged = {}
+            if xsb then
+                if world.entityMaster(message.receiverId) then
+                    recoged = world.sendEntityMessage(message.receiverId or player.id(), "dpcGetRecogs"):result() or {}
+                end
+            else
+                recoged = player.getProperty("DPC::recognizedPlayers") or {}
+            end
             --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
             --this will just apply it if it exists and is higher priority
             --if the entry doesn't exist and the message has no value filled in then apply the ???
@@ -3277,7 +3284,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         ["aliasPrio"] = message.aliasPrio
                     }
                     recoged[message.playerUid] = charRecInfo
-                    player.setProperty("DPC::recognizedPlayers", recoged)
+                    if xsb then
+                        world.sendEntityMessage(message.receiverId or player.id(), "dpcSetRecogs", recoged)
+                    else
+                        player.setProperty("DPC::recognizedPlayers", recoged)
+                    end
                 end
             end
 

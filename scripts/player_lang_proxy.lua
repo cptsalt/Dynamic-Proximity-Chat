@@ -83,10 +83,22 @@ function init()
             return true
         end
     end)
-    message.setHandler("receiverName", function(_, isLocal, newDefault)
+    message.setHandler("receiverName", function(_, isLocal)
         if isLocal then
             local _, defaultName = getNames()
             return defaultName
+        end
+    end)
+
+    message.setHandler("dpcGetRecogs", function(_, isLocal)
+        if isLocal then
+            return player.getProperty("DPC::recognizedPlayers") or {}
+        end
+    end)
+
+    message.setHandler("dpcSetRecogs", function(_, isLocal, newRecogs)
+        if isLocal then
+            player.setProperty("DPC::recognizedPlayers", newRecogs)
         end
     end)
 
