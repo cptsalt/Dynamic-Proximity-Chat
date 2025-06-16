@@ -83,6 +83,12 @@ function init()
             return true
         end
     end)
+    message.setHandler("receiverName", function(_, isLocal, newDefault)
+        if isLocal then
+            local _, defaultName = getNames()
+            return defaultName
+        end
+    end)
 
     local currentName, defaultName = getNames()
     if not defaultName then

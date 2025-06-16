@@ -1975,7 +1975,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     if xsb and not message.isSccrp then           -- FezzedOne: Already handled in SCCRP with my PR.
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
                             if world.entityExists(receiverEntityId) then
-                                local receiverName = world.entityName(receiverEntityId) or "<n/a>"
+                                local receiverName = world.sendEntityMessage(receiverEntityId, "receiverName"):result() or "<n/a>"
                                 if #ownPlayers ~= 1 then message.receiverName = receiverName end
                                 if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
                             end
@@ -3145,8 +3145,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         -- Don't need to process the sender ID anymore after this, so we can remove it so that a portrait is no longer displayed.
                         message.senderId = nil
                     end
-                    message.nickname = message.receiverName and (message.nickname .. " -> " .. message.receiverName)
-                        or message.nickname
                     if copiedMessage then
                         message.processed = true
                         world.sendEntityMessage(receiverEntityId, "scc_add_message", message)
@@ -3246,6 +3244,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             message.nickname = useName
         end
 
+        if xsb then
+            message.nickname = message.receiverName and (message.nickname .. " -> " .. message.receiverName)
+                or message.nickname
+        end
 
         if showAsProximity then message.mode = "Proximity" end
         if showAsLocal then message.mode = "Local" end
