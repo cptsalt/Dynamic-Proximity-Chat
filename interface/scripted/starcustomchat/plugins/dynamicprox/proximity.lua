@@ -1312,7 +1312,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             aliasPrio = aliasPrio:format("%i")
 
             playerAliases[aliasPrio] = tostring(alias)
-            playerAliases[0] = world.entityName(player.id())
+            playerAliases["0"] = world.entityName(player.id())
             player.setProperty("DPC::aliases", playerAliases)
             return "Alias " .. alias .. " added with priority " .. aliasPrio
         end, data)
@@ -1505,6 +1505,8 @@ end
 
 local function quoteMap(str)
     local quotes = getQuotes(str)
+    -- FezzedOne: Adding a space at the end simplifies the code below.
+    quotes = quotes .. " "
     local arg = ""
     local t = {}
     for c in quotes:gmatch(".") do
@@ -1518,8 +1520,46 @@ local function quoteMap(str)
             arg = arg .. c
         end
     end
-    if #arg > 0 then
-        t[arg] = true
+    -- if #arg > 0 then
+    --     t[arg] = true
+    -- end
+    local spaces = 0
+    -- FezzedOne: Now do two-word combinations.
+    arg = ""
+    for c in quotes:gmatch(".") do
+        if c:match("%s") then
+            if spaces >= 1 then
+                -- arg = trim(arg) --shouldn't be necessary
+                if #arg > 0 then
+                    t[arg] = true
+                end
+                arg = ""
+                spaces = 0
+            else
+                spaces = spaces + 1
+            end
+        else
+            arg = arg .. c
+        end
+    end
+    -- FezzedOne: Lastly, three-worders.
+    spaces = 0
+    arg = ""
+    for c in quotes:gmatch(".") do
+        if c:match("%s") then
+            if spaces >= 2 then
+                -- arg = trim(arg) --shouldn't be necessary
+                if #arg > 0 then
+                    t[arg] = true
+                end
+                arg = ""
+                spaces = 0
+            else
+                spaces = spaces + 1
+            end
+        else
+            arg = arg .. c
+        end
     end
     return t
 end
@@ -1753,17 +1793,19 @@ function dynamicprox:onSendMessage(data)
 
                 -- FezzedOne: Fixed the default priority 0 alias not getting changed after character swaps on xStarbound, OpenStarbound and StarExtensions.
                 -- Shouldn't need to use the stock chat nickname (`data.nickname`) anyway in this alias system.
-                playerAliases[0] = xsb and self.currentPlayerName or
+                playerAliases["0"] = xsb and self.currentPlayerName or
                     ( (isOSB or starExtensions) and player.name() or world.entityName(player.id()) )
                 --check for any aliases here and set the highest priority one as the name
                 table.sort(playerAliases)
                 local quoteTbl = quoteMap(data.text)
                 local minPrio = 100
                 for prio, alias in pairs(playerAliases) do
-                    if quoteTbl[alias] and prio < minPrio then
+                    -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
+                    local prioNum = tonumber(prio)
+                    if prioNum and quoteTbl[alias] and prioNum < minPrio then
                         recogName = alias
-                        recogPrio = prio
-                        minPrio = prio
+                        recogPrio = prioNum
+                        minPrio = prioNum
                     end
                 end
                 --data.alias is for the alias
