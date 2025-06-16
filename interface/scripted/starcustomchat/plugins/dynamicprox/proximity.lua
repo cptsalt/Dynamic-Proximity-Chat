@@ -130,17 +130,17 @@ end
 
 function dynamicprox:init()
     self:_loadConfig()
-    local currentName, defaultName = getNames()
-    self.currentPlayerName, self.lastPlayer = nil, nil
-    if xsb then
-        self.lastPlayer = world.primaryPlayerUuid()
-        self.currentPlayerName = defaultName
-    end
+    local currentName, _ = getNames()
     -- FezzedOne: Check to ensure this callback EXISTS first, Captain Salt!
     if player.setNametag then
         player.setNametag(currentName or "")
     end
     root.setConfiguration("DPC::cursorChar", nil)
+end
+
+function dynamicprox:uninit()
+    -- FezzedOne: Ensures the player's name tag on OpenStarbound isn't left invisible or as a custom tag if DPC is uninstalled.
+    if player.setNametag then player.setNametag() end
 end
 
 function dynamicprox:addCustomCommandPreview(availableCommands, substr)
@@ -1510,11 +1510,8 @@ end
 
 function dynamicprox:onSendMessage(data)
     if xsb then -- FezzedOne: Needed to ensure the correct default alias is sent on DPC after swapping characters on xStarbound.
-        if world.primaryPlayerUuid() ~= self.lastPlayer then
-            local _, defaultName = getNames()
-            self.currentPlayerName = defaultName
-            self.lastPlayer = world.primaryPlayerUuid()
-        end
+        local _, defaultName = getNames()
+        self.currentPlayerName = defaultName
     end
 
     --think about running this in local to allow players without the mod to still see messages
@@ -1761,6 +1758,11 @@ function dynamicprox:onSendMessage(data)
                     data.aliasPrio = recogPrio
                 end
 
+                -- FezzedOne: Moved these to ensure full recog support in client-side mode.
+                data.playerId = player.id()
+                data.playerUid = player.uniqueId()
+                data.skipRecog = player.getProperty("DPC::skipRecog") or false
+                data.recogGroup = player.getProperty("DPC::recogGroup") or false
 
                 if sendOverServer then
                     -- local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -1773,15 +1775,10 @@ function dynamicprox:onSendMessage(data)
                     --     data.playerplayerSecret = playerSecret
                     -- end
 
-
-                    data.playerId = player.id()
-                    data.playerUid = player.uniqueId()
                     data.estRad = estRad
                     data.globalFlag = globalFlag
                     -- FezzedOne: xStarbound also supports the stuff needed for the server-side message handler.
                     data.isOSB = (not not xsb) or isOSB
-                    data.skipRecog = player.getProperty("DPC::skipRecog") or false
-                    data.recogGroup = player.getProperty("DPC::recogGroup") or false
                     -- player.setProperty("DPC::"..type.."Font",self.fontLib[font])
                     data.actionFont = player.getProperty("DPC::generalFont") or nil
                     data.quoteFont = player.getProperty("DPC::quoteFont") or nil
@@ -1906,7 +1903,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 local hasAuthorPrefix = message.text:sub(1, #AuthorIdPrefix) == AuthorIdPrefix
                 local authorEntityId
                 local defaultLangStr = nil
-                if hasAuthorPrefix then
+                if hasAuthorPrefix and not message.alias then
                     local i = #AuthorIdPrefix + 1
                     local authorIdStr = ""
                     local c = ""
@@ -3185,23 +3182,30 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         end
 
         --this is disabled for now since i'd prefer the nickname to appear if it's just you
-        -- FezzedOne: Nickname's not changed after character swaps! Re-enabled this to drop usage of the stock nickname in DPC entirely (except in `/proxlocal` mode).
+        -- FezzedOne: The stock nickname is not changed after character swaps. Fixed that issue by not using the stock nickname.
+        -- It's now recommended that the character's main name (set with `/setname` on xStarbound or `/identity set name` on
+        -- OpenStarbound or StarExtensions) be the character's «canonical» name. E.g., «Jonathan», «Jonathan F. Thompson» or
+        -- «Jonathan 'Hammer' Thompson», instead of «Jonny», «Dr. Thompson» or «'Hammer'».
+        -- Tip: With this change, you can now save the stock nickname for your OOC username (or whatever else) in non-Dynamic chat,
+        -- since it's now completely disconnected from DPC messages. Wanted to add auto-nick for this reason, but that'd cause issues
+        -- with servers running StarryPy3k.
         if message.mode == "Prox" and message.playerUid == player.uniqueId() then
             --allow higher (negative) priority aliases to appear on the message
             --take from player config instead of the message
             --in the future, allow players to use the nickname feature on themselves. right now i dont see why it'd be useful to do but whatever
-            local aliases = player.getProperty("DPC::aliases") or {}
+            -- local aliases = player.getProperty("DPC::aliases") or {}
             local _, defaultName = getNames()
             local useName = xsb and (defaultName or "") or world.entityName(player.id())
-            local minPrio = 0
+            -- local minPrio = 0
 
-            for prio, alias in pairs(aliases) do
-                if prio < minPrio then
-                    useName = alias
-                end
-            end
+            -- for prio, alias in pairs(aliases) do
+            --     if prio < minPrio then
+            --         useName = alias
+            --     end
+            -- end
             message.nickname = useName
-        elseif message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
+        elseif message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
+            -- FezzedOne: Removed this check to add recog support in client-side modes: and root.getConfiguration("dpcOverServer")
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
             --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
             --this will just apply it if it exists and is higher priority
