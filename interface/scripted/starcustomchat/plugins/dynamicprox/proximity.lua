@@ -1379,7 +1379,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     --add /apply with the ability to use the chid or everyone within LOS and 30 tiles
     starcustomchat.utils.setMessageHandler("/apply", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local aliasPrio = tonumber(splitStr(data, " ")[1]) or 0
+            local aliasPrio = splitStr(data, " ")[1] or "0"
             local chid = root.getConfiguration("DPC::cursorChar") or nil
             if not chid then
                 return "No character selected, move your cursor over one and use /chid to select them."
@@ -1387,10 +1387,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local playerAliases = player.getProperty("DPC::aliases") or {}
             local aliasInfo = {}
 
-            if playerAliases then
+            if playerAliases and tonumber(aliasPrio) and playerAliases[aliasPrio] then
                 aliasInfo = {
-                    ["alias"] = playerAliases[aliasPrio],
-                    ["priority"] = aliasPrio,
+                    ["alias"] = tostring(playerAliases[aliasPrio]),
+                    ["priority"] = tonumber(aliasPrio),
                     ["UUID"] = player.uniqueId()
                 }
             end
@@ -3315,6 +3315,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
 
             if charRecInfo then
+                sb.logInfo("charRecInfo = %s", exportvar(charRecInfo))
                 useName = charRecInfo.savedName
             end
 
