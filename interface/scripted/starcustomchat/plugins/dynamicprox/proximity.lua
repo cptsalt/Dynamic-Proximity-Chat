@@ -1207,8 +1207,16 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     --add a nickanme command that lets you apply a custom name to the selected chid character
     starcustomchat.utils.setMessageHandler("/addnick", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local newNick = splitStr(data, " ")[1] or nil
-            if not newNick or #newNick < 1 then
+            local splitArgs
+            if xsb then
+                splitArgs = chat.parseArguments(data)
+            elseif chat.parseArguments then -- FezzedOne: OpenStarbound and StarExtensions.
+                splitArgs = table.pack(chat.parseArguments(data))
+            else
+                splitArgs = splitStr(data, " ")
+            end
+            local newNick = splitArgs[1] or nil
+            if not newNick or #tostring(newNick) < 1 then
                 return "No nickname provided, try again."
             end
 
@@ -1229,14 +1237,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         ]]
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
             recoged[chid] = {
-                ["savedName"] = newNick,
+                ["savedName"] = tostring(newNick),
                 ["manName"] = true,
                 ["aliasPrio"] = -10
             }
             player.setProperty("DPC::recognizedPlayers", recoged)
             root.setConfiguration("DPC::cursorChar", nil)
 
-            return "Character assigned nickanme " .. newNick .. ", selection released."
+            return "Character assigned nickname " .. newNick .. ", selection released."
         end, data)
         if status then
             return resultOrError
@@ -1271,7 +1279,15 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
     starcustomchat.utils.setMessageHandler("/addalias", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local splitArgs = splitStr(data, " ")
+            local splitArgs
+            -- FezzedOne: Allowed spaces in aliases.
+            if xsb then
+                splitArgs = chat.parseArguments(data)
+            elseif chat.parseArguments then -- FezzedOne: OpenStarbound and StarExtensions.
+                splitArgs = table.pack(chat.parseArguments(data))
+            else
+                splitArgs = splitStr(data, " ")
+            end
             local alias, aliasPrio = splitArgs[1] or nil, splitArgs[2] or nil
             if (not alias or #alias < 1) or (not aliasPrio) then
                 return "Missing arguments, you must include an alias and priority."
