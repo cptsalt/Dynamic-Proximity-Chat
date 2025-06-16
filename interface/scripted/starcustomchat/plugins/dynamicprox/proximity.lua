@@ -1110,9 +1110,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     starcustomchat.utils.setMessageHandler("/font", function(_, _, data)
         local status, resultOrError = pcall(function(data)
             --no font support yet
-            if true then
-                return "Fonts aren't supported (yet), wait until [next version]"
-            end
+            -- if true then
+            --     return "Fonts aren't supported (yet), wait until [next version]"
+            -- end
             --1st arg is type, 2nd arg is font
             local splitArgs = splitStr(data, " ")
             local type, font = splitArgs[1] or nil, splitArgs[2] or nil
@@ -1129,7 +1129,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "Reset " .. type .. " font."
             end
 
-            sb.logInfo("font is %s, lib entry is %s", font, self.fontLib[font])
+            -- sb.logInfo("font is %s, lib entry is %s", font, self.fontLib[font])
 
             if self.fontLib and self.fontLib[font] then
                 --apply player property to tell people what font is used for general/quotes
