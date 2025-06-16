@@ -50,4 +50,28 @@ function init()
             return player.setProperty("DynProxChat::defaultCommCode", newDefault)
         end
     end)
+    message.setHandler("showRecog", function(_, _, aliasInfo)
+        --[[
+        aliasInfo = {
+                    ["alias"] = playerAliases[aliasPrio],
+                    ["priority"] = aliasPrio,
+                    ["UUID"] = player.uniqueId()
+                }
+        ]]
+        local recoged = player.getProperty("DPC::recognizedPlayers") or {}
+        local playerUid = aliasInfo.UUID or nil
+        if not playerUid then return false end
+        local playerRecog = recoged[playerUid] or nil
+        if not playerRecog or (playerRecog and playerRecog.aliasPrio < aliasInfo.priority) then
+            --check priority, apply if new is higher
+            playerRecog = {
+                ["savedName"] = aliasInfo.alias,
+                ["manName"] = false,
+                ["aliasPrio"] = aliasInfo.priority
+            }
+            recoged[playerUid] = playerRecog
+            player.getProperty("DPC::recognizedPlayers", recoged)
+            return true
+        end
+    end)
 end

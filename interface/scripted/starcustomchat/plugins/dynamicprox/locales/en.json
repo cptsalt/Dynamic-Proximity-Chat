@@ -29,5 +29,12 @@
   "commands.showlangs.desc": "Lists your learned languages",
   "commands.langlist.desc": "Lists a server's registered languages",
   "commands.editlang.desc": "Edit a saved language you created, (code, subject, new value)",
-  "commands.font.desc": "Allows you to change your selected fonts for general messages, and quotes/sounds. {type, font}"
+  "commands.font.desc": "Allows you to change your selected fonts for general messages, and quotes/sounds. {type, font}",
+  "commands.chid.desc": "Selects the character your cursor is on for other commands",
+  "commands.addnick.desc": "Set a nickname for the character selected with /chid, {nickname}",
+  "commands.clearnick.desc": "Remove the nickname (and recognition) for the character selected with /chid",
+  "commands.addalias.desc": "Adds an alias to your list of aliases, {alias, priority}",
+  "commands.resetalias.desc": "Resets your aliases, argument must be \"reset\" to work, {reset}",
+  "commands.showalias.desc": "Prints all of your saved aliases and priorities",
+  "commands.apply.desc": "Lets the character selected with /chid recognize you"
 }
