@@ -1324,7 +1324,7 @@ function dynamicprox:onSendMessage(data)
                     data.playerUid = player.uniqueId()
                     data.estRad = estRad
                     data.globalFlag = globalFlag
-                    data.isOSB = root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
+                    data.isOSB = (not not xsb) or root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
                     data.skipRecog = player.getProperty("DPC::skipRecog") or false
                     data.recogGroup = player.getProperty("DPC::recogGroup") or false
                     -- player.setProperty("DPC::"..type.."Font",self.fontLib[font])
