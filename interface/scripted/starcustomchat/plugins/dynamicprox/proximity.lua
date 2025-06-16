@@ -33,6 +33,14 @@ local function sccrpInstalled()
     end
 end
 
+local function getNames()
+    local currentName = status.statusProperty("currentName")
+    currentName = type(currentName) == "string" and currentName
+    local defaultName = status.statusProperty("defaultName")
+    defaultName = type(defaultName) == "string" and defaultName
+    return currentName, defaultName
+end
+
 dynamicprox = PluginClass:new({
     name = "dynamicprox",
 })
@@ -122,8 +130,17 @@ end
 
 function dynamicprox:init()
     self:_loadConfig()
-    player.setNametag("")
+    local currentName, _ = getNames()
+    -- FezzedOne: Check to ensure this callback EXISTS first, Captain Salt!
+    if player.setNametag then
+        player.setNametag(currentName or "")
+    end
     root.setConfiguration("DPC::cursorChar", nil)
+end
+
+function dynamicprox:uninit()
+    -- FezzedOne: Ensures the player's name tag on OpenStarbound isn't left invisible or as a custom tag if DPC is uninstalled.
+    if player.setNametag then player.setNametag() end
 end
 
 function dynamicprox:addCustomCommandPreview(availableCommands, substr)
@@ -331,6 +348,18 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             name = "/apply",
             description = "commands.apply.desc",
             data = "/apply",
+        })
+    elseif string.find("/nametag", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/nametag",
+            description = "commands.nametag.desc",
+            data = "/nametag",
+        })
+    elseif xsb and string.find("/nametag", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/setname",
+            description = "commands.setname.desc",
+            data = "/setname",
         })
     end
 end
@@ -1178,8 +1207,16 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     --add a nickanme command that lets you apply a custom name to the selected chid character
     starcustomchat.utils.setMessageHandler("/addnick", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local newNick = splitStr(data, " ")[1] or nil
-            if not newNick or #newNick < 1 then
+            local splitArgs
+            if xsb then
+                splitArgs = chat.parseArguments(data)
+            elseif chat.parseArguments then -- FezzedOne: OpenStarbound and StarExtensions.
+                splitArgs = table.pack(chat.parseArguments(data))
+            else
+                splitArgs = splitStr(data, " ")
+            end
+            local newNick = splitArgs[1] or nil
+            if not newNick or #tostring(newNick) < 1 then
                 return "No nickname provided, try again."
             end
 
@@ -1200,14 +1237,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         ]]
             local recoged = player.getProperty("DPC::recognizedPlayers") or {}
             recoged[chid] = {
-                ["savedName"] = newNick,
+                ["savedName"] = tostring(newNick),
                 ["manName"] = true,
                 ["aliasPrio"] = -10
             }
             player.setProperty("DPC::recognizedPlayers", recoged)
             root.setConfiguration("DPC::cursorChar", nil)
 
-            return "Character assigned nickanme " .. newNick .. ", selection released."
+            return "Character assigned nickname " .. newNick .. ", selection released."
         end, data)
         if status then
             return resultOrError
@@ -1242,9 +1279,17 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
     starcustomchat.utils.setMessageHandler("/addalias", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local splitArgs = splitStr(data, " ")
+            local splitArgs
+            -- FezzedOne: Allowed spaces in aliases.
+            if xsb then
+                splitArgs = chat.parseArguments(data)
+            elseif chat.parseArguments then -- FezzedOne: OpenStarbound and StarExtensions.
+                splitArgs = table.pack(chat.parseArguments(data))
+            else
+                splitArgs = splitStr(data, " ")
+            end
             local alias, aliasPrio = splitArgs[1] or nil, splitArgs[2] or nil
-            if (not alias or #alias < 1) or (not aliasPrio) then
+            if (not alias or #tostring(alias) < 1) or (not aliasPrio) then
                 return "Missing arguments, you must include an alias and priority."
             end
 
@@ -1266,8 +1311,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             end
             aliasPrio = aliasPrio:format("%i")
 
-            playerAliases[aliasPrio] = alias
-            playerAliases[0] = world.entityName(player.id())
+            playerAliases[aliasPrio] = tostring(alias)
+            local _, defaultName = getNames()
+            playerAliases["0"] = xsb and defaultName or world.entityName(player.id())
             player.setProperty("DPC::aliases", playerAliases)
             return "Alias " .. alias .. " added with priority " .. aliasPrio
         end, data)
@@ -1307,15 +1353,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
             sb.logInfo("aliases are: %s", playerAliases)
 
-            local aliasKeys = {}
-            for k in pairs(playerAliases) do table.insert(aliasKeys, k) end
-            table.sort(aliasKeys)
-
-            for _, prio in ipairs(aliasKeys) do
+            for prioNum = -10, 10, 1 do
+                local prio = tostring(prioNum)
                 local alias = playerAliases[prio]
-                if prio == 0 then
-                    retStr = retStr .. "[" .. prio .. ": " .. world.entityName(player.id()) .. "] "
-                else
+                if prioNum == 0 then
+                    local _, defaultName = getNames()
+                    local canonicalName = xsb and defaultName or world.entityName(player.id())
+                    retStr = retStr .. "[" .. prio .. ": " .. canonicalName .. "] "
+                elseif alias then
                     retStr = retStr .. "[" .. prio .. ": " .. alias .. "] "
                 end
             end
@@ -1334,7 +1379,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     --add /apply with the ability to use the chid or everyone within LOS and 30 tiles
     starcustomchat.utils.setMessageHandler("/apply", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local aliasPrio = splitStr(data, " ")[1] or 0
+            local aliasPrio = splitStr(data, " ")[1] or "0"
             local chid = root.getConfiguration("DPC::cursorChar") or nil
             if not chid then
                 return "No character selected, move your cursor over one and use /chid to select them."
@@ -1342,19 +1387,88 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local playerAliases = player.getProperty("DPC::aliases") or {}
             local aliasInfo = {}
 
-            if playerAliases then
+            if playerAliases and tonumber(aliasPrio) and playerAliases[aliasPrio] then
                 aliasInfo = {
-                    ["alias"] = playerAliases[aliasPrio],
-                    ["priority"] = aliasPrio,
+                    ["alias"] = tostring(playerAliases[aliasPrio]),
+                    ["priority"] = tonumber(aliasPrio),
                     ["UUID"] = player.uniqueId()
                 }
             end
 
 
+            -- FezzedOne: This is ASYNCHRONOUS on players owned by other clients and will thus always jump to the `else` for them, showing the failure even if it succeeds.
+            --[[
             if world.sendEntityMessage(chid.entityId, "showRecog", aliasInfo):result() then
                 return chid.name .. " now recognizes you."
             else
                 return "Recognition failed (this is bad it shouldn't happen)."
+            end
+            ]]
+
+            -- FezzedOne: Use this instead!
+            world.sendEntityMessage(chid.entityId, "showRecog", aliasInfo)
+            return "The selected character should now recognise you (if running DPC)."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+
+    -- FezzedOne: Added /nametag for both xStarbound and OpenStarbound.
+    starcustomchat.utils.setMessageHandler("/nametag", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            if xsb then
+                local splitArgs = chat.parseArguments(data)
+                local newName = splitArgs[1]
+                if (not newName) or newName == "" then
+                    player.setName("")
+                    status.setStatusProperty("currentName", nil)
+                    return "Cleared name tag."
+                else
+                    player.setName(tostring(newName))
+                    status.setStatusProperty("currentName", tostring(newName))
+                    return "Set name tag to '" .. tostring(newName) .. "'."
+                end
+            elseif root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil and player.setNametag then
+                local newName = chat.parseArguments(data)
+                if (not newName) or newName == "" then
+                    player.setNametag("")
+                    status.setStatusProperty("currentName", nil)
+                    return "Cleared name tag."
+                else
+                    player.setNametag(tostring(newName))
+                    status.setStatusProperty("currentName", tostring(newName))
+                    return "Set name tag to '" .. tostring(newName) .. "'."
+                end
+            else
+                return "^red;Command unavailable on this client."
+            end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+
+    -- FezzedOne: Added /setname for xStarbound.
+    starcustomchat.utils.setMessageHandler("/setname", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            if xsb then
+                local splitArgs = chat.parseArguments(data)
+                local newName = splitArgs[1]
+                if not newName then
+                    return "Must specify a character name!"
+                else
+                    status.setStatusProperty("defaultName", tostring(newName))
+                    return "Set character name to '" .. tostring(newName) .. "'."
+                end
+            else
+                return "^red;Command unavailable on this client."
             end
         end, data)
         if status then
@@ -1366,7 +1480,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
 end
 
+local function normaliseText(str)
+    return tostring(str):gsub("%^[^^;]-;", ""):gsub("%p", ""):gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+end
+
 local function getQuotes(str)
+    -- FezzedOne: Need to strip escape codes here to avoid fucking up parsing.
+    str = str:gsub("%^[^^;]-;", "")
+
     local returnStr, quoteBuffer = "", ""
 
     local isQuote = false
@@ -1389,28 +1510,53 @@ local function getQuotes(str)
     return returnStr
 end
 
+-- FezzedOne: Used DeepSeek for this one.
 local function quoteMap(str)
     local quotes = getQuotes(str)
-    local arg = ""
-    local t = {}
-    for c in quotes:gmatch(".") do
-        if c:match("%s") then
-            -- arg = trim(arg) --shouldn't be necessary
-            if #arg > 0 then
-                t[arg] = true
-            end
-            arg = ""
-        else
-            arg = arg .. c
+    -- Normalize spaces and trim
+    quotes = quotes:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+
+    -- Split quotes into individual words
+    local words = {}
+    for word in quotes:gmatch("%S+") do
+        -- Remove punctuation from each word
+        word = word:gsub("%p", "")
+        if #word > 0 then
+            table.insert(words, word)
         end
     end
-    if #arg > 0 then
-        t[arg] = true
+
+    local tokens = {}
+    local numWords = #words
+
+    -- Generate all 1-5 word n-grams (overlapping)
+    for startIdx = 1, numWords do
+        local currentToken = ""
+        for n = 1, 5 do  -- n-gram length (1 to 5 words)
+            local endIdx = startIdx + n - 1
+            if endIdx > numWords then break end
+
+            -- Build token by adding next word
+            if n == 1 then
+                currentToken = words[startIdx]
+            else
+                currentToken = currentToken .. " " .. words[endIdx]
+            end
+
+            tokens[currentToken] = true
+        end
     end
-    return t
+
+    return tokens
 end
 
 function dynamicprox:onSendMessage(data)
+    local currentPlayerName = ""
+    if xsb then -- FezzedOne: Needed to ensure the correct default alias is sent on DPC after swapping characters on xStarbound.
+        local _, defaultName = getNames()
+        currentPlayerName = defaultName or ""
+    end
+
     --think about running this in local to allow players without the mod to still see messages
     if data.mode == "Prox" then
         local sendOverServer = root.getConfiguration("dpcOverServer") or false
@@ -1627,20 +1773,28 @@ function dynamicprox:onSendMessage(data)
                 local playerAliases = player.getProperty("DPC::aliases") or {}
                 data.fakeName = player.getProperty("DPC::unknownAlias") or nil
 
-                local recogName = false
+                local recogName = nil
                 local recogPrio = 100
 
+                local isOSB = root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
 
-                playerAliases[0] = data.nickname
+                -- FezzedOne: Fixed the default priority 0 alias not getting changed after character swaps on xStarbound, OpenStarbound and StarExtensions.
+                -- Shouldn't need to use the stock chat nickname (`data.nickname`) anyway in this alias system.
+                playerAliases["0"] = xsb and currentPlayerName or world.entityName(player.id())
                 --check for any aliases here and set the highest priority one as the name
                 table.sort(playerAliases)
-                local quoteTbl = quoteMap(data.text)
-                local minPrio = 100
+                local quoteTbl = quoteMap(data.content or "")
+                local minPrio = -100
                 for prio, alias in pairs(playerAliases) do
-                    if quoteTbl[alias] and prio < minPrio then
-                        recogName = alias
-                        recogPrio = prio
-                        minPrio = prio
+                    -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
+                    local prioNum = tonumber(prio)
+                    -- FezzedOne: Ignore punctuation, escape codes, and duplicate spaces in alias comparisons. Fixes an issue where «I'm Jonny.» wouldn't proc for the alias «Jonny».
+                    local normalisedAlias = normaliseText(alias)
+                    -- FezzedOne: Now correctly returns the *highest*-priority matching alias as per the comment, not the lowest.
+                    if prioNum and quoteTbl[normalisedAlias] and prioNum > minPrio then
+                        recogName = tostring(alias)
+                        recogPrio = prioNum
+                        minPrio = prioNum
                     end
                 end
                 --data.alias is for the alias
@@ -1651,6 +1805,12 @@ function dynamicprox:onSendMessage(data)
                     data.aliasPrio = recogPrio
                 end
 
+                data.playerName = xsb and currentPlayerName or world.entityName(player.id())
+                -- FezzedOne: Moved these to ensure full recog support in client-side mode.
+                data.playerId = player.id()
+                data.playerUid = player.uniqueId()
+                data.skipRecog = player.getProperty("DPC::skipRecog") or false
+                data.recogGroup = player.getProperty("DPC::recogGroup") or false
 
                 if sendOverServer then
                     -- local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -1663,14 +1823,10 @@ function dynamicprox:onSendMessage(data)
                     --     data.playerplayerSecret = playerSecret
                     -- end
 
-
-                    data.playerId = player.id()
-                    data.playerUid = player.uniqueId()
                     data.estRad = estRad
                     data.globalFlag = globalFlag
-                    data.isOSB = root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
-                    data.skipRecog = player.getProperty("DPC::skipRecog") or false
-                    data.recogGroup = player.getProperty("DPC::recogGroup") or false
+                    -- FezzedOne: xStarbound also supports the stuff needed for the server-side message handler.
+                    data.isOSB = (not not xsb) or isOSB
                     -- player.setProperty("DPC::"..type.."Font",self.fontLib[font])
                     data.actionFont = player.getProperty("DPC::generalFont") or nil
                     data.quoteFont = player.getProperty("DPC::quoteFont") or nil
@@ -1680,7 +1836,9 @@ function dynamicprox:onSendMessage(data)
                     return true --this should stop global strings from running (which i want in this case)
                     --later on i may make this a client config setting
                 elseif root.getConfiguration("DynamicProxChat::sendProxChatInLocal") then
-                    chat.send(DynamicProxPrefix .. chatTags .. data.content, "Local", false)
+                    -- FezzedOne: Added xStarbound/OpenStarbound chat metadata support to `/proxlocal`.
+                    -- The legacy tags remain for some stock server / legacy connection compatibility.
+                    chat.send(DynamicProxPrefix .. chatTags .. data.content, "Local", false, data)
                 else
                     for _, pl in ipairs(players) do
                         if xsb then data.sourceId = world.primaryPlayer() end
@@ -1700,7 +1858,7 @@ function dynamicprox:onSendMessage(data)
                     globalMsg = globalMsg:gsub("[ ]+", " "):gsub("%{ ", "{"):gsub(" %}", "}")
                     globalMsg = DynamicProxPrefix .. chatTags .. globalMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalMsg, "Broadcast", false)
+                    chat.send(globalMsg, "Broadcast", false, data)
                 end
                 if #globalOocStrings ~= 0 then
                     local globalOocMsg = ""
@@ -1712,7 +1870,7 @@ function dynamicprox:onSendMessage(data)
                     globalOocMsg = globalOocMsg:gsub("[ ]+", " ")
                     globalOocMsg = DynamicProxPrefix .. globalOocMsg
                     -- The third parameter is ignored on StarExtensions, but retains the "..." chat bubble on xStarbound and OpenStarbound.
-                    chat.send(globalOocMsg, "Broadcast", false)
+                    chat.send(globalOocMsg, "Broadcast", false, data)
                 end
                 return true
             end
@@ -1789,11 +1947,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             if not message.contentIsText then message.text = message.content end
             message.content = ""
 
-            if message.connection then --i don't know what receivingRestricted does
+            if message.connection then
                 local hasAuthorPrefix = message.text:sub(1, #AuthorIdPrefix) == AuthorIdPrefix
                 local authorEntityId
                 local defaultLangStr = nil
-                if hasAuthorPrefix then
+                if hasAuthorPrefix and not message.alias then
                     local i = #AuthorIdPrefix + 1
                     local authorIdStr = ""
                     local c = ""
@@ -1865,8 +2023,11 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     if xsb and not message.isSccrp then           -- FezzedOne: Already handled in SCCRP with my PR.
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
                             if world.entityExists(receiverEntityId) then
-                                local receiverName = world.entityName(receiverEntityId) or "<n/a>"
-                                if #ownPlayers ~= 1 then message.receiverName = receiverName end
+                                local receiverName = world.sendEntityMessage(receiverEntityId, "receiverName"):result() or "<n/a>"
+                                if #ownPlayers ~= 1 then
+                                    message.receiverName = receiverName
+                                    message.receiverUid = world.entityUniqueId(receiverEntityId)
+                                end
                                 if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
                             end
                         end
@@ -3035,14 +3196,13 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         -- Don't need to process the sender ID anymore after this, so we can remove it so that a portrait is no longer displayed.
                         message.senderId = nil
                     end
-                    message.nickname = message.receiverName and (message.nickname .. " -> " .. message.receiverName)
-                        or message.nickname
                     if copiedMessage then
                         message.processed = true
                         world.sendEntityMessage(receiverEntityId, "scc_add_message", message)
                     end
                 end
 
+                message.isDpc = true
                 -- FezzedOne: If both SCCRP and Dynamic Proximity Chat are installed, always show SCCRP Proximity messages as such, even if handled by DPC.
                 if message.isSccrp then message.mode = "Proximity" end
                 -- FezzedOne: Show Local and Broadcast messages as such, even if formatted by DPC.
@@ -3071,23 +3231,52 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
         end
 
+        local ownPlayers = {}
+        if xsb then ownPlayers = world.ownPlayers() end
+        local isLocalPlayer = function(entityId)
+            if not xsb then return true end
+            for _, plr in ipairs(ownPlayers) do
+                if entityId == plr then return true end
+            end
+            return false
+        end
+
+        if message.isDpc then message.nickname = message.playerName or message.nickname end
+
         --this is disabled for now since i'd prefer the nickname to appear if it's just you
-        if false and message.mode == "Prox" and message.playerUid == player.uniqueId() then
+        -- FezzedOne: The stock nickname is not changed after character swaps. Fixed that issue by not using the stock nickname.
+        -- It's now recommended that the character's main name (set with `/setname` on xStarbound or `/identity set name` on
+        -- OpenStarbound or StarExtensions) be the character's «canonical» name. E.g., «Jonathan», «Jonathan F. Thompson» or
+        -- «Jonathan 'Hammer' Thompson», instead of «Jonny», «Dr. Thompson» or «'Hammer'».
+        -- Tip: With this change, you can now save the stock nickname for your OOC username (or whatever else) in non-Dynamic chat,
+        -- since it's now completely disconnected from DPC messages. Wanted to add auto-nick for this reason, but that'd cause issues
+        -- with servers running StarryPy3k.
+        if message.isDpc and message.playerUid == (message.receiverUid or player.uniqueId()) then
             --allow higher (negative) priority aliases to appear on the message
             --take from player config instead of the message
             --in the future, allow players to use the nickname feature on themselves. right now i dont see why it'd be useful to do but whatever
-            local aliases = player.getProperty("DPC::aliases") or {}
-            local useName = world.entityName(player.id())
-            local minPrio = 0
+            -- local aliases = player.getProperty("DPC::aliases") or {}
+            local _, defaultName = getNames()
+            local useName = xsb and (defaultName or "") or world.entityName(player.id())
+            -- local minPrio = 0
 
-            for prio, alias in pairs(aliases) do
-                if prio < minPrio then
-                    useName = alias
-                end
-            end
+            -- for prio, alias in pairs(aliases) do
+            --     if prio < minPrio then
+            --         useName = alias
+            --     end
+            -- end
             message.nickname = useName
-        elseif message.mode == "Prox" and message.playerUid ~= player.uniqueId() and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) and root.getConfiguration("dpcOverServer") then
-            local recoged = player.getProperty("DPC::recognizedPlayers") or {}
+        elseif message.isDpc and message.playerUid ~= (message.receiverUid or player.uniqueId()) and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
+            -- FezzedOne: Removed this check to add recog support in client-side modes: and root.getConfiguration("dpcOverServer")
+            local recoged = {}
+            if xsb then
+                if isLocalPlayer(message.receiverId or player.id()) then
+                    recoged = world.sendEntityMessage(message.receiverId or player.id(), "dpcGetRecogs"):result() or {}
+                end
+            else
+                recoged = player.getProperty("DPC::recognizedPlayers") or {}
+            end
+
             --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
             --this will just apply it if it exists and is higher priority
             --if the entry doesn't exist and the message has no value filled in then apply the ???
@@ -3105,23 +3294,45 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             local charRecInfo = recoged[message.playerUid] or nil
             local useName = message.fakeName or "^#999;???^reset;"
 
-            if message.alias and (not charRecInfo) or (charRecInfo and not charRecInfo.manName and message.aliasPrio < charRecInfo.aliasPrio) then --if conditions are met
-                --apply new thing or create entry, should work either way
-                charRecInfo = {
-                    ["savedName"] = message.alias,
-                    ["manName"] = false,
-                    ["aliasPrio"] = message.aliasPrio
-                }
-                recoged[message.playerUid] = charRecInfo
-                player.setProperty("DPC::recognizedPlayers", recoged)
+            if (message.alias and message.aliasPrio) and
+                ((not charRecInfo) or (charRecInfo and (not charRecInfo.manName) and message.aliasPrio > charRecInfo.aliasPrio)) then --if conditions are met
+                local normalisedAlias = normaliseText(message.alias)
+                local tokens = quoteMap(message.text or "")
+                if tokens[normalisedAlias] then -- FezzedOne: Check that the alias isn't garbled first.
+                    --apply new thing or create entry, should work either way
+                    charRecInfo = {
+                        ["savedName"] = message.alias,
+                        ["manName"] = false,
+                        ["aliasPrio"] = message.aliasPrio
+                    }
+                    recoged[message.playerUid] = charRecInfo
+                    if xsb then
+                        world.sendEntityMessage(message.receiverId or player.id(), "dpcSetRecogs", recoged)
+                    else
+                        player.setProperty("DPC::recognizedPlayers", recoged)
+                    end
+                end
             end
 
             if charRecInfo then
                 useName = charRecInfo.savedName
             end
+
             message.nickname = useName
+
+            -- FezzedOne's note: Messages sent with `/proxlocal` enabled will *not* automatically «proc» recog or handle recog groups
+            -- or skips on a player unless all three of the sending client, receiving client *and* server are running the same
+            -- mod (i.e., either xStarbound or OpenStarbound) *and* are not connected in legacy mode, due to the alias and
+            -- character name being sent in chat metadata in this case. Players should consider using `/addnick` or disabling
+            -- `/proxlocal` on stock servers.
         end
 
+        if message.nickname == "" then message.nickname = "^#999;???^reset;" end
+
+        if xsb then
+            message.nickname = message.receiverName and ((message.nickname or "^#999;???^reset;") .. " -> " .. message.receiverName)
+                or message.nickname
+        end
 
         if showAsProximity then message.mode = "Proximity" end
         if showAsLocal then message.mode = "Local" end
