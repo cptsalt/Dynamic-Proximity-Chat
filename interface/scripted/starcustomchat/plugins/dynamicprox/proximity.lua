@@ -1312,7 +1312,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             aliasPrio = aliasPrio:format("%i")
 
             playerAliases[aliasPrio] = tostring(alias)
-            playerAliases["0"] = world.entityName(player.id())
+            local _, defaultName = getNames()
+            playerAliases["0"] = xsb and defaultName or world.entityName(player.id())
             player.setProperty("DPC::aliases", playerAliases)
             return "Alias " .. alias .. " added with priority " .. aliasPrio
         end, data)
@@ -1353,13 +1354,19 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             sb.logInfo("aliases are: %s", playerAliases)
 
             local aliasKeys = {}
-            for k in pairs(playerAliases) do table.insert(aliasKeys, k) end
+            for k in pairs(playerAliases) do
+                if tonumber(k) then
+                    table.insert(aliasKeys, tonumber(k))
+                end
+            end
             table.sort(aliasKeys)
 
             for _, prio in ipairs(aliasKeys) do
                 local alias = playerAliases[prio]
                 if prio == 0 then
-                    retStr = retStr .. "[" .. prio .. ": " .. world.entityName(player.id()) .. "] "
+                    local _, defaultName = getNames()
+                    local canonicalName = xsb and defaultName or world.entityName(player.id())
+                    retStr = retStr .. "[" .. prio .. ": " .. canonicalName .. "] "
                 else
                     retStr = retStr .. "[" .. prio .. ": " .. alias .. "] "
                 end

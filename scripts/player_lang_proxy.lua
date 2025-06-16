@@ -79,7 +79,7 @@ function init()
                 ["aliasPrio"] = aliasInfo.priority
             }
             recoged[playerUid] = playerRecog
-            player.getProperty("DPC::recognizedPlayers", recoged)
+            player.setProperty("DPC::recognizedPlayers", recoged)
             return true
         end
     end)
