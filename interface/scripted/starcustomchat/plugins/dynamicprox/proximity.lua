@@ -1407,7 +1407,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
             -- FezzedOne: Use this instead!
             world.sendEntityMessage(chid.entityId, "showRecog", aliasInfo)
-            return chid.name .. " should now recognise you (if running DPC)."
+            return "The selected character should now recognise you (if running DPC)."
         end, data)
         if status then
             return resultOrError
