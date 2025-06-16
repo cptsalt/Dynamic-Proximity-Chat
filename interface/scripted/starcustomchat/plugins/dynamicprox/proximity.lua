@@ -3244,6 +3244,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             message.nickname = useName
         end
 
+        if message.nickname == "" then message.nickname = "^#999;???^reset;" end
+
         if xsb then
             message.nickname = message.receiverName and (message.nickname .. " -> " .. message.receiverName)
                 or message.nickname
