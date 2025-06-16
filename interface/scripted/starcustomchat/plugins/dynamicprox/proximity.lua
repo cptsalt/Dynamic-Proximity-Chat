@@ -2016,7 +2016,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
                             if world.entityExists(receiverEntityId) then
                                 local receiverName = world.sendEntityMessage(receiverEntityId, "receiverName"):result() or "<n/a>"
-                                if #ownPlayers ~= 1 then message.receiverName = receiverName end
+                                if #ownPlayers ~= 1 then
+                                    message.receiverName = receiverName
+                                    message.receiverUid = world.entityUniqueId(receiverEntityId)
+                                end
                                 if receiverEntityId ~= player.id() then message.mode = "ProxSecondary" end
                             end
                         end
@@ -3220,7 +3223,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
         end
 
-        message.nickname = message.playerName or message.nickname
+        if message.isDpc then message.nickname = message.playerName or message.nickname end
 
         --this is disabled for now since i'd prefer the nickname to appear if it's just you
         -- FezzedOne: The stock nickname is not changed after character swaps. Fixed that issue by not using the stock nickname.
@@ -3230,7 +3233,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         -- Tip: With this change, you can now save the stock nickname for your OOC username (or whatever else) in non-Dynamic chat,
         -- since it's now completely disconnected from DPC messages. Wanted to add auto-nick for this reason, but that'd cause issues
         -- with servers running StarryPy3k.
-        if message.isDpc and message.playerUid == player.uniqueId() then
+        if message.isDpc and (message.receiverUid or message.playerUid) == player.uniqueId() then
             --allow higher (negative) priority aliases to appear on the message
             --take from player config instead of the message
             --in the future, allow players to use the nickname feature on themselves. right now i dont see why it'd be useful to do but whatever
