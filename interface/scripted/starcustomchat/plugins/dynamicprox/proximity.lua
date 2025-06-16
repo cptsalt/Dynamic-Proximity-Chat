@@ -1353,21 +1353,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
             sb.logInfo("aliases are: %s", playerAliases)
 
-            local aliasKeys = {}
-            for k in pairs(playerAliases) do
-                if tonumber(k) then
-                    table.insert(aliasKeys, tonumber(k))
-                end
-            end
-            table.sort(aliasKeys)
-
-            for _, prio in ipairs(aliasKeys) do
+            for prioNum = -10, 10, 1 do
+                local prio = tostring(prioNum)
                 local alias = playerAliases[prio]
                 if prio == 0 then
                     local _, defaultName = getNames()
                     local canonicalName = xsb and defaultName or world.entityName(player.id())
                     retStr = retStr .. "[" .. prio .. ": " .. canonicalName .. "] "
-                else
+                elseif alias then
                     retStr = retStr .. "[" .. prio .. ": " .. alias .. "] "
                 end
             end
