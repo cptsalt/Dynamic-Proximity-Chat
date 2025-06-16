@@ -1480,7 +1480,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
 end
 
+local function normaliseText(str)
+    return tostring(str):gsub("%^[^^;]-;", ""):gsub("%p", ""):gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+end
+
 local function getQuotes(str)
+    -- FezzedOne: Need to strip escape codes here to avoid fucking up parsing.
+    str = str:gsub("%^[^^;]-;", "")
+
     local returnStr, quoteBuffer = "", ""
 
     local isQuote = false
@@ -1782,7 +1789,7 @@ function dynamicprox:onSendMessage(data)
                     -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
                     local prioNum = tonumber(prio)
                     -- Ignore punctuation in alias comparisons. Fixes an issue where «I'm Jonny.» wouldn't proc for the alias «Jonny».
-                    local normalisedAlias = tostring(alias):gsub("%p", ""):gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+                    local normalisedAlias = normaliseText(alias)
                     if prioNum and quoteTbl[normalisedAlias] and prioNum < minPrio then
                         recogName = tostring(alias)
                         recogPrio = prioNum
@@ -3223,6 +3230,16 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
         end
 
+        local ownPlayers = {}
+        if xsb then ownPlayers = world.ownPlayers() end
+        local isLocalPlayer = function(entityId)
+            if not xsb then return true end
+            for _, plr in ipairs(ownPlayers) do
+                if entityId == plr then return true end
+            end
+            return false
+        end
+
         if message.isDpc then message.nickname = message.playerName or message.nickname end
 
         --this is disabled for now since i'd prefer the nickname to appear if it's just you
@@ -3252,12 +3269,14 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             -- FezzedOne: Removed this check to add recog support in client-side modes: and root.getConfiguration("dpcOverServer")
             local recoged = {}
             if xsb then
-                if world.entityMaster(message.receiverId) then
+                if isLocalPlayer(message.receiverId or player.id()) then
                     recoged = world.sendEntityMessage(message.receiverId or player.id(), "dpcGetRecogs"):result() or {}
                 end
             else
                 recoged = player.getProperty("DPC::recognizedPlayers") or {}
             end
+
+            sb.logInfo("recoged = %s", exportvar(recoged))
             --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
             --this will just apply it if it exists and is higher priority
             --if the entry doesn't exist and the message has no value filled in then apply the ???
@@ -3276,7 +3295,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             local useName = message.fakeName or "^#999;???^reset;"
 
             if message.alias and (not charRecInfo) or (charRecInfo and not charRecInfo.manName and message.aliasPrio > charRecInfo.aliasPrio) then --if conditions are met
-                if quoteMap(message.text or "")[message.alias] then -- FezzedOne: Check that the alias isn't garbled first.
+                local normalisedAlias = normaliseText(message.alias)
+                local tokens = quoteMap(message.text or "")
+                if tokens[normalisedAlias] then -- FezzedOne: Check that the alias isn't garbled first.
                     --apply new thing or create entry, should work either way
                     charRecInfo = {
                         ["savedName"] = message.alias,
