@@ -71,7 +71,8 @@ function init()
         local playerUid = aliasInfo.UUID or nil
         if not playerUid then return false end
         local playerRecog = recoged[playerUid] or nil
-        if not playerRecog or (playerRecog and playerRecog.aliasPrio < aliasInfo.priority) then
+        if not playerRecog or (playerRecog and playerRecog.aliasPrio <= aliasInfo.priority) then
+            -- FezzedOne: Allowed updating aliases at the same priority level.
             --check priority, apply if new is higher
             playerRecog = {
                 ["savedName"] = aliasInfo.alias,

@@ -3315,7 +3315,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
 
             if charRecInfo then
-                sb.logInfo("charRecInfo = %s", exportvar(charRecInfo))
                 useName = charRecInfo.savedName
             end
 
