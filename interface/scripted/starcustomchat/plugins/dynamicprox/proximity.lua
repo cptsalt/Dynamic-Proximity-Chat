@@ -1784,13 +1784,14 @@ function dynamicprox:onSendMessage(data)
                 --check for any aliases here and set the highest priority one as the name
                 table.sort(playerAliases)
                 local quoteTbl = quoteMap(data.content or "")
-                local minPrio = 100
+                local minPrio = -100
                 for prio, alias in pairs(playerAliases) do
                     -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
                     local prioNum = tonumber(prio)
-                    -- Ignore punctuation in alias comparisons. Fixes an issue where «I'm Jonny.» wouldn't proc for the alias «Jonny».
+                    -- FezzedOne: Ignore punctuation, escape codes, and duplicate spaces in alias comparisons. Fixes an issue where «I'm Jonny.» wouldn't proc for the alias «Jonny».
                     local normalisedAlias = normaliseText(alias)
-                    if prioNum and quoteTbl[normalisedAlias] and prioNum < minPrio then
+                    -- FezzedOne: Now correctly returns the *highest*-priority matching alias as per the comment, not the lowest.
+                    if prioNum and quoteTbl[normalisedAlias] and prioNum > minPrio then
                         recogName = tostring(alias)
                         recogPrio = prioNum
                         minPrio = prioNum
@@ -3276,7 +3277,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 recoged = player.getProperty("DPC::recognizedPlayers") or {}
             end
 
-            sb.logInfo("recoged = %s", exportvar(recoged))
             --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
             --this will just apply it if it exists and is higher priority
             --if the entry doesn't exist and the message has no value filled in then apply the ???
@@ -3294,7 +3294,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             local charRecInfo = recoged[message.playerUid] or nil
             local useName = message.fakeName or "^#999;???^reset;"
 
-            if message.alias and (not charRecInfo) or (charRecInfo and not charRecInfo.manName and message.aliasPrio > charRecInfo.aliasPrio) then --if conditions are met
+            if (message.alias and message.aliasPrio) and
+                ((not charRecInfo) or (charRecInfo and (not charRecInfo.manName) and message.aliasPrio > charRecInfo.aliasPrio)) then --if conditions are met
                 local normalisedAlias = normaliseText(message.alias)
                 local tokens = quoteMap(message.text or "")
                 if tokens[normalisedAlias] then -- FezzedOne: Check that the alias isn't garbled first.

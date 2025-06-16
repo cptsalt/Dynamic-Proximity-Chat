@@ -92,14 +92,12 @@ function init()
 
     message.setHandler("dpcGetRecogs", function(_, isLocal)
         if isLocal then
-            sb.logInfo("Called dpcGetRecogs on player %s", tostring(player.id()))
             return player.getProperty("DPC::recognizedPlayers") or {}
         end
     end)
 
     message.setHandler("dpcSetRecogs", function(_, isLocal, newRecogs)
         if isLocal then
-            sb.logInfo("Called dpcSetRecogs on player %s", tostring(player.id()))
             player.setProperty("DPC::recognizedPlayers", newRecogs)
         end
     end)
