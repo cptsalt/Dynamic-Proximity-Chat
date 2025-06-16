@@ -1512,6 +1512,7 @@ local function quoteMap(str)
     for c in quotes:gmatch(".") do
         if c:match("%s") then
             -- arg = trim(arg) --shouldn't be necessary
+            arg = arg:gsub("%p", "") -- Strip periods.
             if #arg > 0 then
                 t[arg] = true
             end
@@ -1529,7 +1530,7 @@ local function quoteMap(str)
     for c in quotes:gmatch(".") do
         if c:match("%s") then
             if spaces >= 1 then
-                -- arg = trim(arg) --shouldn't be necessary
+                arg = arg:gsub("%p", "")
                 if #arg > 0 then
                     t[arg] = true
                 end
@@ -1548,7 +1549,7 @@ local function quoteMap(str)
     for c in quotes:gmatch(".") do
         if c:match("%s") then
             if spaces >= 2 then
-                -- arg = trim(arg) --shouldn't be necessary
+                arg = arg:gsub("%p", "")
                 if #arg > 0 then
                     t[arg] = true
                 end
@@ -1802,7 +1803,8 @@ function dynamicprox:onSendMessage(data)
                 for prio, alias in pairs(playerAliases) do
                     -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
                     local prioNum = tonumber(prio)
-                    if prioNum and quoteTbl[alias] and prioNum < minPrio then
+                    -- Ignore punctuation in alias comparisons. Fixes an issue where «I'm Jonny.» wouldn't proc for the alias «Jonny».
+                    if prioNum and quoteTbl[tostring(alias):gsub("%p", "")] and prioNum < minPrio then
                         recogName = alias
                         recogPrio = prioNum
                         minPrio = prioNum
