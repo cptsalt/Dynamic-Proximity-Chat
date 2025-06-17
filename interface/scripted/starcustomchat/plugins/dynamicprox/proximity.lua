@@ -374,7 +374,7 @@ local function splitStr(inputstr, sep) --replaced this with a less efficient lin
             arg = trim(arg)
             table.insert(t, arg)
             arg = ""
-        elseif c == '"' then
+        elseif c == '"' then --"test word" 1 makes "test word" and " 1"
             if qFlag then
                 table.insert(t, arg)
                 qFlag = false
@@ -382,7 +382,7 @@ local function splitStr(inputstr, sep) --replaced this with a less efficient lin
             else
                 qFlag = true
             end
-        else
+        elseif not c:match(sep) or (c:match(sep) and qFlag) then
             arg = arg .. c
         end
     end
@@ -1207,14 +1207,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     --add a nickanme command that lets you apply a custom name to the selected chid character
     starcustomchat.utils.setMessageHandler("/addnick", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local splitArgs
-            if xsb then
-                splitArgs = chat.parseArguments(data)
-            elseif chat.parseArguments then -- FezzedOne: OpenStarbound and StarExtensions.
-                splitArgs = table.pack(chat.parseArguments(data))
-            else
-                splitArgs = splitStr(data, " ")
-            end
+            local splitArgs = splitStr(data, " ")
             local newNick = splitArgs[1] or nil
             if not newNick or #tostring(newNick) < 1 then
                 return "No nickname provided, try again."
@@ -1279,15 +1272,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
     starcustomchat.utils.setMessageHandler("/addalias", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local splitArgs
-            -- FezzedOne: Allowed spaces in aliases.
-            if xsb then
-                splitArgs = chat.parseArguments(data)
-            elseif chat.parseArguments then -- FezzedOne: OpenStarbound and StarExtensions.
-                splitArgs = table.pack(chat.parseArguments(data))
-            else
-                splitArgs = splitStr(data, " ")
-            end
+            --the different splitting caused problems with negative numbers, reverted
+            local splitArgs = splitStr(data, " ")
             local alias, aliasPrio = splitArgs[1] or nil, splitArgs[2] or nil
             if (not alias or #tostring(alias) < 1) or (not aliasPrio) then
                 return "Missing arguments, you must include an alias and priority."
@@ -1309,6 +1295,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             if not tonumber(aliasPrio) then
                 return "Invalid priority, use a number or '?' for assignment."
             end
+
             aliasPrio = aliasPrio:format("%i")
 
             playerAliases[aliasPrio] = tostring(alias)
@@ -1481,7 +1468,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 end
 
 local function normaliseText(str)
-    return tostring(str):gsub("%^[^^;]-;", ""):gsub("%p", ""):gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+    return tostring(str):gsub("%^[^^;]-;", ""):gsub("%p", ""):gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " "):lower()
 end
 
 local function getQuotes(str)
@@ -1514,7 +1501,7 @@ end
 local function quoteMap(str)
     local quotes = getQuotes(str)
     -- Normalize spaces and trim
-    quotes = quotes:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+    quotes = quotes:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " "):lower()
 
     -- Split quotes into individual words
     local words = {}
@@ -1532,7 +1519,7 @@ local function quoteMap(str)
     -- Generate all 1-5 word n-grams (overlapping)
     for startIdx = 1, numWords do
         local currentToken = ""
-        for n = 1, 5 do  -- n-gram length (1 to 5 words)
+        for n = 1, 5 do -- n-gram length (1 to 5 words)
             local endIdx = startIdx + n - 1
             if endIdx > numWords then break end
 
@@ -1784,14 +1771,15 @@ function dynamicprox:onSendMessage(data)
                 --check for any aliases here and set the highest priority one as the name
                 table.sort(playerAliases)
                 local quoteTbl = quoteMap(data.content or "")
-                local minPrio = -100
+                local minPrio = 100
                 for prio, alias in pairs(playerAliases) do
                     -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
                     local prioNum = tonumber(prio)
                     -- FezzedOne: Ignore punctuation, escape codes, and duplicate spaces in alias comparisons. Fixes an issue where «I'm Jonny.» wouldn't proc for the alias «Jonny».
                     local normalisedAlias = normaliseText(alias)
                     -- FezzedOne: Now correctly returns the *highest*-priority matching alias as per the comment, not the lowest.
-                    if prioNum and quoteTbl[normalisedAlias] and prioNum > minPrio then
+                    --reno a lower number is higher priority
+                    if prioNum and quoteTbl[normalisedAlias] and prioNum < minPrio then
                         recogName = tostring(alias)
                         recogPrio = prioNum
                         minPrio = prioNum
@@ -2023,7 +2011,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     if xsb and not message.isSccrp then           -- FezzedOne: Already handled in SCCRP with my PR.
                         if copiedMessage or message.targetId then -- FezzedOne: Show the receiver's name for disambiguation on xClient.
                             if world.entityExists(receiverEntityId) then
-                                local receiverName = world.sendEntityMessage(receiverEntityId, "receiverName"):result() or "<n/a>"
+                                local receiverName = world.sendEntityMessage(receiverEntityId, "receiverName"):result() or
+                                    "<n/a>"
                                 if #ownPlayers ~= 1 then
                                     message.receiverName = receiverName
                                     message.receiverUid = world.entityUniqueId(receiverEntityId)
@@ -3241,6 +3230,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             return false
         end
 
+
+        if message.mode == "Prox" then message.isDpc = true end
+
         if message.isDpc then message.nickname = message.playerName or message.nickname end
 
         --this is disabled for now since i'd prefer the nickname to appear if it's just you
@@ -3295,7 +3287,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             local useName = message.fakeName or "^#999;???^reset;"
 
             if (message.alias and message.aliasPrio) and
-                ((not charRecInfo) or (charRecInfo and (not charRecInfo.manName) and message.aliasPrio > charRecInfo.aliasPrio)) then --if conditions are met
+                ((not charRecInfo) or (charRecInfo and (not charRecInfo.manName) and message.aliasPrio < charRecInfo.aliasPrio)) then --if conditions are met
                 local normalisedAlias = normaliseText(message.alias)
                 local tokens = quoteMap(message.text or "")
                 if tokens[normalisedAlias] then -- FezzedOne: Check that the alias isn't garbled first.
@@ -3330,7 +3322,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if message.nickname == "" then message.nickname = "^#999;???^reset;" end
 
         if xsb then
-            message.nickname = message.receiverName and ((message.nickname or "^#999;???^reset;") .. " -> " .. message.receiverName)
+            message.nickname = message.receiverName and
+                ((message.nickname or "^#999;???^reset;") .. " -> " .. message.receiverName)
                 or message.nickname
         end
 
