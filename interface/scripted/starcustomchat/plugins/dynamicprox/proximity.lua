@@ -1338,8 +1338,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "No aliases exist, use /addalias to make some."
             end
 
-            sb.logInfo("aliases are: %s", playerAliases)
-
+            
             for prioNum = -10, 10, 1 do
                 local prio = tostring(prioNum)
                 local alias = playerAliases[prio]
