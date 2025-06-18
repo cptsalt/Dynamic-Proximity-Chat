@@ -1839,7 +1839,9 @@ function dynamicprox:onSendMessage(data)
 
                     local recogs = player.getProperty("DPC::recognizedPlayers") or {}
                     for uuid, info in pairs(recogs) do
-                        recogList[normaliseText(info["savedName"])] = true
+                        if info["savedName"] and info["savedName"] ~= true then
+                            recogList[normaliseText(info["savedName"])] = true
+                        end
                     end
 
                     data.recogList = recogList
