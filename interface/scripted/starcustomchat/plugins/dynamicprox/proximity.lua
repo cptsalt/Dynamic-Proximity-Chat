@@ -128,6 +128,7 @@ local function rollDice(die) -- From https://github.com/brianherbert/dice/, with
     end
 end
 
+
 function dynamicprox:init()
     self:_loadConfig()
     local currentName, _ = getNames()
@@ -136,6 +137,9 @@ function dynamicprox:init()
         player.setNametag(currentName or "")
     end
     root.setConfiguration("DPC::cursorChar", nil)
+    root.setConfiguration("DPC::ignoreVersion",nil)
+
+    self.unchecked = true
 end
 
 function dynamicprox:uninit()
@@ -354,6 +358,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             name = "/nametag",
             description = "commands.nametag.desc",
             data = "/nametag",
+        })
+    elseif string.find("/ignoreversion", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/ignoreversion",
+            description = "commands.ignoreversion.desc",
+            data = "/ignoreversion",
         })
     elseif xsb and string.find("/nametag", substr, nil, true) then
         table.insert(availableCommands, {
@@ -1338,7 +1348,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "No aliases exist, use /addalias to make some."
             end
 
-            
+
             for prioNum = -10, 10, 1 do
                 local prio = tostring(prioNum)
                 local alias = playerAliases[prio]
@@ -1432,6 +1442,18 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             else
                 return "^red;Command unavailable on this client."
             end
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/ignoreversion", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            root.setConfiguration("DPC::ignoreVersion",true)
+            return "Ignoring version notices until you reconnect."
         end, data)
         if status then
             return resultOrError
@@ -1764,6 +1786,9 @@ function dynamicprox:onSendMessage(data)
 
                 local isOSB = root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil
 
+                --recogList for server processing (uses recogList[word])
+                local recogList = {}
+
                 -- FezzedOne: Fixed the default priority 0 alias not getting changed after character swaps on xStarbound, OpenStarbound and StarExtensions.
                 -- Shouldn't need to use the stock chat nickname (`data.nickname`) anyway in this alias system.
                 playerAliases["0"] = xsb and currentPlayerName or world.entityName(player.id())
@@ -1783,6 +1808,8 @@ function dynamicprox:onSendMessage(data)
                         recogPrio = prioNum
                         minPrio = prioNum
                     end
+
+                    recogList[normaliseText(tostring(alias))] = true
                 end
                 --data.alias is for the alias
                 --data.aliasPrio is for the priority
@@ -1809,6 +1836,17 @@ function dynamicprox:onSendMessage(data)
                     -- if data.updatedLangs then
                     --     data.playerplayerSecret = playerSecret
                     -- end
+
+                    local recogs = player.getProperty("DPC::recognizedPlayers") or {}
+                    for uuid, info in pairs(recogs) do
+                        recogList[normaliseText(info["savedName"])] = true
+                    end
+
+                    data.recogList = recogList
+                    sb.logInfo("recogList is %s", recogList)
+
+                    data.version = 162
+                    data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
                     data.estRad = estRad
                     data.globalFlag = globalFlag
@@ -3329,7 +3367,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if showAsProximity then message.mode = "Proximity" end
         if showAsLocal then message.mode = "Local" end
         if (isGlobalChat or message.global) and message.mode ~= "ProxSecondary" then message.mode = "Broadcast" end
-
         -- setTextHint(message.mode)
         return message
     end

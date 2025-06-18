@@ -38,5 +38,6 @@
   "commands.showalias.desc": "Prints all of your saved aliases and priorities",
   "commands.apply.desc": "Lets the character selected with /chid recognize you, {alias priority}",
   "commands.nametag.desc": "Sets or (if no name is specified) clears your name tag. {[name tag]}",
-  "commands.setname.desc": "Sets your character's name; use instead of /identity set name on xStarbound. {new name}"
+  "commands.setname.desc": "Sets your character's name; use instead of /identity set name on xStarbound. {new name}",
+  "commands.ignoreversion.desc": "Ignores version warnings for the session"
 }
