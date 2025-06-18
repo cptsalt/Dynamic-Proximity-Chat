@@ -1839,7 +1839,7 @@ function dynamicprox:onSendMessage(data)
 
                     local recogs = player.getProperty("DPC::recognizedPlayers") or {}
                     for uuid, info in pairs(recogs) do
-                        if info["savedName"] and info["savedName"] ~= true then
+                        if info ~= true and info["savedName"] then
                             recogList[normaliseText(info["savedName"])] = true
                         end
                     end
@@ -3323,6 +3323,9 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             }
             ]]
             local charRecInfo = recoged[message.playerUid] or nil
+            if charRecInfo == true then
+                charRecInfo = nil
+            end
             local useName = message.fakeName or "^#999;???^reset;"
 
             if (message.alias and message.aliasPrio) and
