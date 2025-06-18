@@ -1847,7 +1847,7 @@ function dynamicprox:onSendMessage(data)
                     data.recogList = recogList
                     sb.logInfo("recogList is %s", recogList)
 
-                    data.version = 162
+                    data.version = 163
                     data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
                     data.estRad = estRad
