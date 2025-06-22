@@ -417,11 +417,8 @@ end
 
 local function setTextHint(mode, override)
     local override = override or false
-    if override or mode ~= "Prox" then
+    if override or mode ~= "Prox" or root.getConfiguration("DPC::hideHints") then
         widget.setText("lblTextboxHint", starcustomchat.utils.getTranslation("chat.textbox.hint"))
-        return
-    end
-    if root.getConfiguration("DPC::hideHints") then
         return
     end
 
@@ -839,7 +836,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         local newHintsVal = not root.getConfiguration("DPC::hideHints")
         local hintsDisplay = (newHintsVal and "off") or "on"
         root.setConfiguration("DPC::hideHints", newHintsVal)
-        setTextHint("Prox", not newHintsVal)
+        setTextHint("Prox")
         return "Hint display " .. hintsDisplay
     end)
     starcustomchat.utils.setMessageHandler("/commcodes", function(_, _, data)
