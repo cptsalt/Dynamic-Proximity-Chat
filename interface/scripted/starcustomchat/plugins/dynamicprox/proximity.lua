@@ -1806,6 +1806,9 @@ function dynamicprox:formatOutcomingMessage(data)
                 data.actionFont = player.getProperty("DPC::generalFont") or nil
                 data.quoteFont = player.getProperty("DPC::quoteFont") or nil
                 data.fontW8 = player.getProperty("DPC::quoteWeight") or nil
+                if rawText:find("{") then
+                    data.defaultComms = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+                end
             end
         end
     end
