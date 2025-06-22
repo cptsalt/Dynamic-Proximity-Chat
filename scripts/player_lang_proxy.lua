@@ -16,10 +16,16 @@ function init()
         if isLocal then return player.hasCountOfItem(langKeyItem, true) end
     end)
     message.setHandler("getCommCodes", function(_, isLocal)
-        if isLocal then return player.getProperty("DynProxChat::commCodes") or { ["0"] = false } end
+        if isLocal then return player.getProperty("DynProxChat::commCodes") or { ["0"] = "Default" } end
     end)
-    message.setHandler("setCommCodes", function(_, isLocal, newCommCodes)
-        if isLocal then return player.setProperty("DynProxChat::commCodes", newCommCodes or { ["0"] = false }) end
+    message.setHandler("setCommCodes", function(_, isLocal, data)
+        if data.fromServer then
+            player.setProperty("DynProxChat::commCodes", data.newCommCodes or { ["0"] = "Default" })
+            chat.addMessage("Comm code " .. data.option .. " removed. " .. data.slotsOpen .. " comm presets remaining.")
+        else
+            return player.setProperty("DynProxChat::commCodes", data or { ["0"] = "Default" })
+        end
+
     end)
     message.setHandler("dpcServerMessage", function(_, _, status)
         if status then

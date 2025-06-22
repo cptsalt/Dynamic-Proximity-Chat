@@ -844,19 +844,22 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
     starcustomchat.utils.setMessageHandler("/commcodes", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
+            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or {}
+            sb.logInfo("commcodes are %s", playerCommCodes)
 
             local returnString = "Listening on comm codes:"
             local numCodes = 0
             for code, alias in pairs(playerCommCodes) do
-                local codeStr
-                if alias then
-                    codeStr = "[" .. alias .. "]" .. " -> [" .. code .. "]"
-                else
-                    codeStr = "[" .. code .. "]"
+                if code ~= 0 then
+                    local codeStr
+                    if alias then
+                        codeStr = "[" .. alias .. "]" .. " -> [" .. code .. "]"
+                    else
+                        codeStr = "[" .. code .. "]"
+                    end
+                    returnString = returnString .. "\n" .. codeStr
+                    numCodes = numCodes + 1
                 end
-                returnString = returnString .. "\n" .. codeStr
-                numCodes = numCodes + 1
             end
             if numCodes == 0 then
                 return "Not listening on any comm codes"
