@@ -1830,7 +1830,7 @@ function dynamicprox:onSendMessage(data)
         if root.getConfiguration("DPC::chatBubble") or false then
             player.say("...")
         end
-        if data.text:find("\"") then
+        if data.content:find("\"") then
             player.emote("Blabbering")
         end
     end
