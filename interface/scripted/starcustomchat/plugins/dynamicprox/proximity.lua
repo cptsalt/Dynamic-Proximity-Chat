@@ -426,7 +426,12 @@ local function setTextHint(mode, override)
         "off"
     hintStr = hintStr .. "Autocorrect " .. autoCorVal
 
-    local radioState = (not (player.getProperty("DPC::radioState") or false) and ", Radio off") or ""
+    local radioState = ""
+
+    if player.getProperty("DPC::radioState") == false then
+    radioState = ", Radio off" 
+    end
+
     hintStr = hintStr .. radioState
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
@@ -859,7 +864,6 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                     playerSecret = playerSecret,
                     radioState = radioState
                 }
-                sb.logInfo("sending stagehand with %s",addInfo)
                 starcustomchat.utils.createStagehandWithData("dpcServerHandler",
                     { message = "toggleradio", data = addInfo })
                 return
@@ -1683,8 +1687,7 @@ function dynamicprox:formatOutcomingMessage(data)
                 end
 
                 data.recogList = recogList
-                sb.logInfo("recogList is %s", recogList)
-
+                
                 data.version = 163
                 data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
