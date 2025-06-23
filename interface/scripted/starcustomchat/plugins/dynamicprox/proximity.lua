@@ -251,29 +251,23 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.proxooc.desc",
             data = "/proxooc",
         })
-    elseif string.find("/commcode", substr, nil, true) then
+    elseif string.find("/toggleradio", substr, nil, true) then
         table.insert(availableCommands, {
-            name = "/commcode",
-            description = "commands.commcode.desc",
-            data = "/commcode",
+            name = "/toggleradio",
+            description = "commands.toggleradio.desc",
+            data = "/toggleradio",
         })
-    elseif string.find("/commcodes", substr, nil, true) then
+    elseif string.find("/setfreq", substr, nil, true) then
         table.insert(availableCommands, {
-            name = "/commcodes",
-            description = "commands.commcodes.desc",
-            data = "/commcodes",
+            name = "/setfreq",
+            description = "commands.setfreq.desc",
+            data = "/setfreq",
         })
-    elseif string.find("/addcommcode", substr, nil, true) then
+    elseif string.find("/getfreq", substr, nil, true) then
         table.insert(availableCommands, {
-            name = "/addcommcode",
-            description = "commands.addcommcode.desc",
-            data = "/addcommcode",
-        })
-    elseif string.find("/removecommcode", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/removecommcode",
-            description = "commands.removecommcode.desc",
-            data = "/removecommcode",
+            name = "/getfreq",
+            description = "commands.getfreq.desc",
+            data = "/getfreq",
         })
     elseif string.find("/dpcserver", substr, nil, true) then
         table.insert(availableCommands, {
@@ -431,6 +425,9 @@ local function setTextHint(mode, override)
     local autoCorVal = (root.getConfiguration("DPC::typos") and root.getConfiguration("DPC::typos")["typosActive"] and "on") or
         "off"
     hintStr = hintStr .. "Autocorrect " .. autoCorVal
+
+    local radioState = (not (player.getProperty("DPC::radioState") or false) and ", Radio off") or ""
+    hintStr = hintStr .. radioState
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
 
@@ -839,126 +836,36 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         setTextHint("Prox")
         return "Hint display " .. hintsDisplay
     end)
-    starcustomchat.utils.setMessageHandler("/commcodes", function(_, _, data)
+    starcustomchat.utils.setMessageHandler("/toggleradio", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or {}
-            sb.logInfo("commcodes are %s", playerCommCodes)
-
-            local returnString = "Listening on comm codes:"
-            local numCodes = 0
-            for code, alias in pairs(playerCommCodes) do
-                if code ~= 0 then
-                    local codeStr
-                    if alias then
-                        codeStr = "[" .. alias .. "]" .. " -> [" .. code .. "]"
-                    else
-                        codeStr = "[" .. code .. "]"
-                    end
-                    returnString = returnString .. "\n" .. codeStr
-                    numCodes = numCodes + 1
-                end
+            local sendOverServer = root.getConfiguration("dpcOverServer") or false
+            local radioState = player.getProperty("DPC::radioState")
+            if radioState == nil then
+                radioState = true
             end
-            if numCodes == 0 then
-                return "Not listening on any comm codes"
-            else
-                return returnString
-            end
-        end, data)
-        if status then
-            return resultOrError
-        else
-            sb.logError("Error occurred while running DPC command: %s", resultOrError)
-            return "^red;Error occurred while running command, check log"
-        end
-    end)
-    starcustomchat.utils.setMessageHandler("/commcode", function(_, _, data)
-        local status, resultOrError = pcall(function(data)
-            local splitArgs = splitStr(data, " ")
-            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
-            local newDefault = splitArgs[1] or nil
-            if newDefault == "" or not newDefault then
-                local currentDefault = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
-                local alias = playerCommCodes[currentDefault]
-                if currentDefault == false then currentDefault = "-" end
-                if alias then
-                    return "Default comm code is [" .. tostring(currentDefault) .. "] (alias [" .. alias .. "])"
-                else
-                    return "Default comm code is [" .. tostring(currentDefault) .. "] (no alias)"
-                end
-            end
-            if tonumber(newDefault) and playerCommCodes[newDefault] ~= nil then
-                world.sendEntityMessage(player.id(), "setDefaultCommCode", newDefault)
-                local alias = playerCommCodes[newDefault]
-                return "Set default comm code to ["
-                    .. newDefault
-                    .. "]"
-                    .. (alias and (" (alias [" .. tostring(alias) .. "])") or " (no alias)")
-            elseif not tonumber(newDefault) then
-                if newDefault == "-" then
-                    world.sendEntityMessage(player.id(), "setDefaultCommCode", false)
-                    return "Set default comm code to [-]"
-                else
-                    local foundCode = nil
-                    for code, alias in pairs(playerCommCodes) do
-                        if alias == newDefault then
-                            foundCode = code
-                            break
-                        end
-                    end
-                    if foundCode then
-                        world.sendEntityMessage(player.id(), "setDefaultCommCode", foundCode)
-                        return "Set default comm code to [" .. foundCode .. "] (alias [" .. newDefault .. "])"
-                    else
-                        return "Could not find comm code alias '" .. newDefault .. "'; default not changed"
-                    end
-                end
-            else
-                return "Not listening to comm code; default not changed"
-                    .. "\n"
-                    .. "Use ^cyan;/addcommcode "
-                    .. newDefault
-                    .. " [optional alias]^reset; first"
-            end
-        end, data)
-        if status then
-            return resultOrError
-        else
-            sb.logError("Error occurred while running DPC command: %s", resultOrError)
-            return "^red;Error occurred while running command, check log"
-        end
-    end)
-    starcustomchat.utils.setMessageHandler("/addcommcode", function(_, _, data)
-        local status, resultOrError = pcall(function(data)
-            local splitArgs = splitStr(data, " ")
-            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
-            local newCommCode, newAlias = (splitArgs[1] or nil), (splitArgs[2] or nil)
-            if tonumber(newAlias) then newAlias = nil end
-            if newCommCode == "" or not newCommCode then return "Must specify a comm code to add or modify" end
-            if not tonumber(newCommCode) then return "Invalid comm code specified; must be a number" end
-            local codeExists = playerCommCodes[newCommCode] ~= nil
-            playerCommCodes[newCommCode] = newAlias or false
-            world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
-
-            if (root.getConfiguration("dpcOverServer") or false) then
-                --send update to server
+            player.setProperty("DPC::radioState", not radioState)
+            setTextHint("Prox")
+            if sendOverServer then
                 local playerSecret = player.getProperty("DPC::playerCheck") or false
+
+                if not playerSecret then
+                    playerSecret = sb.makeUuid()
+                    player.setProperty("DPC::playerCheck", playerSecret)
+                end
+
                 local addInfo = {
                     player = player.id(),
                     uuid = player.uniqueId(),
                     playerSecret = playerSecret,
-                    channel = newCommCode,
-                    alias = newAlias
+                    radioState = radioState
                 }
+                sb.logInfo("sending stagehand with %s",addInfo)
                 starcustomchat.utils.createStagehandWithData("dpcServerHandler",
-                    { message = "addChannel", data = addInfo })
+                    { message = "toggleradio", data = addInfo })
                 return
+            else
+                return "Your radio is now " .. radioState and "on." or "off."
             end
-
-            return (codeExists and "Modified" or "Added")
-                .. " comm code ["
-                .. newCommCode
-                .. "]"
-                .. (newAlias and (" (alias [" .. newAlias .. "])") or " (no alias)")
         end, data)
         if status then
             return resultOrError
@@ -967,66 +874,72 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             return "^red;Error occurred while running command, check log"
         end
     end)
-    starcustomchat.utils.setMessageHandler("/removecommcode", function(_, _, data)
+    starcustomchat.utils.setMessageHandler("/getfreq", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local splitArgs = splitStr(data, " ")
-            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result() or { ["0"] = false }
-            local defaultCommCode = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
-            if defaultCommCode == nil then defaultCommCode = "0" end
-            local commCodeOrAlias = (splitArgs[1] or nil)
-            if commCodeOrAlias == "" or not commCodeOrAlias then
-                return "Must specify a comm code or alias to remove"
+            local activeFreq = player.getProperty("DPC::activeFreq") or nil
+            if activeFreq then
+                local freqAlias = (activeFreq["alias"] and "(" .. activeFreq["alias"] .. ")") or "(no alias)"
+                return "Active frequency is: " .. activeFreq["freq"] .. " " .. freqAlias .. "."
+            else
+                return "No frequency has been set, use /setfreq to make one."
             end
-            if (root.getConfiguration("dpcOverServer") or false) then
-                --send update to server
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/setfreq", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local args = splitStr(data, " ")
+            local newFreq, freqAlias = args[1] or nil, args[2] or nil
+            if not tonumber(newFreq) then
+                return "Invalid frequency given, use a number instead."
+            end
+
+            --freq is valid, pass it to the player property to override
+            --[[structure, since there's only one active:
+            activeFreq = {
+                [code] => 123,
+                [alias] => optional name
+            }
+            --may do this one, might not, idk yet
+            savedFreqs = {
+            ["code"] => alias,
+            ...
+            }
+            ]]
+
+            local activeFreq = {
+                ["freq"] = newFreq,
+                ["alias"] = freqAlias
+            }
+            player.setProperty("DPC::activeFreq", activeFreq)
+
+            local sendOverServer = root.getConfiguration("dpcOverServer") or false
+            if sendOverServer then
                 local playerSecret = player.getProperty("DPC::playerCheck") or false
+
+                if not playerSecret then
+                    playerSecret = sb.makeUuid()
+                    player.setProperty("DPC::playerCheck", playerSecret)
+                end
+
                 local addInfo = {
                     player = player.id(),
                     uuid = player.uniqueId(),
                     playerSecret = playerSecret,
-                    channel = commCodeOrAlias
+                    activeFreq = activeFreq
                 }
                 starcustomchat.utils.createStagehandWithData("dpcServerHandler",
-                    { message = "removeChannel", data = addInfo })
+                    { message = "setfreq", data = addInfo })
                 return
             end
-            if tonumber(commCodeOrAlias) and playerCommCodes[commCodeOrAlias] ~= nil then
-                local alias = playerCommCodes[commCodeOrAlias]
-                playerCommCodes[commCodeOrAlias] = nil
-                world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
-                if defaultCommCode == commCodeOrAlias then
-                    local newDefault = false
-                    -- FezzedOne: Check if the player has any other comm codes to default to. If not, disable comms.
-                    if playerCommCodes["0"] == nil then
-                        for code, _ in pairs(playerCommCodes) do
-                            newDefault = code
-                            break
-                        end
-                    else
-                        newDefault = "0"
-                    end
-                    world.sendEntityMessage(player.id(), "setDefaultCommCode", newDefault)
-                end
-                return "Removed comm code ["
-                    .. commCodeOrAlias
-                    .. "]"
-                    .. (alias and (" (alias [" .. tostring(alias) .. "])") or " (no alias)")
-            elseif not tonumber(commCodeOrAlias) then
-                local foundCode = nil
-                for code, alias in pairs(playerCommCodes) do
-                    if alias == commCodeOrAlias then
-                        foundCode = code
-                        break
-                    end
-                end
-                if not foundCode then return "Did not find alias to remove" end
-                playerCommCodes[foundCode] = nil
-                world.sendEntityMessage(player.id(), "setCommCodes", playerCommCodes)
-                removeToServer(playerCommCodes)
-                return "Removed comm code [" .. foundCode .. "] (alias [" .. commCodeOrAlias .. "])"
-            else
-                return "Did not find comm code to remove"
-            end
+
+            local freqAlias = (activeFreq["alias"] and "(" .. activeFreq["alias"] .. ")") or "(no alias)"
+            return "Active frequency is now: " .. activeFreq["freq"] .. " " .. freqAlias .. "."
         end, data)
         if status then
             return resultOrError
@@ -1663,41 +1576,13 @@ function dynamicprox:formatOutcomingMessage(data)
                 elseif i == "[" and langEnd ~= nil then                                --use this flag to check for default languages. A string without any noise won't have any language support
                     if (not inOoc) and rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
                         local langKey, commKey
-                        local commKeySubstitute = nil
-                        local legalCommKey = true
+                        -- local commKeySubstitute = nil
+                        -- local legalCommKey = true
                         if rawText:sub(iCount, langEnd) == "[]" then --checking for []
                             langKey = defaultKey
                             rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
                         else
-                            local rawCode = rawText:sub(iCount + 1, langEnd - 1)
-                            local playerCommCodes = world.sendEntityMessage(player.id(), "getCommCodes"):result()
-                                or { ["0"] = false }
-                            if tonumber(rawCode) then
-                                local rawCommKey = tostring(tonumber(rawCode) or "0")
-                                legalCommKey = playerCommCodes[rawCommKey] ~= nil
-                            else
-                                for key, alias in pairs(playerCommCodes) do
-                                    if alias == rawCode then
-                                        commKeySubstitute = key
-                                        legalCommKey = true
-                                        break
-                                    end
-                                end
-                            end
-                            commKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
-                            if not tonumber(rawCode) then
-                                -- FezzedOne: Fixed issue where special characters weren't escaped before being passed as a Lua pattern.
-                                langKey = rawCode:gsub("[%(%)%.%%%+%-%*%?%[%^%$]",
-                                    function(s) return "%" .. s end)
-                            end
-                        end
-
-                        if commKeySubstitute or not legalCommKey then
-                            if not legalCommKey then
-                                rawText = rawText:gsub("%[" .. commKey .. "%]", "[-]")
-                            elseif commKeySubstitute then
-                                rawText = rawText:gsub("%[" .. commKey .. "%]", "[" .. commKeySubstitute .. "]")
-                            end
+                            langKey = rawText:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
                         end
                         if langKey then
                             local upperKey = langKey:upper()
@@ -1758,7 +1643,9 @@ function dynamicprox:formatOutcomingMessage(data)
                 end
 
                 --go through each word and insert them individually into the table
-                recogList[normalisedAlias] = true
+                for index, value in ipairs(splitStr(normalisedAlias, "%s")) do
+                    recogList[value] = true
+                end
             end
             --data.alias is for the alias
             --data.aliasPrio is for the priority
@@ -1789,11 +1676,14 @@ function dynamicprox:formatOutcomingMessage(data)
                 local recogs = player.getProperty("DPC::recognizedPlayers") or {}
                 for uuid, info in pairs(recogs) do
                     if info ~= true and info["savedName"] then
-                        recogList[normaliseText(info["savedName"])] = true
+                        for index, value in ipairs(splitStr(normaliseText(info["savedName"]), "%s")) do
+                            recogList[value] = true
+                        end
                     end
                 end
 
                 data.recogList = recogList
+                sb.logInfo("recogList is %s", recogList)
 
                 data.version = 163
                 data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
@@ -1807,7 +1697,7 @@ function dynamicprox:formatOutcomingMessage(data)
                 data.quoteFont = player.getProperty("DPC::quoteFont") or nil
                 data.fontW8 = player.getProperty("DPC::quoteWeight") or nil
                 if rawText:find("{") then
-                    data.defaultComms = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
+                    data.defaultComms = player.getProperty("DPC::activeFreq") or nil
                 end
             end
         end
@@ -1887,18 +1777,6 @@ function dynamicprox:onSendMessage(data)
                     data.mode = "Proximity"
                     world.sendEntityMessage(pl, "scc_add_message", data)
                 end
-            end
-
-            local commKey = ""
-            if rawText:find("{.*}") then
-                local defaultCommCode = world.sendEntityMessage(player.id(), "getDefaultCommCode"):result()
-                if defaultCommCode == nil then
-                    defaultCommCode = "0"
-                elseif defaultCommCode == false then
-                    defaultCommCode = "-"
-                end
-                commKey = defaultCommCode ~= "0" and ("[" .. defaultCommCode .. "] ") or ""
-                rawText = commKey .. rawText
             end
 
             if #globalStrings ~= 0 then
@@ -2101,9 +1979,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                         message.inSight = inSight
                         message.inEarShot = false
 
-                        -- FezzedOne: Get the player's comm codes for later.
-                        local playerCommCodes = world.sendEntityMessage(receiverEntityId, "getCommCodes"):result()
-                            or { ["0"] = false }
+                        local activeFreq = player.getProperty("DPC::activeFreq")
 
                         -- FezzedOne: Dynamic collision thickness calculation.
                         local collisionA = nil
@@ -2589,16 +2465,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                     cInd = cInd + 2
                                 elseif fStart ~= nil and fEnd ~= nil then
                                     local newCode = rawSub(fStart + 1, fEnd)
-
-                                    if tonumber(newCode) or newCode == "-" then -- FezzedOne: This is a comm code.
-                                        local newCommCode = newCode == "-" and "-"
-                                            or tostring(tonumber(newCode) or "0")
-                                        if commCode ~= newCommCode then newMode(curMode) end
-                                        commCode = newCommCode
-                                    else -- FezzedOne: This is a language code.
-                                        if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
-                                        languageCode = newCode:upper()
-                                    end
+                                    if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
+                                    languageCode = newCode:upper()
                                     cInd = rawText:find("%S", fEnd + 2) or
                                         #rawText --set index to the next non whitespace character after the code
                                 else
@@ -2977,13 +2845,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 -- FezzedOne: Strip out radio brackets. We'll re-add them later.
                                 v["text"] = rawStr:gsub("^{{", ""):gsub("^{", ""):gsub("}}$", ""):gsub("}$", "")
 
-                                -- FezzedOne: Check if the player is listening on a given comm code, for validity checks.
-                                if v["isRadio"] then
-                                    if v["commCode"] ~= "-" and playerCommCodes[v["commCode"]] ~= nil then
-                                        v["valid"] = true
-                                    else
-                                        v["isRadio"] = false
-                                    end
+                                if v["isRadio"] and (activeFreq["freq"] == v["commCode"] or v["commCode"] == 0) then
+                                    v["valid"] = true
+                                else
+                                    v["isRadio"] = false
                                 end
 
                                 chunkStr = v["text"]
@@ -3105,27 +2970,15 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                                 end
 
                                 -- FezzedOne: Add comm codes to chunks.
-                                if v["isRadio"] then
+                                if v["isRadio"] and v["valid"] then
                                     local msgColor = "#fff"
                                     local commKey = v["commCode"]
-                                    if v["valid"] and commKey ~= prevCommCode then
-                                        if v["commCode"] ~= "-" then
-                                            local commName, name = "", ""
-                                            local isUnknownCommCode = playerCommCodes[commKey] == nil
-                                            if not isUnknownCommCode then
-                                                name = playerCommCodes[commKey]
-                                                commName = name or commKey
-                                            end
-                                            chunkStr = "^"
-                                                .. (name and "#88f" or "#44f")
-                                                .. ";["
-                                                .. (isUnknownCommCode and "???" or commName)
-                                                .. "]^"
-                                                .. msgColor
-                                                .. "; "
-                                                .. chunkStr
-                                            prevCommCode = commKey
-                                        end
+                                    if commKey == activeFreq["freq"] or commKey == "0" then
+                                        chunkStr = "^"
+                                            .. (activeFreq["alias"] and "#88f" or "#44f")
+                                            .. ";{" ..
+                                            (activeFreq["alias"] or activeFreq["freq"]) ..
+                                            "}^" .. msgColor .. "; " .. chunkStr
                                     end
                                 end
                                 if v["valid"] and chunkStr ~= "" then
