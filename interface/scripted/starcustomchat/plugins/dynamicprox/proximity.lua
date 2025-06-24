@@ -3207,9 +3207,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             local useName = message.fakeName or "^#999;???^reset;"
             local playerNicks = player.getProperty("DPC::playerNicks") or {}
 
-            sb.logInfo("charRecInfo is %s",charRecInfo)
             if charRecInfo and charRecInfo.manName then
-                sb.logInfo("resetting name info and assigning to nickname")
                 playerNicks[message.playerUid] = charRecInfo.savedName
                 charRecInfo = nil
                 recoged[message.playerUid] = charRecInfo
