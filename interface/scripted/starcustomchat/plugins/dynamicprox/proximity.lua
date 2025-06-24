@@ -1032,8 +1032,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             end
 
             player.setProperty("DPC::recognizedPlayers", nil)
+            player.setProperty("DPC::playerNicks", nil)
             player.setProperty("DPC::recogGroup", nil)
-            return "Your recognized characters and groups have been reset."
+            return "Your recognized characters, nicknames and groups have been reset."
         end, data)
         if status then
             return resultOrError
@@ -1155,13 +1156,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             },
             }
         ]]
-            local recoged = player.getProperty("DPC::recognizedPlayers") or {}
-            recoged[chid] = {
-                ["savedName"] = tostring(newNick),
-                ["manName"] = true,
-                ["aliasPrio"] = -10
-            }
-            player.setProperty("DPC::recognizedPlayers", recoged)
+            local nicks = player.getProperty("DPC::playerNicks") or {}
+            nicks[chid] = tostring(newNick)
+            player.setProperty("DPC::playerNicks", nicks)
             root.setConfiguration("DPC::cursorChar", nil)
 
             return "Character assigned nickname " .. newNick .. ", selection released."
@@ -1180,14 +1177,14 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "No character selected, move your cursor over one and use /chid to select them."
             end
             chid = chid.UUID
-            local recoged = player.getProperty("DPC::recognizedPlayers") or {}
-            if recoged[chid] then
-                recoged[chid] = nil
-                player.setProperty("DPC::recognizedPlayers", recoged)
+            local nicks = player.getProperty("DPC::playerNicks") or {}
+            if nicks[chid] then
+                nicks[chid] = nil
                 root.setConfiguration("DPC::cursorChar", nil)
+                player.setProperty("DPC::playerNicks", nicks)
                 return "Reset nickname for character, selection released."
             else
-                return "No nickname for this character exists."
+                return "No nickname found."
             end
         end, data)
         if status then
@@ -3208,9 +3205,20 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 charRecInfo = nil
             end
             local useName = message.fakeName or "^#999;???^reset;"
+            local playerNicks = player.getProperty("DPC::playerNicks") or {}
+
+            sb.logInfo("charRecInfo is %s",charRecInfo)
+            if charRecInfo and charRecInfo.manName then
+                sb.logInfo("resetting name info and assigning to nickname")
+                playerNicks[message.playerUid] = charRecInfo.savedName
+                charRecInfo = nil
+                recoged[message.playerUid] = charRecInfo
+                player.setProperty("DPC::recognizedPlayers", recoged)
+                player.setProperty("DPC::playerNicks", playerNicks)
+            end
 
             if (message.alias and message.aliasPrio) and
-                ((not charRecInfo) or (charRecInfo and (not charRecInfo.manName) and message.aliasPrio < charRecInfo.aliasPrio)) then --if conditions are met
+                (not charRecInfo or (charRecInfo and (charRecInfo.manName or message.aliasPrio < charRecInfo.aliasPrio))) then --if conditions are met
                 local normalisedAlias = normaliseText(message.alias)
                 local tokens = quoteMap(message.text or "")
                 if tokens[normalisedAlias] then -- FezzedOne: Check that the alias isn't garbled first.
@@ -3233,7 +3241,14 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 useName = charRecInfo.savedName
             end
 
-            message.nickname = useName
+            local nickName = nil
+
+            local nickCandidate = playerNicks[message.playerUid]
+            if nickCandidate and normaliseText(useName) ~= normaliseText(nickCandidate) then
+                nickName = " ^font=M;(" .. nickCandidate .. ")^reset;"
+            end
+
+            message.nickname = useName .. (nickName or "")
 
             -- FezzedOne's note: Messages sent with `/proxlocal` enabled will *not* automatically «proc» recog or handle recog groups
             -- or skips on a player unless all three of the sending client, receiving client *and* server are running the same
