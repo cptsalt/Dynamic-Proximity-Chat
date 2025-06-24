@@ -1685,7 +1685,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
                 data.recogList = recogList
 
-                data.version = 172
+                data.version = 173
                 data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
                 data.estRad = estRad
@@ -3245,7 +3245,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
             local nickCandidate = playerNicks[message.playerUid]
             if nickCandidate and normaliseText(useName) ~= normaliseText(nickCandidate) then
-                nickName = " ^font=M;(" .. nickCandidate .. ")^reset;"
+                nickName = " ^font=M;^#999;(" .. nickCandidate .. "^#999;)^reset;"
             end
 
             message.nickname = useName .. (nickName or "")
