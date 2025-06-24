@@ -429,7 +429,7 @@ local function setTextHint(mode, override)
     local radioState = ""
 
     if player.getProperty("DPC::radioState") == false then
-    radioState = ", Radio off" 
+        radioState = ", Radio off"
     end
 
     hintStr = hintStr .. radioState
@@ -1631,7 +1631,7 @@ function dynamicprox:formatOutcomingMessage(data)
             playerAliases["0"] = xsb and currentPlayerName or world.entityName(player.id())
             --check for any aliases here and set the highest priority one as the name
             table.sort(playerAliases)
-            local quoteTbl = quoteMap(data.content or "")
+            local quoteTbl = quoteMap(rawText or "")
             local minPrio = 100
             for prio, alias in pairs(playerAliases) do
                 -- FezzedOne: Because this is stored as a JSON object, which requires all keys to be strings.
@@ -1687,7 +1687,7 @@ function dynamicprox:formatOutcomingMessage(data)
                 end
 
                 data.recogList = recogList
-                
+
                 data.version = 171
                 data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
