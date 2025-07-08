@@ -12,8 +12,7 @@
   "commands.sendlocal.desc": "Sets whether chat sent in the Dynamic tab will be sent as local chat. {on/off}",
   "commands.proxooc.desc": "Sets whether double-parentheses OOC chat - (( )) - received as Dynamic chat will be proximity-limited. {on/off}",
   "commands.dynamicsccrp.desc": "Sets whether SCCRP proximity messages will be handled as dynamic proximity chat",
-  "commands.getfreq.desc": "Shows your current radio frequency",
-  "commands.setfreq.desc": "Sets your current radio frequency, {frequency, [alias]}",
+  "commands.freq.desc": "View or set your current radio frequency, {[frequency], [alias]}",
   "commands.toggleradio.desc": "Turns your radio on or off.",
   "commands.dpcserver.desc": "Dictates whether or not dynamic messages are sent via a server, default is off. {true, false}",
   "commands.learnlang.desc": "Commit unspent language points to a language, {code, points, [name], [hex color], [preset]}",
@@ -36,6 +35,6 @@
   "commands.showalias.desc": "Prints all of your saved aliases and priorities",
   "commands.apply.desc": "Lets the character selected with /chid recognize you, {alias priority}",
   "commands.nametag.desc": "Sets or (if no name is specified) clears your name tag. {[name tag]}",
-  "commands.setname.desc": "Sets your character's name; use instead of /identity set name on xStarbound. {new name}",
+  "commands.talkvol.desc": "Get or set your default talking volume. {[volume]}",
   "commands.ignoreversion.desc": "Ignores version warnings for the session"
 }

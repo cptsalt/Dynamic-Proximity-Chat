@@ -136,7 +136,7 @@ function dynamicprox:init()
     if player.setNametag then
         player.setNametag(currentName or "")
     end
-    root.setConfiguration("DPC::cursorChar", nil)
+    self.cursorChar = nil
     root.setConfiguration("DPC::ignoreVersion", nil)
 
     self.unchecked = true
@@ -257,17 +257,11 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.toggleradio.desc",
             data = "/toggleradio",
         })
-    elseif string.find("/setfreq", substr, nil, true) then
+    elseif string.find("/freq", substr, nil, true) then
         table.insert(availableCommands, {
-            name = "/setfreq",
-            description = "commands.setfreq.desc",
-            data = "/setfreq",
-        })
-    elseif string.find("/getfreq", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/getfreq",
-            description = "commands.getfreq.desc",
-            data = "/getfreq",
+            name = "/freq",
+            description = "commands.freq.desc",
+            data = "/freq",
         })
     elseif string.find("/dpcserver", substr, nil, true) then
         table.insert(availableCommands, {
@@ -359,11 +353,11 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.ignoreversion.desc",
             data = "/ignoreversion",
         })
-    elseif xsb and string.find("/nametag", substr, nil, true) then
+    elseif string.find("/talkvol", substr, nil, true) then
         table.insert(availableCommands, {
-            name = "/setname",
-            description = "commands.setname.desc",
-            data = "/setname",
+            name = "/talkvol",
+            description = "commands.talkvol.desc",
+            data = "/talkvol",
         })
     end
 end
@@ -878,29 +872,18 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             return "^red;Error occurred while running command, check log"
         end
     end)
-    starcustomchat.utils.setMessageHandler("/getfreq", function(_, _, data)
-        local status, resultOrError = pcall(function(data)
-            local activeFreq = player.getProperty("DPC::activeFreq") or nil
-            if activeFreq then
-                local freqAlias = (activeFreq["alias"] and "(" .. activeFreq["alias"] .. ")") or "(no alias)"
-                return "Active frequency is: " .. activeFreq["freq"] .. " " .. freqAlias .. "."
-            else
-                return "No frequency has been set, use /setfreq to make one."
-            end
-        end, data)
-        if status then
-            return resultOrError
-        else
-            sb.logError("Error occurred while running DPC command: %s", resultOrError)
-            return "^red;Error occurred while running command, check log"
-        end
-    end)
-    starcustomchat.utils.setMessageHandler("/setfreq", function(_, _, data)
+    starcustomchat.utils.setMessageHandler("/freq", function(_, _, data)
         local status, resultOrError = pcall(function(data)
             local args = splitStr(data, " ")
             local newFreq, freqAlias = args[1] or nil, args[2] or nil
             if not tonumber(newFreq) then
-                return "Invalid frequency given, use a number instead."
+                local activeFreq = player.getProperty("DPC::activeFreq") or nil
+                if activeFreq then
+                    local freqAlias = (activeFreq["alias"] and "(" .. activeFreq["alias"] .. ")") or "(no alias)"
+                    return "Active frequency is: " .. activeFreq["freq"] .. " " .. freqAlias .. "."
+                else
+                    return "No frequency has been set, use /setfreq to make one."
+                end
             end
 
             --freq is valid, pass it to the player property to override
@@ -1122,7 +1105,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 ["entityId"] = cursorPlayer,
                 ["UUID"] = world.entityUniqueId(cursorPlayer)
             }
-            root.setConfiguration("DPC::cursorChar", chidTable)
+
+            self.cursorChar = chidTable
             return "Character selected."
         end, data)
         if status then
@@ -1141,7 +1125,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "No nickname provided, try again."
             end
 
-            local chid = root.getConfiguration("DPC::cursorChar") or nil
+            local chid = self.cursorChar or nil
             if not chid then
                 return "No character selected, move your cursor over one and use /chid to select them."
             end
@@ -1159,7 +1143,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local nicks = player.getProperty("DPC::playerNicks") or {}
             nicks[chid] = tostring(newNick)
             player.setProperty("DPC::playerNicks", nicks)
-            root.setConfiguration("DPC::cursorChar", nil)
+
+            self.cursorChar = nil
 
             return "Character assigned nickname " .. newNick .. ", selection released."
         end, data)
@@ -1172,7 +1157,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     end)
     starcustomchat.utils.setMessageHandler("/clearnick", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local chid = root.getConfiguration("DPC::cursorChar") or nil
+            local chid = self.cursorChar or nil
             if not chid then
                 return "No character selected, move your cursor over one and use /chid to select them."
             end
@@ -1180,7 +1165,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local nicks = player.getProperty("DPC::playerNicks") or {}
             if nicks[chid] then
                 nicks[chid] = nil
-                root.setConfiguration("DPC::cursorChar", nil)
+                
+                self.cursorChar = nil
                 player.setProperty("DPC::playerNicks", nicks)
                 return "Reset nickname for character, selection released."
             else
@@ -1290,7 +1276,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     starcustomchat.utils.setMessageHandler("/apply", function(_, _, data)
         local status, resultOrError = pcall(function(data)
             local aliasPrio = splitStr(data, " ")[1] or "0"
-            local chid = root.getConfiguration("DPC::cursorChar") or nil
+            local chid = self.cursorChar or nil
             if not chid then
                 return "No character selected, move your cursor over one and use /chid to select them."
             end
@@ -1330,20 +1316,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     -- FezzedOne: Added /nametag for both xStarbound and OpenStarbound.
     starcustomchat.utils.setMessageHandler("/nametag", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            if xsb then
-                local splitArgs = chat.parseArguments(data)
-                local newName = splitArgs[1]
-                if (not newName) or newName == "" then
-                    player.setName("")
-                    status.setStatusProperty("currentName", nil)
-                    return "Cleared name tag."
-                else
-                    player.setName(tostring(newName))
-                    status.setStatusProperty("currentName", tostring(newName))
-                    return "Set name tag to '" .. tostring(newName) .. "'."
-                end
-            elseif root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil and player.setNametag then
-                local newName = chat.parseArguments(data)
+            if root.assetJson("/player.config:genericScriptContexts").OpenStarbound ~= nil and player.setNametag then
+                local newName = splitStr(data, " ")[1]
                 if (not newName) or newName == "" then
                     player.setNametag("")
                     status.setStatusProperty("currentName", nil)
@@ -1376,22 +1350,24 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             return "^red;Error occurred while running command, check log"
         end
     end)
-
-    -- FezzedOne: Added /setname for xStarbound.
-    starcustomchat.utils.setMessageHandler("/setname", function(_, _, data)
+    starcustomchat.utils.setMessageHandler("/talkvol", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            if xsb then
-                local splitArgs = chat.parseArguments(data)
-                local newName = splitArgs[1]
-                if not newName then
-                    return "Must specify a character name!"
-                else
-                    status.setStatusProperty("defaultName", tostring(newName))
-                    return "Set character name to '" .. tostring(newName) .. "'."
-                end
-            else
-                return "^red;Command unavailable on this client."
+            local newVol = splitStr(data, " ")[1]
+
+            if #trim(newVol) < 1 then
+                return "Default volume is: ".. (player.getProperty("DPC::defaultVolume") or 0)
             end
+
+            if not tonumber(newVol) or tonumber(newVol) > 4 or tonumber(newVol) < -4 then
+                return "Invalid argument provided, enter a number between -4 and 4"
+            end
+            newVol = tonumber(newVol)
+
+            player.setProperty("DPC::defaultVolume",newVol)
+            return "Default volume set to "..newVol
+
+
+
         end, data)
         if status then
             return resultOrError
@@ -1662,6 +1638,7 @@ function dynamicprox:formatOutcomingMessage(data)
             data.playerUid = player.uniqueId()
             data.skipRecog = player.getProperty("DPC::skipRecog") or false
             data.recogGroup = player.getProperty("DPC::recogGroup") or false
+            data.estRad = estRad
 
             if sendOverServer then
                 -- local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -1688,8 +1665,11 @@ function dynamicprox:formatOutcomingMessage(data)
                 data.version = 173
                 data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
-                data.estRad = estRad
+
                 data.globalFlag = globalFlag
+
+                data.volume = player.getProperty("DPC::defaultVolume") or 0
+
                 -- FezzedOne: xStarbound also supports the stuff needed for the server-side message handler.
                 data.isOSB = (not not xsb) or isOSB
                 -- player.setProperty("DPC::"..type.."Font",self.fontLib[font])
