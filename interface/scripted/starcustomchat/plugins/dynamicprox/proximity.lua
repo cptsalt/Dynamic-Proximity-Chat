@@ -1130,16 +1130,6 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "No character selected, move your cursor over one and use /chid to select them."
             end
             chid = chid.UUID
-            --add the nickname
-            --[[
-            {
-            uuid: {
-                savedName: "name",
-                manName: "/addnick name", (if populated, prevent alias overwrites for higher priority aliases)
-                aliasPrio: int (0 is for real name, can make negative ints)
-            },
-            }
-        ]]
             local nicks = player.getProperty("DPC::playerNicks") or {}
             nicks[chid] = tostring(newNick)
             player.setProperty("DPC::playerNicks", nicks)
@@ -1281,6 +1271,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 return "No character selected, move your cursor over one and use /chid to select them."
             end
             local playerAliases = player.getProperty("DPC::aliases") or {}
+            playerAliases["0"] = world.entityName(player.id())
             local aliasInfo = {}
 
             if playerAliases and tonumber(aliasPrio) and playerAliases[aliasPrio] then
@@ -1289,18 +1280,9 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                     ["priority"] = tonumber(aliasPrio),
                     ["UUID"] = player.uniqueId()
                 }
-            end
-
-
-            -- FezzedOne: This is ASYNCHRONOUS on players owned by other clients and will thus always jump to the `else` for them, showing the failure even if it succeeds.
-            --[[
-            if world.sendEntityMessage(chid.entityId, "showRecog", aliasInfo):result() then
-                return chid.name .. " now recognizes you."
             else
-                return "Recognition failed (this is bad it shouldn't happen)."
+                return "Missing aliases, command failed."
             end
-            ]]
-
             -- FezzedOne: Use this instead!
             world.sendEntityMessage(chid.entityId, "showRecog", aliasInfo)
             return "The selected character should now recognise you (if running DPC)."
@@ -1601,7 +1583,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- FezzedOne: Fixed the default priority 0 alias not getting changed after character swaps on xStarbound, OpenStarbound and StarExtensions.
             -- Shouldn't need to use the stock chat nickname (`data.nickname`) anyway in this alias system.
-            playerAliases["0"] = xsb and currentPlayerName or world.entityName(player.id())
+            playerAliases["0"] = world.entityName(player.id())
             --check for any aliases here and set the highest priority one as the name
             table.sort(playerAliases)
             local quoteTbl = quoteMap(rawText or "")
@@ -3165,21 +3147,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             else
                 recoged = player.getProperty("DPC::recognizedPlayers") or {}
             end
-
-            --sending player will check for aliases or a name (and priority) in the message and attach a param if it exists
-            --this will just apply it if it exists and is higher priority
-            --if the entry doesn't exist and the message has no value filled in then apply the ???
-            --[[
-            table should be:
-            {
-            uuid: {
-                savedName: "name",
-                manName: "/addnick name", (if populated, prevent alias overwrites for higher priority aliases)
-                aliasPrio: int (0 is for real name, can make negative ints)
-            },
-            uuid:{etc}
-            }
-            ]]
             local charRecInfo = recoged[message.playerUid] or nil
             if charRecInfo == true then
                 charRecInfo = nil
@@ -3203,7 +3170,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     --apply new thing or create entry, should work either way
                     charRecInfo = {
                         ["savedName"] = message.alias,
-                        ["manName"] = false,
+                        ["manName"] = nil,
                         ["aliasPrio"] = message.aliasPrio
                     }
                     recoged[message.playerUid] = charRecInfo
