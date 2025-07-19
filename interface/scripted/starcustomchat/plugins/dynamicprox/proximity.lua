@@ -1155,7 +1155,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local nicks = player.getProperty("DPC::playerNicks") or {}
             if nicks[chid] then
                 nicks[chid] = nil
-                
+
                 self.cursorChar = nil
                 player.setProperty("DPC::playerNicks", nicks)
                 return "Reset nickname for character, selection released."
@@ -1267,9 +1267,6 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         local status, resultOrError = pcall(function(data)
             local aliasPrio = splitStr(data, " ")[1] or "0"
             local chid = self.cursorChar or nil
-            if not chid then
-                return "No character selected, move your cursor over one and use /chid to select them."
-            end
             local playerAliases = player.getProperty("DPC::aliases") or {}
             playerAliases["0"] = world.entityName(player.id())
             local aliasInfo = {}
@@ -1283,7 +1280,21 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             else
                 return "Missing aliases, command failed."
             end
-            -- FezzedOne: Use this instead!
+
+            if not chid then
+                --do an entity query within 25 and call it good
+                local players = world.playerQuery(world.entityPosition(player.id()), 25, {
+                    boundMode = "position",
+                })
+
+                local pCount = 0
+                for _, pl in ipairs(players) do
+                    world.sendEntityMessage(pl, "showRecog", aliasInfo)
+                    pCount = pCount + 1
+                end
+                return "Sent alias " .. aliasInfo.alias .. " to " .. pCount .. " players."
+            end
+
             world.sendEntityMessage(chid.entityId, "showRecog", aliasInfo)
             return "The selected character should now recognise you (if running DPC)."
         end, data)
@@ -1337,7 +1348,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local newVol = splitStr(data, " ")[1]
 
             if #trim(newVol) < 1 then
-                return "Default volume is: ".. (player.getProperty("DPC::defaultVolume") or 0)
+                return "Default volume is: " .. (player.getProperty("DPC::defaultVolume") or 0)
             end
 
             if not tonumber(newVol) or tonumber(newVol) > 4 or tonumber(newVol) < -4 then
@@ -1345,11 +1356,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             end
             newVol = tonumber(newVol)
 
-            player.setProperty("DPC::defaultVolume",newVol)
-            return "Default volume set to "..newVol
-
-
-
+            player.setProperty("DPC::defaultVolume", newVol)
+            return "Default volume set to " .. newVol
         end, data)
         if status then
             return resultOrError
@@ -1733,7 +1741,6 @@ function dynamicprox:onSendMessage(data)
                 chat.send(DynamicProxPrefix .. chatTags .. data.content, "Local", false, data)
             else
                 for _, pl in ipairs(players) do
-                    if xsb then data.sourceId = world.primaryPlayer() end
                     data.targetId =
                         pl -- FezzedOne: Used to distinguish DPC messages from SCCRP messages *and* for filtering messages as seen by secondaries on xStarbound clients.
                     data.mode = "Proximity"
