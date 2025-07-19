@@ -1265,7 +1265,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     --add /apply with the ability to use the chid or everyone within LOS and 30 tiles
     starcustomchat.utils.setMessageHandler("/apply", function(_, _, data)
         local status, resultOrError = pcall(function(data)
-            local aliasPrio = splitStr(data, " ")[1] or "0"
+            local splitArgs = splitStr(data, " ")
+            local aliasPrio = (splitArgs[1] and tonumber(splitArgs[1])) or "0"
             local chid = self.cursorChar or nil
             local playerAliases = player.getProperty("DPC::aliases") or {}
             playerAliases["0"] = world.entityName(player.id())
@@ -1289,8 +1290,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
                 local pCount = 0
                 for _, pl in ipairs(players) do
-                    world.sendEntityMessage(pl, "showRecog", aliasInfo)
-                    pCount = pCount + 1
+                    if pl ~= player.id() then
+                        world.sendEntityMessage(pl, "showRecog", aliasInfo)
+                        pCount = pCount + 1
+                    end
                 end
                 return "Sent alias " .. aliasInfo.alias .. " to " .. pCount .. " players."
             end
