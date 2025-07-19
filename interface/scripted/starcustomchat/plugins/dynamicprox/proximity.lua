@@ -3122,7 +3122,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
         if message.mode == "Prox" then message.isDpc = true end
 
-        if message.isDpc then message.nickname = message.playerName or message.nickname end
+        if message.isDpc then message.displayName = message.playerName or message.nickname end
 
         --this is disabled for now since i'd prefer the nickname to appear if it's just you
         -- FezzedOne: The stock nickname is not changed after character swaps. Fixed that issue by not using the stock nickname.
@@ -3146,7 +3146,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             --         useName = alias
             --     end
             -- end
-            message.nickname = useName
+            message.displayName = useName
         elseif message.isDpc and message.playerUid ~= (message.receiverUid or player.uniqueId()) and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
             -- FezzedOne: Removed this check to add recog support in client-side modes: and root.getConfiguration("dpcOverServer")
             local recoged = {}
@@ -3203,22 +3203,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 nickName = " ^font=M;^#999;(" .. nickCandidate .. "^#999;)^reset;"
             end
 
-            message.nickname = useName .. (nickName or "")
-
-            -- FezzedOne's note: Messages sent with `/proxlocal` enabled will *not* automatically «proc» recog or handle recog groups
-            -- or skips on a player unless all three of the sending client, receiving client *and* server are running the same
-            -- mod (i.e., either xStarbound or OpenStarbound) *and* are not connected in legacy mode, due to the alias and
-            -- character name being sent in chat metadata in this case. Players should consider using `/addnick` or disabling
-            -- `/proxlocal` on stock servers.
+            message.displayName = useName .. (nickName or "")
         end
 
-        if message.nickname == "" then message.nickname = "^#999;???^reset;" end
-
-        if xsb then
-            message.nickname = message.receiverName and
-                ((message.nickname or "^#999;???^reset;") .. " -> " .. message.receiverName)
-                or message.nickname
-        end
+        if message.displayName == "" then message.displayName = "^#999;???^reset;" end
 
         if showAsProximity then message.mode = "Proximity" end
         if showAsLocal then message.mode = "Local" end
