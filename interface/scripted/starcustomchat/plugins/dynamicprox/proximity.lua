@@ -1243,8 +1243,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 local prio = tostring(prioNum)
                 local alias = playerAliases[prio]
                 if prioNum == 0 then
-                    local _, defaultName = getNames()
-                    local canonicalName = xsb and defaultName or world.entityName(player.id())
+                    local canonicalName world.entityName(player.id())
                     retStr = retStr .. "[" .. prio .. ": " .. canonicalName .. "] "
                 elseif alias then
                     retStr = retStr .. "[" .. prio .. ": " .. alias .. "] "
@@ -1272,9 +1271,12 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             playerAliases["0"] = world.entityName(player.id())
             local aliasInfo = {}
 
-            if playerAliases and tonumber(aliasPrio) and playerAliases[aliasPrio] then
+
+            sb.logInfo("aliases are %s, toNum is %s, entry is %s",playerAliases, tonumber(aliasPrio), playerAliases[tostring(aliasPrio)])
+
+            if playerAliases and tonumber(aliasPrio) and playerAliases[tostring(aliasPrio)] then
                 aliasInfo = {
-                    ["alias"] = tostring(playerAliases[aliasPrio]),
+                    ["alias"] = tostring(playerAliases[tostring(aliasPrio)]),
                     ["priority"] = tonumber(aliasPrio),
                     ["UUID"] = player.uniqueId()
                 }
@@ -1673,6 +1675,7 @@ function dynamicprox:formatOutcomingMessage(data)
                     data.defaultComms = player.getProperty("DPC::activeFreq") or nil
                 end
             end
+            data.text = rawText
         end
     end
     return data
@@ -3087,16 +3090,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                 if showAsLocal then message.mode = "Local" end
                 if isGlobalChat then message.mode = "Broadcast" end
 
-                if xsb and message.contentIsText then
-                    if message.isSccrp then
-                        handleMessage(receiverEntityId)
-                    else
-                        for _, pId in ipairs(ownPlayers) do
-                            handleMessage(pId, copy(message))
-                        end
-                        message.text = ""
-                    end
-                elseif message.contentIsText then
+                if message.contentIsText then
                     if message.isSccrp then
                         handleMessage(receiverEntityId)
                     else
@@ -3109,18 +3103,15 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
         end
 
-        local ownPlayers = {}
-        if xsb then ownPlayers = world.ownPlayers() end
-        local isLocalPlayer = function(entityId)
-            if not xsb then return true end
-            for _, plr in ipairs(ownPlayers) do
-                if entityId == plr then return true end
-            end
-            return false
-        end
-
 
         if message.mode == "Prox" then message.isDpc = true end
+
+        local cleanText = message.text:gsub("%^[^^;]-;", "")
+
+        if cleanText:gsub("%s", "") == "" then
+            message.text = ""
+            return message
+        end
 
         if message.isDpc then message.displayName = message.playerName or message.nickname end
 
@@ -3150,13 +3141,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         elseif message.isDpc and message.playerUid ~= (message.receiverUid or player.uniqueId()) and not message.skipRecog and (not message.recogGroup or message.recogGroup ~= player.getProperty("DPC::recogGroup")) then
             -- FezzedOne: Removed this check to add recog support in client-side modes: and root.getConfiguration("dpcOverServer")
             local recoged = {}
-            if xsb then
-                if isLocalPlayer(message.receiverId or player.id()) then
-                    recoged = world.sendEntityMessage(message.receiverId or player.id(), "dpcGetRecogs"):result() or {}
-                end
-            else
-                recoged = player.getProperty("DPC::recognizedPlayers") or {}
-            end
+            recoged = player.getProperty("DPC::recognizedPlayers") or {}
             local charRecInfo = recoged[message.playerUid] or nil
             if charRecInfo == true then
                 charRecInfo = nil
