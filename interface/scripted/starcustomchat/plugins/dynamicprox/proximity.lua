@@ -1243,7 +1243,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 local prio = tostring(prioNum)
                 local alias = playerAliases[prio]
                 if prioNum == 0 then
-                    local canonicalName world.entityName(player.id())
+                    local canonicalName = world.entityName(player.id())
                     retStr = retStr .. "[" .. prio .. ": " .. canonicalName .. "] "
                 elseif alias then
                     retStr = retStr .. "[" .. prio .. ": " .. alias .. "] "
