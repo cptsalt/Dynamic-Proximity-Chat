@@ -1,0 +1,12 @@
+[
+  {
+    "op": "add",
+    "path": "/Proximity",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/Announcement",
+    "value": true
+  }
+]
