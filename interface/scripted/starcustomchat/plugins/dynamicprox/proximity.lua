@@ -3227,7 +3227,7 @@ function dynamicprox:onModeChange(mode)
     if mode == "Prox" and not (player.getProperty("DPC::firstLoad") or false) then
         chat.addMessage(
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. To use the language system, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
-        if self.serverDefault then
+        if self.serverDefault or root.assetExists("DPC Stagehand.pak") then
             root.setConfiguration("dpcOverServer", true)
         end
         player.setProperty("DPC::firstLoad", true)
