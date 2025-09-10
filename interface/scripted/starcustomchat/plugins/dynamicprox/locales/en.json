@@ -36,5 +36,6 @@
   "commands.apply.desc": "Lets the character selected with /chid recognize you, {alias priority}",
   "commands.nametag.desc": "Sets or (if no name is specified) clears your name tag. {[name tag]}",
   "commands.talkvol.desc": "Get or set your default talking volume. {[volume]}",
-  "commands.ignoreversion.desc": "Ignores version warnings for the session"
+  "commands.ignoreversion.desc": "Ignores version warnings for the session",
+  "commands.editlangphrase.desc": "Adds/removes a phrase for language replacement. {lang code, phrase, [replacement]}"
 }

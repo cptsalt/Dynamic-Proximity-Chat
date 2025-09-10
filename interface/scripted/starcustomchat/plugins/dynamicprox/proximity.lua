@@ -359,6 +359,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.talkvol.desc",
             data = "/talkvol",
         })
+    elseif string.find("/editlangphrase", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/editlangphrase",
+            description = "commands.editlangphrase.desc",
+            data = "/editlangphrase",
+        })
     end
 end
 
@@ -1272,7 +1278,8 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local aliasInfo = {}
 
 
-            sb.logInfo("aliases are %s, toNum is %s, entry is %s",playerAliases, tonumber(aliasPrio), playerAliases[tostring(aliasPrio)])
+            sb.logInfo("aliases are %s, toNum is %s, entry is %s", playerAliases, tonumber(aliasPrio),
+                playerAliases[tostring(aliasPrio)])
 
             if playerAliases and tonumber(aliasPrio) and playerAliases[tostring(aliasPrio)] then
                 aliasInfo = {
@@ -1363,6 +1370,41 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
 
             player.setProperty("DPC::defaultVolume", newVol)
             return "Default volume set to " .. newVol
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/editlangphrase", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local langCode, phrase, replacement = splitArgs[1] or nil, splitArgs[2] or nil, splitArgs[3] or nil
+
+            local playerSecret = player.getProperty("DPC::playerCheck") or false
+            if not langCode then
+                return "Bad arguments, must include language code."
+            end
+
+
+            local playerSecret = player.getProperty("DPC::playerCheck") or false
+            if not playerSecret then
+                playerSecret = sb.makeUuid()
+                player.setProperty("DPC::playerCheck", playerSecret)
+            end
+
+            local addInfo = {
+                player = player.id(),
+                uuid = player.uniqueId(),
+                playerSecret = playerSecret,
+                dCode = langCode,
+                phrase = phrase,
+                replacement = replacement
+            }
+            starcustomchat.utils.createStagehandWithData("dpcServerHandler",
+                { message = "editLangPhrase", data = addInfo })
         end, data)
         if status then
             return resultOrError
