@@ -1485,6 +1485,43 @@ local function quoteMap(str)
     return tokens
 end
 
+local function applyRecogToQuotes(str, recogList)
+    --[[
+    (optimization) if out of a quote, check the rest of the string for quotes. if none exist then finish
+    ]]
+
+    if not str:match("\"") then
+        return str
+    end
+
+    local retStr = ""
+    local word = ""
+    local inQuote = false
+    local index = 1
+
+    while index <= #str do
+        local char = str:sub(index, index)
+
+        if char:match("[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]%^_%`~]") then
+            --check recogList here
+            if inQuote and recogList[word:lower()] then
+                word = "<" .. word .. ">"
+            end
+
+            retStr = retStr .. word
+            word = ""
+            retStr = retStr .. char
+        else
+            word = word .. char
+        end
+        if char == "\"" then
+            inQuote = not inQuote
+        end
+        index = index + 1
+    end
+    return retStr
+end
+
 function dynamicprox:formatOutcomingMessage(data)
     local currentPlayerName = ""
     if xsb then -- FezzedOne: Needed to ensure the correct default alias is sent on DPC after swapping characters on xStarbound.
@@ -1697,7 +1734,14 @@ function dynamicprox:formatOutcomingMessage(data)
                     end
                 end
 
-                data.recogList = recogList
+
+                for name, value in pairs(recogList) do
+                    rawText = rawText:gsub(name, "<" .. name .. ">")
+                end
+
+                rawText = applyRecogToQuotes(rawText,recogList)
+
+                -- data.recogList = recogList
 
                 data.version = 177
                 data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
@@ -1708,7 +1752,7 @@ function dynamicprox:formatOutcomingMessage(data)
                 data.volume = player.getProperty("DPC::defaultVolume") or 0
 
                 -- FezzedOne: xStarbound also supports the stuff needed for the server-side message handler.
-                data.isOSB = (not not xsb) or isOSB
+                data.isOSB = isOSB
                 -- player.setProperty("DPC::"..type.."Font",self.fontLib[font])
                 data.actionFont = player.getProperty("DPC::generalFont") or nil
                 data.quoteFont = player.getProperty("DPC::quoteFont") or nil
@@ -3171,7 +3215,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             --in the future, allow players to use the nickname feature on themselves. right now i dont see why it'd be useful to do but whatever
             -- local aliases = player.getProperty("DPC::aliases") or {}
             local _, defaultName = getNames()
-            local useName = xsb and (defaultName or "") or world.entityName(player.id())
+            local useName = world.entityName(player.id())
             -- local minPrio = 0
 
             -- for prio, alias in pairs(aliases) do
@@ -3200,7 +3244,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
 
             if (message.alias and message.aliasPrio) and
-                (not charRecInfo or (charRecInfo and (charRecInfo.manName or message.aliasPrio < charRecInfo.aliasPrio))) then --if conditions are met
+                (not charRecInfo or (charRecInfo and (charRecInfo.manName or message.aliasPrio < charRecInfo.aliasPrio or (message.time > charRecInfo.timestamp and message.alias ~= charRecInfo.savedName)))) then --if conditions are met
                 local normalisedAlias = normaliseText(message.alias)
                 local tokens = quoteMap(message.text or "")
                 if tokens[normalisedAlias] then -- FezzedOne: Check that the alias isn't garbled first.
@@ -3208,7 +3252,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
                     charRecInfo = {
                         ["savedName"] = message.alias,
                         ["manName"] = nil,
-                        ["aliasPrio"] = message.aliasPrio
+                        ["aliasPrio"] = message.aliasPrio,
+                        ["timestamp"] = message.time
                     }
                     recoged[message.playerUid] = charRecInfo
                     if xsb then
