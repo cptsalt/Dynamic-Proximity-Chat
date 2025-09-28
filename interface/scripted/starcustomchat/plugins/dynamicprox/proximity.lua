@@ -1734,12 +1734,7 @@ function dynamicprox:formatOutcomingMessage(data)
                     end
                 end
 
-
-                for name, value in pairs(recogList) do
-                    rawText = rawText:gsub(name, "<" .. name .. ">")
-                end
-
-                rawText = applyRecogToQuotes(rawText,recogList)
+                rawText = applyRecogToQuotes(rawText, recogList)
 
                 -- data.recogList = recogList
 
@@ -3244,7 +3239,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             end
 
             if (message.alias and message.aliasPrio) and
-                (not charRecInfo or (charRecInfo and (charRecInfo.manName or message.aliasPrio < charRecInfo.aliasPrio or (message.time > charRecInfo.timestamp and message.alias ~= charRecInfo.savedName)))) then --if conditions are met
+                (not charRecInfo or (charRecInfo and (charRecInfo.manName or (message.aliasPrio <= charRecInfo.aliasPrio) and message.alias ~= charRecInfo.savedName))) then --if conditions are met
                 local normalisedAlias = normaliseText(message.alias)
                 local tokens = quoteMap(message.text or "")
                 if tokens[normalisedAlias] then -- FezzedOne: Check that the alias isn't garbled first.
