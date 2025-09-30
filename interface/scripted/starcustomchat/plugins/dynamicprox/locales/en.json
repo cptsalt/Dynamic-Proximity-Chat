@@ -37,5 +37,6 @@
   "commands.nametag.desc": "Sets or (if no name is specified) clears your name tag. {[name tag]}",
   "commands.talkvol.desc": "Get or set your default talking volume. {[volume]}",
   "commands.ignoreversion.desc": "Ignores version warnings for the session",
-  "commands.editlangphrase.desc": "Adds/removes a phrase for language replacement. {lang code, phrase, [replacement]}"
+  "commands.editlangphrase.desc": "Adds/removes a phrase for language replacement. {lang code, phrase, [replacement]}",
+  "commands.emphcolor.desc": "View or change the color for emphasis."
 }

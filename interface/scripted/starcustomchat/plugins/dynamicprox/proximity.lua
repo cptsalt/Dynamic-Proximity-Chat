@@ -365,6 +365,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.editlangphrase.desc",
             data = "/editlangphrase",
         })
+    elseif string.find("/emphcolor", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/emphcolor",
+            description = "commands.emphcolor.desc",
+            data = "/emphcolor",
+        })
     end
 end
 
@@ -1413,6 +1419,36 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             return "^red;Error occurred while running command, check log"
         end
     end)
+    starcustomchat.utils.setMessageHandler("/emphcolor", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local emphColor = splitArgs[1] or nil
+
+            if emphColor == nil or #emphColor < 1 then
+                emphColor = player.getProperty("DPC::emphColor") or "#d80"
+                return "Current emphasis color is ^"..emphColor..";"..emphColor
+            end
+
+            if emphColor == "reset" or tonumber(emphColor) == 0 then
+                player.setProperty("DPC::emphColor",nil)
+                return "Reset emphasis color."
+            end
+
+            emphColor = emphColor:gsub("#","")
+
+            emphColor = "#"..emphColor
+
+            player.setProperty("DPC::emphColor",emphColor)
+            return "Set emphasis color to ^"..emphColor..";"..emphColor
+
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
 end
 
 local function normaliseText(str)
@@ -1755,6 +1791,7 @@ function dynamicprox:formatOutcomingMessage(data)
                 if rawText:find("{") then
                     data.defaultComms = player.getProperty("DPC::activeFreq") or nil
                 end
+                data.emphColor = player.getProperty("DPC::emphColor") or "#d80"
             end
             data.text = rawText
         end
