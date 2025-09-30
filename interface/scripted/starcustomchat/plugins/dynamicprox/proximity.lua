@@ -1555,6 +1555,11 @@ local function applyRecogToQuotes(str, recogList)
         end
         index = index + 1
     end
+
+    if #word > 0 then
+        retStr = retStr .. word 
+    end
+
     return retStr
 end
 
