@@ -1,0 +1,7 @@
+[
+    {
+        "op": "add",
+        "path": "/scriptContexts",
+        "value": {"dpcMsgHandler" : ["/scripts/worldDPCMsg.lua"]}
+    }
+]

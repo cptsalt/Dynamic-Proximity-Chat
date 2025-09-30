@@ -1774,7 +1774,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
                 -- data.recogList = recogList
 
-                data.version = 178
+                data.version = 180
                 data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
 
