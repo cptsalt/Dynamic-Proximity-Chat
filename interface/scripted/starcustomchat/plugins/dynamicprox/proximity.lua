@@ -444,10 +444,11 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         end
     end)
     starcustomchat.utils.setMessageHandler("/togglejoinmsgs", function(_, _, data)
-        local hideConnection = root.getConfiguration("DPC::hideConnection") or true
-        root.setConfiguration("DPC::hideConnection",not hideConnection)
+        local showConnection = root.getConfiguration("DPC::showConnection") or false
+        showConnection = not showConnection
+        root.setConfiguration("DPC::showConnection",showConnection)
 
-        local statusStr = "hidden" and not hideConnection or "shown"
+        local statusStr = showConnection and "shown" or "hidden"
         return "Connection messages are now "..statusStr
     end)
     starcustomchat.utils.setMessageHandler("/showtypos", function(_, _, data)
@@ -1629,7 +1630,7 @@ end
 
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
-        if root.getConfiguration("DPC::hideConnection") or true and message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
+        if (root.getConfiguration("DPC::showConnection") or false) and message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
             message.text = ""
             return message
         end
