@@ -38,5 +38,6 @@
   "commands.talkvol.desc": "Get or set your default talking volume. {[volume]}",
   "commands.ignoreversion.desc": "Ignores version warnings for the session",
   "commands.editlangphrase.desc": "Adds/removes a phrase for language replacement. {lang code, phrase, [replacement]}",
-  "commands.emphcolor.desc": "View or change the color for emphasis."
+  "commands.emphcolor.desc": "View or change the color for emphasis.",
+  "commands.togglejoinmsgs.desc": "Toggle whether or not to see server connection messages."
 }

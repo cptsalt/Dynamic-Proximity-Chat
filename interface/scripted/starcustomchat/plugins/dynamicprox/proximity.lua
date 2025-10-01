@@ -334,6 +334,12 @@ function dynamicprox:addCustomCommandPreview(availableCommands, substr)
             description = "commands.emphcolor.desc",
             data = "/emphcolor",
         })
+    elseif string.find("/togglejoinmsgs", substr, nil, true) then
+        table.insert(availableCommands, {
+            name = "/togglejoinmsgs",
+            description = "commands.togglejoinmsgs.desc",
+            data = "/togglejoinmsgs",
+        })
     end
 end
 
@@ -436,6 +442,13 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                 .. (DEBUG and "^green;ENABLED" or "^red;DISABLED")
                 .. "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
         end
+    end)
+    starcustomchat.utils.setMessageHandler("/togglejoinmsgs", function(_, _, data)
+        local hideConnection = root.getConfiguration("DPC::hideConnection") or true
+        root.setConfiguration("DPC::hideConnection",not hideConnection)
+
+        local statusStr = "hidden" and not hideConnection or "shown"
+        return "Connection messages are now "..statusStr
     end)
     starcustomchat.utils.setMessageHandler("/showtypos", function(_, _, data)
         local typoTable = root.getConfiguration("DPC::typos") or {}
@@ -1616,7 +1629,7 @@ end
 
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
-        if self.serverDefault and message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
+        if root.getConfiguration("DPC::hideConnection") or true and message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
             message.text = ""
             return message
         end
