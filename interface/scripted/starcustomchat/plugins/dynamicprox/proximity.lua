@@ -1616,6 +1616,11 @@ end
 
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
+        if self.serverDefault and message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
+            message.text = ""
+            return message
+        end
+
         if message.mode == "Prox" then message.isDpc = true end
 
         local cleanText = message.text:gsub("%^[^^;]-;", "")
@@ -1706,9 +1711,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
         if message.displayName == "" then message.displayName = "^#999;???^reset;" end
 
-        if showAsProximity then message.mode = "Proximity" end
-        if showAsLocal then message.mode = "Local" end
-        if (isGlobalChat or message.global) and message.mode ~= "ProxSecondary" then message.mode = "Broadcast" end
         -- setTextHint(message.mode)
         return message
     end
