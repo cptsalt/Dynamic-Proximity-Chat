@@ -509,7 +509,6 @@ local function genRandAlph(byteLC)
         end
         if useSpecial then specialCount = specialCount + 1 end
     end
-    -- sb.logInfo("new alphabet is %s", newAlphabet)
     return newAlphabet
 end
 
@@ -1262,7 +1261,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                     newChar = newChar:sub(1, 1):upper() .. newChar:sub(2)
                 end
             end
-            newWord = newWord .. (newChar or "")
+            newWord = newWord .. (newChar or char)
         end
         return newWord
     end
@@ -1339,9 +1338,6 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             retWord = retWord:sub(1, 1):upper() .. retWord:sub(2)
         end
 
-        -- sb.logInfo("Word is: %s", retWord)
-        -- sb.logInfo("random info is: before %s, after %s, firstVowel: %s", soundsBefore, soundsAfter,
-        --     vowelTable[firstVowel])
         return retWord
     end
 
@@ -1545,7 +1541,11 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             if c:match(sep) then
                 -- arg = trim(arg) --shouldn't be necessary
                 if #arg > 0 then
-                    table.insert(t, { word = arg, nocolor = false })
+                    if arg:match("%^") then
+                        table.insert(t, { word = arg, nocolor = true })
+                    else
+                        table.insert(t, { word = arg, nocolor = false })
+                    end
                 end
                 table.insert(t, { word = c, nocolor = true, isSep = true })
                 arg = ""
@@ -1575,7 +1575,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         local returnStr = ""
         str = str:gsub("  ", " ")
         -- local strDict = langSplit(str, "[%s%p]")
-        local strDict = langSplit(str, "[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]%^_%`~]") --all punctuation except apostrophe, and whitespace
+        local strDict = langSplit(str, "[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]_%`~]") --all punctuation except apostrophe, and whitespace
         local byteLC = wordBytes(langCode)
         local uniqueIdBytes = wordBytes(tostring(receiverEntityId))
         --no need for color, since it's always supplied
@@ -1593,8 +1593,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             else
                 local replacedWord = false
 
-                if word:match("[<>]") then
-                    word = word:gsub("[<>]", "")
+                local subbedWord, poundCount = word:gsub("[#]","")
+                if poundCount == 2 then
+                    word = subbedWord
                     replacedWord = true
                 end
 
@@ -1605,7 +1606,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 local wordRoll = randSource:randInt(1, 100)
                 local euler = math.exp(1)
                 local rollResult = math.floor(wordRoll * euler ^ ((wordLength - 5) / 5))
-                if not replacedWord and (skipLangRecog[langPreset] or skipRecogWords[word:lower()]) and (prof < 5 or rollResult > prof) then
+                if (not replacedWord or skipLangRecog[langPreset] or skipRecogWords[word:lower()]) and (prof < 5 or rollResult > prof) then
                     --scramble
                     word = langWordRep(word, langCode, byteLC, langPreset, newAlphabet)
                     if not prevScrambled then
@@ -1779,10 +1780,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                     colorOn = false
                 end
             elseif i == "\\" then
-                -- sb.logInfo("forward slash found for escape character")
                 prevChar = i
             else
-                -- sb.logInfo("either escape char is found or no match, char is %s, prevChar is %s",i,prevChar)
                 --put this outside the if statement to make the characters appear as well as colors
                 charBuffer = charBuffer .. i
                 prevChar = i
@@ -1995,7 +1994,6 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         textTable =
             newTextTable --cut down the table to remove invalid messages. This shortens computing time by a negligable amount
 
-        -- sb.logInfo("textTable is %s", textTable)
 
         local numChunks = #textTable
 

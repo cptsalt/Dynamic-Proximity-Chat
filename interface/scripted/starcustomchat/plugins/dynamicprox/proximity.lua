@@ -1334,10 +1334,10 @@ local function applyRecogToQuotes(str, recogList)
     while index <= #str do
         local char = str:sub(index, index)
 
-        if char:match("[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]%^_%`~]") then
+        if char:match("[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]_%`~]") then
             --check recogList here
             if inQuote and recogList[word:lower()] then
-                word = "<" .. word .. ">"
+                word = "#" .. word .. "#"
             end
 
             retStr = retStr .. word
