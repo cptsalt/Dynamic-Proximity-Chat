@@ -446,10 +446,10 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
     starcustomchat.utils.setMessageHandler("/togglejoinmsgs", function(_, _, data)
         local showConnection = root.getConfiguration("DPC::showConnection") or false
         showConnection = not showConnection
-        root.setConfiguration("DPC::showConnection",showConnection)
+        root.setConfiguration("DPC::showConnection", showConnection)
 
         local statusStr = showConnection and "shown" or "hidden"
-        return "Connection messages are now "..statusStr
+        return "Connection messages are now " .. statusStr
     end)
     starcustomchat.utils.setMessageHandler("/showtypos", function(_, _, data)
         local typoTable = root.getConfiguration("DPC::typos") or {}
@@ -1081,7 +1081,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local aliasInfo = {}
 
 
-            
+
             if playerAliases and tonumber(aliasPrio) and playerAliases[tostring(aliasPrio)] then
                 aliasInfo = {
                     ["alias"] = tostring(playerAliases[tostring(aliasPrio)]),
@@ -1440,14 +1440,14 @@ function dynamicprox:formatOutcomingMessage(data)
                     globalFlag = true
                 elseif i == "[" and langEnd ~= nil then                                --use this flag to check for default languages. A string without any noise won't have any language support
                     if (not inOoc) and rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
-                    local langKey, commKey
+                        local langKey, commKey
                         -- local commKeySubstitute = nil
                         -- local legalCommKey = true
                         if rawText:sub(iCount, langEnd) == "[]" then --checking for []
                             langKey = defaultKey
                             rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
                         else
-                            langKey = rawText:sub(iCount+1,rawText:find("]")-1)
+                            langKey = rawText:sub(iCount + 1, rawText:find("]") - 1)
                         end
                         if langKey then
                             local upperKey = langKey:upper()
@@ -1628,8 +1628,17 @@ end
 
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
-        if (root.getConfiguration("DPC::showConnection") or false) and message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
-            message.text = ""
+        if message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
+            if root.getConfiguration("DPC::showConnection") then
+                if message.text:match("disconnected") then
+                    message.text = "Player disconnected."
+                else
+                    message.text = "Player connected."
+                end
+            else
+                message.text = ""
+            end
+
             return message
         end
 
