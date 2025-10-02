@@ -1442,20 +1442,20 @@ function dynamicprox:formatOutcomingMessage(data)
                     globalFlag = true
                 elseif i == "[" and langEnd ~= nil then                                --use this flag to check for default languages. A string without any noise won't have any language support
                     if (not inOoc) and rawText:sub(iCount + 1, iCount + 1) ~= "[" then -- FezzedOne: If `[[` is detected, don't parse it as a language key.
-                        local langKey, commKey
+                    local langKey, commKey
                         -- local commKeySubstitute = nil
                         -- local legalCommKey = true
                         if rawText:sub(iCount, langEnd) == "[]" then --checking for []
                             langKey = defaultKey
                             rawText = rawText:gsub("%[%]", "[" .. defaultKey .. "]")
                         else
-                            langKey = rawText:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", function(s) return "%" .. s end)
+                            langKey = rawText:sub(iCount+1,rawText:find("]")-1)
                         end
                         if langKey then
                             local upperKey = langKey:upper()
                             --if sendoverserver is on, this returns a prof value. Otherwise it returns an item. Either way it doesn't get checked later so that's fine
-                            local langItem = player.getProperty("DPC::learnedLangs")
-                            if langItem == nil and upperKey ~= "!!" then
+                            local learnedLangs = player.getProperty("DPC::learnedLangs")
+                            if learnedLangs and not learnedLangs[upperKey] and upperKey ~= "!!" then
                                 rawText = rawText:gsub("%[" .. langKey .. "%]", "[" .. defaultKey .. "]")
                             end
                         end
@@ -1573,6 +1573,7 @@ function dynamicprox:formatOutcomingMessage(data)
             data.text = rawText
         end
     end
+    sb.logInfo("text is %s",data.text)
     return data
 end
 
