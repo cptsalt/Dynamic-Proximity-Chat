@@ -1081,9 +1081,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
             local aliasInfo = {}
 
 
-            sb.logInfo("aliases are %s, toNum is %s, entry is %s", playerAliases, tonumber(aliasPrio),
-                playerAliases[tostring(aliasPrio)])
-
+            
             if playerAliases and tonumber(aliasPrio) and playerAliases[tostring(aliasPrio)] then
                 aliasInfo = {
                     ["alias"] = tostring(playerAliases[tostring(aliasPrio)]),
@@ -1552,7 +1550,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 200
+            data.version = 201
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
 
@@ -1573,7 +1571,6 @@ function dynamicprox:formatOutcomingMessage(data)
             data.text = rawText
         end
     end
-    sb.logInfo("text is %s",data.text)
     return data
 end
 
