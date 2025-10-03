@@ -2088,8 +2088,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                             local newAlphabet = langAlphabets[langKey]
                             chunkStr = langScramble(chunkStr, langProf, langKey, baseColorTable[volTable[v["radius"]]],
                                 langColor, langPreset, newAlphabet)
-                        elseif chunkStr:match("[<>]") then
-                            chunkStr = chunkStr:gsub("[<>]", "")
+                        elseif chunkStr:match("[<#>]") then
+                            chunkStr = chunkStr:gsub("[<#>]", "")
                         end
                     end
                     --check message quality
