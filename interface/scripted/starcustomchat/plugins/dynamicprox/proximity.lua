@@ -1332,10 +1332,10 @@ local function applyRecogToQuotes(str, recogList)
     while index <= #str do
         local char = str:sub(index, index)
 
-        if char:match("[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]_%`~]") then
+        if char:match("[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]#%`~]") then
             --check recogList here
             if inQuote and recogList[word:lower()] then
-                word = "#" .. word .. "#"
+                word = "_" .. word .. "_"
             end
 
             retStr = retStr .. word
@@ -1550,7 +1550,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 201
+            data.version = 202
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
 
@@ -1732,7 +1732,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
         if message.displayName == "" then message.displayName = "^#999;???^reset;" end
 
-        -- setTextHint(message.mode)
+        --remove this once a server update looks to be pushed.
+        message.text = message.text:gsub("_", "") --this needs to be here, otherwise people will put autotune crying baby to shame
         return message
     end
     -- return messageFormatter(rawMessage)

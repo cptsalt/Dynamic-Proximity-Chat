@@ -1575,7 +1575,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         local returnStr = ""
         str = str:gsub("  ", " ")
         -- local strDict = langSplit(str, "[%s%p]")
-        local strDict = langSplit(str, "[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]_%`~]") --all punctuation except apostrophe, and whitespace
+        local strDict = langSplit(str, "[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]#%`~]") --all punctuation except apostrophe, and whitespace
         local byteLC = wordBytes(langCode)
         local uniqueIdBytes = wordBytes(tostring(receiverEntityId))
         --no need for color, since it's always supplied
@@ -1593,7 +1593,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             else
                 local replacedWord = false
 
-                local subbedWord, poundCount = word:gsub("[#]","")
+                local subbedWord, poundCount = word:gsub("[_]","")
                 if poundCount == 2 then
                     word = subbedWord
                     replacedWord = true
@@ -2088,8 +2088,14 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                             local newAlphabet = langAlphabets[langKey]
                             chunkStr = langScramble(chunkStr, langProf, langKey, baseColorTable[volTable[v["radius"]]],
                                 langColor, langPreset, newAlphabet)
-                        elseif chunkStr:match("[<#>]") then
-                            chunkStr = chunkStr:gsub("[<#>]", "")
+                        elseif chunkStr:match("[<_>]") then
+                            chunkStr = chunkStr:gsub("[<_>]", "")
+                            --[[
+                            if people don't like underscores, use this instead. Should strip "#$word$#"
+                            str = str:gsub("[<>]","")
+                            str = str:gsub("(#%$)","")
+                            str = str:gsub("(%$#)","")
+                            ]]
                         end
                     end
                     --check message quality
@@ -2359,7 +2365,7 @@ end
 local function checkVersion(data)
     local userVersion = data.version
     --hard code this comparison, i don't care
-    if userVersion < 201 then
+    if userVersion < 202 then
         world.sendEntityMessage(data.player, "dpcServerMessage",
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 1.7.4 to ensure functionality with the server. Use /ignoreversion to suppress this.")
     end
