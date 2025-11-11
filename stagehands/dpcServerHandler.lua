@@ -572,9 +572,9 @@ local volTable = {
 }
 
 local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, message)
-    local authorLangs = (playerLangs and playerLangs[authorUUID]) or {}
-    local activeFreq = (playerCommChannels and playerCommChannels[authorUUID]) or {}
-    local replacementDict = langSubWords or {}
+    -- local authorLangs = (playerLangs and playerLangs[authorUUID]) or {}
+    -- local activeFreq = (playerCommChannels and playerCommChannels[authorUUID]) or {}
+    -- local replacementDict = langSubWords or {}
     savedLangs = root.getConfiguration("DPC::savedLangs") or {}
     message.text = message.content
     message.content = nil
@@ -1068,9 +1068,9 @@ end
 
 local function processVisuals(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, maxRad, messageDistance,
                               formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
-    local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
-    local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
-    local savedLangs = savedLangs or {}
+    -- local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
+    -- local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
+    -- local savedLangs = savedLangs or {}
     local iEmphColor = message.emphColor or "#d80"
     -- local actionRad = 200
     -- local loocRad = 2 * actionRad
@@ -2365,9 +2365,9 @@ end
 local function checkVersion(data)
     local userVersion = data.version
     --hard code this comparison, i don't care
-    if userVersion < 202 then
+    if userVersion < 203 then
         world.sendEntityMessage(data.player, "dpcServerMessage",
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 1.7.4 to ensure functionality with the server. Use /ignoreversion to suppress this.")
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.0.3 to ensure functionality with the server. Use /ignoreversion to suppress this.")
     end
     return
 end

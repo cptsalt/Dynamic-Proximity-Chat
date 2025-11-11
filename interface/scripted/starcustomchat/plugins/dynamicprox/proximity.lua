@@ -490,7 +490,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
         --add a typo correction to the typos table in player data, or replace it if it already exists
         -- local typo = chat.parseArguments(data)
         local typo = splitStr(data, " ")[1]
-        local typoTable = player.getProperty("typos", false)
+        local typoTable = root.getConfiguration("DPC::typos",typoTable)
 
         if typo == nil then return "Missing arguments for /removetypo, need {typo}" end
 
@@ -1550,7 +1550,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 202
+            data.version = 203
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
 
@@ -1733,7 +1733,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if message.displayName == "" then message.displayName = "^#999;???^reset;" end
 
         --remove this once a server update looks to be pushed.
-        message.text = message.text:gsub("_", "") --this needs to be here, otherwise people will put autotune crying baby to shame
+        -- message.text = message.text:gsub("_", "") --this needs to be here, otherwise people will put autotune crying baby to shame
         return message
     end
     -- return messageFormatter(rawMessage)
