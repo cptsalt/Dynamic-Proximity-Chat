@@ -735,7 +735,7 @@ function dynamicprox:registerMessageHandlers(shared) --look at this function in 
                     local freqAlias = (activeFreq["alias"] and "(" .. activeFreq["alias"] .. ")") or "(no alias)"
                     return "Active frequency is: " .. activeFreq["freq"] .. " " .. freqAlias .. "."
                 else
-                    return "No frequency has been set, use /setfreq to make one."
+                    return "No frequency has been set, use /freq to make one."
                 end
             end
 
@@ -1763,17 +1763,11 @@ end
 function dynamicprox:onModeChange(mode)
     if mode == "Prox" and not (player.getProperty("DPC::firstLoad") or false) then
         chat.addMessage(
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Before getting started with this mod, first check to see if you're using it with a server or as an individual client, then use \"^cyan;/dpcserver^reset; ^green;on^reset;/^red;off^reset;\" to enable or disable server handling for message processing. To use the language system, use ^cyan;/learnlang^reset; or ^cyan;/newlangitem^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Before getting started with this mod, be aware that currently the mod is set up only with server configurations. If the chat mod doesn't work, odds are it isn't mounted on the server. To use the language system, use ^cyan;/learnlang^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
         if self.serverDefault then
             root.setConfiguration("dpcOverServer", true)
         end
         player.setProperty("DPC::firstLoad", true)
-    elseif mode == "Prox" and self.serverDefault and not root.getConfiguration("dpcOverServer") and not root.getConfiguration("DPC::forcedClient") then
-        sb.logInfo("Setting dpcOverServer to true")
-        chat.addMessage(
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: You have a mod installed that has ^green;enabled^reset; server handling for messages. If you want to keep server handling disabled, use \"^cyan;/dpcserver off forced^reset;\" to force the mod to ignore this configuration.")
-        root.setConfiguration("dpcOverServer", true)
-        -- root.setConfiguration("scc_autohide_ignore_server_messages",true)
     end
     setTextHint(mode)
 end

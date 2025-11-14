@@ -572,9 +572,9 @@ local volTable = {
 }
 
 local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, message)
-    -- local authorLangs = (playerLangs and playerLangs[authorUUID]) or {}
-    -- local activeFreq = (playerCommChannels and playerCommChannels[authorUUID]) or {}
-    -- local replacementDict = langSubWords or {}
+    local authorLangs = (playerLangs and playerLangs[authorUUID]) or {}
+    local activeFreq = (playerCommChannels and playerCommChannels[authorUUID]) or {}
+    local replacementDict = langSubWords or {}
     savedLangs = root.getConfiguration("DPC::savedLangs") or {}
     message.text = message.content
     message.content = nil
@@ -1068,9 +1068,9 @@ end
 
 local function processVisuals(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, maxRad, messageDistance,
                               formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
-    -- local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
-    -- local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
-    -- local savedLangs = savedLangs or {}
+    local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
+    local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
+    local savedLangs = savedLangs or {}
     local iEmphColor = message.emphColor or "#d80"
     -- local actionRad = 200
     -- local loocRad = 2 * actionRad
@@ -1745,8 +1745,6 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         }
     end
 
-    --right now this is bugged and won't carry italics over between scrambled and non-scrambled langs
-    --i think the best options is to not touch the font thing in the lang scrambling
     local function colorWithin(str, char, color, prevColor, volume, colorOn, hasChar)
         --this also applies if there's only 1 character in the message
         if not hasChar then
