@@ -1,5 +1,3 @@
-require("/scripts/proxmsgfuncs.lua")
-
 local function killStagehand()
     stagehand.die()
 end
