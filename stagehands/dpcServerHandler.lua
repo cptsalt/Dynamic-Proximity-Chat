@@ -19,19 +19,25 @@ local function logCommand(purpose, data)
     sb.logInfo("Player %s running command %s with data %s", data.uuid, purpose, data)
 end
 
+local function checkStatus(data)
+    sb.logInfo("checkStatus ran")
+    --do nothing, just needs to not throw an error
+    -- world.sendEntityMessage(data.player, "dpcStagehandExists")
+end
+
 local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords = nil, nil, nil, nil, nil
 local randSource = nil
---i could make these configurations, but i don't want to
-local langLimit = 30          --points value, multiply by 10 for percentage
+-- i could make these configurations, but i don't want to
+local langLimit = 30 -- points value, multiply by 10 for percentage
 local channelLimit = 5
-local actionRad = 100         -- FezzedOne: Un-hardcoded the action radius.
+local actionRad = 100 -- FezzedOne: Un-hardcoded the action radius.
 local loocRad = 2 * actionRad -- actionRad * 2 -- FezzedOne: Un-hardcoded the local OOC radius.
-local noiseRad = 50           -- FezzedOne: Un-hardcoded the talking radius.
+local noiseRad = 50 -- FezzedOne: Un-hardcoded the talking radius.
 
---it may be worthwhile to set up some kind of pruning system in the future to remove values from inactive characters (2 weeks +)
---these 2 functions should be the only ones that set config files for language and comm channels
---IMPORTANT: confirm that ONLY the requesting player's values change. Do this by copying the table and nullifying the values inside of the uuid
---on return, only return added and removed languages depdending on the command
+-- it may be worthwhile to set up some kind of pruning system in the future to remove values from inactive characters (2 weeks +)
+-- these 2 functions should be the only ones that set config files for language and comm channels
+-- IMPORTANT: confirm that ONLY the requesting player's values change. Do this by copying the table and nullifying the values inside of the uuid
+-- on return, only return added and removed languages depdending on the command
 local function addLang(data)
     local playerUUID = data.uuid
     local playerSecret = data.playerSecret
@@ -41,14 +47,13 @@ local function addLang(data)
     playerLangs = root.getConfiguration("DPC::playerLangs") or {}
 
     local serverSavedSecret = playerSecrets[playerUUID] or false
-    --update config file if the secret checks out (or is empty)
+    -- update config file if the secret checks out (or is empty)
     if serverSavedSecret == false then
-        --establish a new secret and update server
+        -- establish a new secret and update server
         serverSavedSecret = playerSecret
         playerSecrets[playerUUID] = playerSecret
         root.setConfiguration("DPC::playerSecrets", playerSecrets)
     end
-
 
     if playerSecret == serverSavedSecret then
         local serverLangList = playerLangs[playerUUID] or {}
@@ -69,7 +74,7 @@ local function addLang(data)
         -- newPoints = math.min(pointsLeft, langProf + newLang.prof)
         newPoints = langProf + newLang.prof
 
-        --check here in case people have more than x languages
+        -- check here in case people have more than x languages
         pointsLeft = pointsLeft - newLang.prof
         serverLangList[newLang.code] = newPoints
         serverLangList["[pointsLeft]"] = pointsLeft
@@ -89,11 +94,8 @@ local function addLang(data)
         else
             learnedName = savedLangs[newLang.code]["name"] or newLang.code
         end
-        local returnMsg = "Languages updated, " ..
-            newLang.prof ..
-            " points added to " ..
-            learnedName .. ". [" .. newLang.code .. "] Total: " .. newPoints .. ". Points remaining: " ..
-            pointsLeft
+        local returnMsg = "Languages updated, " .. newLang.prof .. " points added to " .. learnedName .. ". [" ..
+                              newLang.code .. "] Total: " .. newPoints .. ". Points remaining: " .. pointsLeft
         local returnInfo = {
             langKey = newLang.code,
             langName = learnedName,
@@ -103,12 +105,12 @@ local function addLang(data)
         world.sendEntityMessage(data.player, "dpcLearnLangReturn", returnInfo)
     end
 
-    --get lang info, add code and prof level to server config
-    --if successful add code, name and color to a different config without player association
+    -- get lang info, add code and prof level to server config
+    -- if successful add code, name and color to a different config without player association
 end
 
 local function editLangPhrase(data)
-    --add/remove to langSubWords
+    -- add/remove to langSubWords
     local playerUUID = data.uuid
     local playerSecret = data.playerSecret
     local dCode = data.dCode:upper() or nil
@@ -127,9 +129,8 @@ local function editLangPhrase(data)
         return
     end
 
-
     if not phrase then
-        --show all words and replacements
+        -- show all words and replacements
         langSubWords = root.getConfiguration("DPC::langSubWords") or {}
         local rtStr = "^cyan;"
         for k, v in pairs(langSubWords[dCode]) do
@@ -172,10 +173,9 @@ local function resetLangs(data)
     local serverSavedSecret = playerSecrets[playerUUID] or false
 
     if (playerSecret and serverSavedSecret) and playerSecret == serverSavedSecret then
-        --reset
+        -- reset
         local ownerLangs = playerLangs[playerUUID] or {}
         local langCondsMet = true
-
 
         playerLangs[playerUUID] = nil
         root.setConfiguration("DPC::playerLangs", playerLangs)
@@ -204,7 +204,7 @@ local function resetLangs(data)
         world.sendEntityMessage(data.player, "dpcServerMessage",
             "Languages have been reset. Use /learnlang to assign languages.")
     else
-        --tell user they are stupid
+        -- tell user they are stupid
         world.sendEntityMessage(data.player, "dpcServerMessage", "Languages failed to reset.")
     end
 end
@@ -232,11 +232,10 @@ local function defaultLang(data)
             playerLangs[playerUUID] = serverPlayerLangs
             root.setConfiguration("DPC::playerLangs", playerLangs)
 
-            world.sendEntityMessage(data.player, "dpcServerMessage",
-                "Default language set to \"" .. langName .. "\"")
+            world.sendEntityMessage(data.player, "dpcServerMessage", "Default language set to \"" .. langName .. "\"")
         end
     else
-        --tell user they are stupid
+        -- tell user they are stupid
         world.sendEntityMessage(data.player, "dpcServerMessage", "Default assignment failed.")
     end
 end
@@ -275,7 +274,8 @@ local function editLang(data)
         return
     end
 
-    if not savedLangs[dCode] or savedLangs[dCode].creator ~= playerUUID or not dCode or (subject ~= "color" and subject ~= "name" and subject ~= "preset") or not newVal then
+    if not savedLangs[dCode] or savedLangs[dCode].creator ~= playerUUID or not dCode or
+        (subject ~= "color" and subject ~= "name" and subject ~= "preset") or not newVal then
         world.sendEntityMessage(data.player, "dpcServerMessage", "Bad arguments, language edit aborted.")
         return
     end
@@ -285,8 +285,8 @@ local function editLang(data)
         langFocus[subject] = newVal
         savedLangs[dCode] = langFocus
         root.setConfiguration("DPC::savedLangs", savedLangs)
-        world.sendEntityMessage(data.player, "dpcServerMessage", "[" .. dCode .. "] " .. subject ..
-            " changed to: " .. newVal)
+        world.sendEntityMessage(data.player, "dpcServerMessage",
+            "[" .. dCode .. "] " .. subject .. " changed to: " .. newVal)
         return
     end
 end
@@ -298,16 +298,16 @@ local function setFreq(data)
     playerSecrets = root.getConfiguration("DPC::playerSecrets") or {}
     playerCommChannels = root.getConfiguration("DPC::playerCommChannels") or {}
     local serverSavedSecret = playerSecrets[playerUUID] or false
-    --update config file if the secret checks out (or is empty)
+    -- update config file if the secret checks out (or is empty)
     if serverSavedSecret == false then
-        --establish a new secret and update server
+        -- establish a new secret and update server
         serverSavedSecret = playerSecret
         playerSecrets[playerUUID] = playerSecret
         root.setConfiguration("DPC::playerSecrets", playerSecrets)
     end
 
     if serverSavedSecret == playerSecret and activeFreq["freq"] then
-        --update server langs for the player
+        -- update server langs for the player
 
         playerCommChannels[playerUUID] = activeFreq
 
@@ -317,8 +317,7 @@ local function setFreq(data)
             "Your radio is now tuned to " .. activeFreq["freq"] .. " " .. freqAlias .. ".")
         return true
     else
-        world.sendEntityMessage(data.player, "dpcServerMessage",
-            "Authentication failed.")
+        world.sendEntityMessage(data.player, "dpcServerMessage", "Authentication failed.")
         return false
     end
 end
@@ -329,9 +328,9 @@ local function toggleRadio(data)
     playerSecrets = root.getConfiguration("DPC::playerSecrets") or {}
     playerCommChannels = root.getConfiguration("DPC::playerCommChannels") or {}
     local serverSavedSecret = playerSecrets[playerUUID] or false
-    --update config file if the secret checks out (or is empty)
+    -- update config file if the secret checks out (or is empty)
     if serverSavedSecret == false then
-        --establish a new secret and update server
+        -- establish a new secret and update server
         serverSavedSecret = playerSecret
         playerSecrets[playerUUID] = playerSecret
         root.setConfiguration("DPC::playerSecrets", playerSecrets)
@@ -339,7 +338,7 @@ local function toggleRadio(data)
 
     if serverSavedSecret == playerSecret then
         local activeFreq = playerCommChannels[playerUUID] or {}
-        --update server langs for the player
+        -- update server langs for the player
         local radioState = data.radioState
         activeFreq["enabled"] = not radioState
         playerCommChannels[playerUUID] = activeFreq
@@ -355,12 +354,10 @@ local function toggleRadio(data)
 
         local stateStr = activeFreq["enabled"] and "on" or "off"
 
-        world.sendEntityMessage(data.player, "dpcServerMessage",
-            "Your radio is now " .. stateStr .. tuningMsg)
+        world.sendEntityMessage(data.player, "dpcServerMessage", "Your radio is now " .. stateStr .. tuningMsg)
         return true
     else
-        world.sendEntityMessage(data.player, "dpcServerMessage",
-            "Authentication failed.")
+        world.sendEntityMessage(data.player, "dpcServerMessage", "Authentication failed.")
         return false
     end
 end
@@ -383,7 +380,9 @@ local function rollDice(die) -- From https://github.com/brianherbert/dice/, with
         local numberDie = tonumber(die)
         if numberDie then
             sides = math.floor(numberDie)
-            if sides < 1 then return nil end
+            if sides < 1 then
+                return nil
+            end
             rolls = 1
             modOperation = "+"
             modifier = 0
@@ -399,7 +398,9 @@ local function rollDice(die) -- From https://github.com/brianherbert/dice/, with
                 rolls = tonumber(string.sub(die, 0, (j - 1)))
             end
 
-            if rolls == nil then return nil end
+            if rolls == nil then
+                return nil
+            end
 
             local afterD = string.sub(die, (j + 1), string.len(die))
             local i_1, j_1 = string.find(afterD, "%d+")
@@ -413,7 +414,9 @@ local function rollDice(die) -- From https://github.com/brianherbert/dice/, with
                 sides = 6
                 afterSides = afterD
             end
-            if sides < 1 then return nil end
+            if sides < 1 then
+                return nil
+            end
 
             if string.len(afterSides) == 0 then
                 modOperation = "+"
@@ -423,7 +426,9 @@ local function rollDice(die) -- From https://github.com/brianherbert/dice/, with
                 modifier = tonumber(string.sub(afterSides, 2, string.len(afterSides)))
             end
 
-            if not modifier then return nil end
+            if not modifier then
+                return nil
+            end
         end
 
         randSource:init()
@@ -456,34 +461,37 @@ end
 local function wordBytes(word)
     word = tostring(word)
     local returnNum = 0
-    if not type(word) == "string" then return 0 end
+    if not type(word) == "string" then
+        return 0
+    end
     for char in word:gmatch(".") do
         char = char:lower()
         returnNum = returnNum * 16
-        if not math.tointeger(returnNum) then returnNum = math.tointeger(2 ^ 48) end
+        if not math.tointeger(returnNum) then
+            returnNum = math.tointeger(2 ^ 48)
+        end
         returnNum = returnNum + math.abs(string.byte(char) - 100)
     end
     return returnNum
 end
 
 local function genRandAlph(byteLC)
-    --basically, make alphabet then replace each letter with a sound from the table, then use that for new letters
-    local alphabet = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-        't', 'u', 'v', 'w', 'x', 'y', 'z' }
+    -- basically, make alphabet then replace each letter with a sound from the table, then use that for new letters
+    local alphabet = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+                      't', 'u', 'v', 'w', 'x', 'y', 'z'}
 
-    local consonants = { 'b', 'c', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'w' }
-    local consRare = { 'j', 'q', 'x', 'z' }
-    local vowels = { 'a', 'e', 'i', 'o', 'u' }
+    local consonants = {'b', 'c', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'w'}
+    local consRare = {'j', 'q', 'x', 'z'}
+    local vowels = {'a', 'e', 'i', 'o', 'u'}
     -- local vowelsRare = 'y'
     local newAlphabet = {}
 
-    --doubled single consonants
-    local consSpecial = { "ck", "qu", "ph", "gh", "dg", "le", "mb", "kn", "wr", "ce", "se", "sc", "ve", "wh",
-        "zh", "ze", "tch", "sh", "ch", "th", "ng",
-        "l'a", "l'e", "d'a", "d'e", "t'a", "t'e" }
-    local vowelSpecial = { "ea", "ai", "ay", "ae", "ie", "ey", "igh", "oa", "ow",
-        "ew", "ue", "oo", "ou", "oi", "oy", "ar", "or", "aw", "au", "ore", "oar", "oor", "er", "ir", "ur", "ear",
-        "air", "are", "er", "re", "i'a", "e'a" }
+    -- doubled single consonants
+    local consSpecial = {"ck", "qu", "ph", "gh", "dg", "le", "mb", "kn", "wr", "ce", "se", "sc", "ve", "wh", "zh", "ze",
+                         "tch", "sh", "ch", "th", "ng", "l'a", "l'e", "d'a", "d'e", "t'a", "t'e"}
+    local vowelSpecial = {"ea", "ai", "ay", "ae", "ie", "ey", "igh", "oa", "ow", "ew", "ue", "oo", "ou", "oi", "oy",
+                          "ar", "or", "aw", "au", "ore", "oar", "oor", "er", "ir", "ur", "ear", "air", "are", "er",
+                          "re", "i'a", "e'a"}
 
     local specialCount = 0
 
@@ -500,22 +508,22 @@ local function genRandAlph(byteLC)
 
         if letter:match("[aeiouy]") then
             newAlphabet[letter] = (useSpecial and vowelSpecial[randSource:randInt(1, #vowelSpecial)]) or
-                (commonCheck <= 2 and 'y') or
-                vowels[randSource:randInt(1, #vowels)]
+                                      (commonCheck <= 2 and 'y') or vowels[randSource:randInt(1, #vowels)]
         else
             newAlphabet[letter] = (useSpecial and consSpecial[randSource:randInt(1, #consSpecial)]) or
-                (commonCheck <= 10 and consRare[randSource:randInt(1, #consRare)]) or
-                consonants[randSource:randInt(1, #consonants)]
+                                      (commonCheck <= 10 and consRare[randSource:randInt(1, #consRare)]) or
+                                      consonants[randSource:randInt(1, #consonants)]
         end
-        if useSpecial then specialCount = specialCount + 1 end
+        if useSpecial then
+            specialCount = specialCount + 1
+        end
     end
     return newAlphabet
 end
 
-
 local function genPresetAlph(byteLC, consonants, vowels, special)
-    local alphabet = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
-        't', 'u', 'v', 'w', 'x', 'y', 'z' }
+    local alphabet = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+                      't', 'u', 'v', 'w', 'x', 'y', 'z'}
     local newAlphabet = {}
     local specialCount = 0
 
@@ -532,43 +540,44 @@ local function genPresetAlph(byteLC, consonants, vowels, special)
 
         if letter:match("[aeiouy]") then
             newAlphabet[letter] = (useSpecial and special[randSource:randInt(1, #special)]) or
-                vowels[randSource:randInt(1, #vowels)]
+                                      vowels[randSource:randInt(1, #vowels)]
         else
             newAlphabet[letter] = (useSpecial and special[randSource:randInt(1, #special)]) or
-                consonants[randSource:randInt(1, #consonants)]
+                                      consonants[randSource:randInt(1, #consonants)]
         end
-        if useSpecial then specialCount = specialCount + 1 end
+        if useSpecial then
+            specialCount = specialCount + 1
+        end
     end
     return newAlphabet
 end
 -- local handleMessage = function(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, msgTime, messageDistance, message)
 -- data.playerId, authorPos, msgTime, data
 
-
---originally i made this a function, but tracking the values is difficult and it's easier to manually set them since there are only 9
-local soundTable = {      --with 50 as default | 50% cutoff range
+-- originally i made this a function, but tracking the values is difficult and it's easier to manually set them since there are only 9
+local soundTable = { -- with 50 as default | 50% cutoff range
     [-4] = noiseRad / 20, -- 2.5 | 1.25
     [-3] = noiseRad / 10, -- 5 | 2.5
-    [-2] = noiseRad / 5,  -- 10 | 5
-    [-1] = noiseRad / 2,  --25 | 12.5
-    [0] = noiseRad,       -- 50 | 25
-    [1] = noiseRad * 1.5, --75 | 37.5
-    [2] = noiseRad * 2,   --100 | 50
-    [3] = noiseRad * 3,   --150 | 75
-    [4] = noiseRad * 4,   --200 | 100
+    [-2] = noiseRad / 5, -- 10 | 5
+    [-1] = noiseRad / 2, -- 25 | 12.5
+    [0] = noiseRad, -- 50 | 25
+    [1] = noiseRad * 1.5, -- 75 | 37.5
+    [2] = noiseRad * 2, -- 100 | 50
+    [3] = noiseRad * 3, -- 150 | 75
+    [4] = noiseRad * 4 -- 200 | 100
 }
 
---i dont like this but it'll have to do
+-- i dont like this but it'll have to do
 local volTable = {
     [noiseRad / 20] = -4,
     [noiseRad / 10] = -3,
     [noiseRad / 5] = -2,
     [noiseRad / 2] = -1,
-    [noiseRad] = 0, --based on the default range of talking being 50, this should be good
+    [noiseRad] = 0, -- based on the default range of talking being 50, this should be good
     [noiseRad * 1.5] = 1,
     [noiseRad * 2] = 2,
     [noiseRad * 3] = 3,
-    [noiseRad * 4] = 4,
+    [noiseRad * 4] = 4
 }
 
 local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, message)
@@ -586,29 +595,28 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
     -- messageDistance = world.magnitude(recPos, authorPos)
     -- messageDistance = 30
 
-
     -- local actionRad = 200         -- FezzedOne: Un-hardcoded the action radius.
     -- local loocRad = 2 * actionRad -- actionRad * 2 -- FezzedOne: Un-hardcoded the local OOC radius.
     -- local noiseRad = 30           -- FezzedOne: Un-hardcoded the talking radius.
-    --*re-hardcodes my radius values*
+    -- *re-hardcodes my radius values*
 
     local tVol, sVol = message.volume or 0, 0
     local tVolRad = soundTable[tVol]
     local sVolRad = noiseRad
-    --iterate through message and get components here
+    -- iterate through message and get components here
     local curMode = "action"
     local prevMode = "action"
     local prevDiffMode = "action"
-    local maxRad = 0     -- Remove the maximum radius restriction from global messages.
+    local maxRad = 0 -- Remove the maximum radius restriction from global messages.
     local rawText = message.text
-    local textTable = {} --this will eventually be smashed together to make filterText
-    local validSum = 0   --number of valid entries in the table
-    local cInd = 1       --lua starts at 1 >:(
+    local textTable = {} -- this will eventually be smashed together to make filterText
+    local validSum = 0 -- number of valid entries in the table
+    local cInd = 1 -- lua starts at 1 >:(
     local charBuffer = ""
     local noScramble = false
-    local languageCode = message.defaultLang or "!!" --the !! shouldn't need to be set, but i'll leave it anyway
-    local radioMode = false                          --radio flag
-    local commCode = message.defaultFreq or "0"      -- FezzedOne: Comm code.
+    local languageCode = message.defaultLang or "!!" -- the !! shouldn't need to be set, but i'll leave it anyway
+    local radioMode = false -- radio flag
+    local commCode = message.defaultFreq or "0" -- FezzedOne: Comm code.
     local langAlphabets = {}
     local quoteStr = ""
     local slashCount = 0
@@ -616,28 +624,36 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
     local tickCount = 0
 
     local modeRadTypes = {
-        action = function() return actionRad end,
-        quote = function() return tVolRad end,
-        sound = function() return sVolRad end,
-        pOOC = function() return loocRad end,
-        lOOC = function() return loocRad end,
-        gOOC = function() return -1 end,
+        action = function()
+            return actionRad
+        end,
+        quote = function()
+            return tVolRad
+        end,
+        sound = function()
+            return sVolRad
+        end,
+        pOOC = function()
+            return loocRad
+        end,
+        lOOC = function()
+            return loocRad
+        end,
+        gOOC = function()
+            return -1
+        end
     }
 
-    local function rawSub(sInd, eInd) return rawText:sub(sInd, eInd) end
+    local function rawSub(sInd, eInd)
+        return rawText:sub(sInd, eInd)
+    end
 
-    --use this to construct the components
-    --any component indications (like :+) that remain should stay, use them for coloring if they aren't picked up here and reset after each component
-    local function formatInsert(
-        str,
-        radius,
-        type,
-        langKey,
-        isRadio,
-        commCode,
-        noScramble
-    )
-        if langKey == nil then langKey = "!!" end
+    -- use this to construct the components
+    -- any component indications (like :+) that remain should stay, use them for coloring if they aren't picked up here and reset after each component
+    local function formatInsert(str, radius, type, langKey, isRadio, commCode, noScramble)
+        if langKey == nil then
+            langKey = "!!"
+        end
 
         table.insert(textTable, {
             text = str,
@@ -646,7 +662,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
             langKey = langKey,
             isRadio = isRadio,
             commCode = commCode,
-            noScramble = noScramble,
+            noScramble = noScramble
         })
     end
 
@@ -655,8 +671,9 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
         cInd = cInd + 1
     end
 
-    local function newMode(nextMode) --if radius is -1, the insert is instance wide
-        if #charBuffer < 1 or charBuffer == '"' or charBuffer == ">" or charBuffer == "<" or (curMode == "quote" and #charBuffer:gsub("%s", "") < 1) then
+    local function newMode(nextMode) -- if radius is -1, the insert is instance wide
+        if #charBuffer < 1 or charBuffer == '"' or charBuffer == ">" or charBuffer == "<" or
+            (curMode == "quote" and #charBuffer:gsub("%s", "") < 1) then
             prevMode = curMode
             curMode = nextMode
             -- if curMode ~= nextMode then prevDiffMode = curMode end
@@ -666,19 +683,17 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
         local useRad
         useRad = modeRadTypes[curMode]()
 
-
         maxRad = math.max(maxRad, useRad)
 
-
-        --insert replacement words for qutoes in languages here
+        -- insert replacement words for qutoes in languages here
         if curMode == "quote" and replacementDict[languageCode:upper()] then
             local wordBank = replacementDict[languageCode]
             local b4Buffer = ""
-            --check a dict of replacement words for the lang tag
-            --check the key (phrase to replace) to see if it exists in the string (case insensitive)
-            --run through the string, when a valid word is found (and isn't surrounded by <>), split the string into before the word and after
-            --then, insert the replacement in the before string, then add the after string, then repeat
-            --if it does, replace it with the value (dont match cases)
+            -- check a dict of replacement words for the lang tag
+            -- check the key (phrase to replace) to see if it exists in the string (case insensitive)
+            -- run through the string, when a valid word is found (and isn't surrounded by <>), split the string into before the word and after
+            -- then, insert the replacement in the before string, then add the after string, then repeat
+            -- if it does, replace it with the value (dont match cases)
 
             for phrase, replacement in pairs(wordBank) do
                 local newBuffer = charBuffer
@@ -690,7 +705,8 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                     beforeStr = newBuffer:sub(1, findStart - 1)
                     afterStr = (findEnd + 1 <= #newBuffer and newBuffer:sub(findEnd + 1)) or ""
 
-                    if newBuffer:sub(findStart - 1, findStart) ~= "<" and newBuffer:sub(findEnd + 1 or #newBuffer, findEnd + 2) ~= ">" then
+                    if newBuffer:sub(findStart - 1, findStart) ~= "<" and
+                        newBuffer:sub(findEnd + 1 or #newBuffer, findEnd + 2) ~= ">" then
                         b4Buffer = b4Buffer .. beforeStr .. "<" .. replacement .. ">"
                         newBuffer = afterStr
                     end
@@ -703,18 +719,10 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
             end
         end
 
-
-
-        if useRad == -1 and maxRad ~= -1 then maxRad = -1 end
-        formatInsert(
-            charBuffer,
-            useRad,
-            curMode,
-            languageCode,
-            radioMode,
-            commCode,
-            noScramble
-        )
+        if useRad == -1 and maxRad ~= -1 then
+            maxRad = -1
+        end
+        formatInsert(charBuffer, useRad, curMode, languageCode, radioMode, commCode, noScramble)
         charBuffer = ""
         prevMode = curMode
         -- if curMode ~= nextMode then prevDiffMode = curMode end
@@ -738,13 +746,13 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                 parseDefault('"')
             end
         end,
-        ["<"] = function() --i could combine these two, but i don't want to
+        ["<"] = function() -- i could combine these two, but i don't want to
             local nextChar = rawSub(cInd + 1, cInd + 1)
             if nextChar == "<" then
                 local oocBump = 0
                 local oocType
                 local oocRad
-                --local ooc
+                -- local ooc
                 local _, oocEnd = rawText:find(">>+", cInd)
                 if not oocEnd then
                     local _, oocEnd2 = rawText:find(">", cInd)
@@ -770,7 +778,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                 if curMode == "quote" then
                     newMode(curMode)
                     noScramble = true
-                elseif curMode ~= "sound" and curMode ~= "quote" then --added quotes here so people can do the cool combine vocoder thing <::Pick up that can.::>
+                elseif curMode ~= "sound" and curMode ~= "quote" then -- added quotes here so people can do the cool combine vocoder thing <::Pick up that can.::>
                     newMode("sound")
                 end
             end
@@ -792,21 +800,33 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
         [":"] = function()
             local nextChar = rawSub(cInd + 1, cInd + 1)
             if nextChar == "+" or nextChar == "-" or nextChar == "=" then
-                newMode(curMode) --this happens to change volume, but mode isn't actually changing
+                newMode(curMode) -- this happens to change volume, but mode isn't actually changing
 
-                local maxAmp = 4 --maximum chars after the colon
+                local maxAmp = 4 -- maximum chars after the colon
 
                 local lStart, lEnd = rawText:find(":%++", cInd)
                 local qStart, qEnd = rawText:find(":%-+", cInd)
                 local eStart, eEnd = rawText:find(":%=+", cInd)
                 local nCStart, nCEnd
 
-                if qStart == nil then qStart = #rawText end
-                if qEnd == nil then qEnd = #rawText end
-                if lStart == nil then lStart = #rawText end
-                if lEnd == nil then lEnd = #rawText end
-                if eStart == nil then eStart = #rawText end
-                if eEnd == nil then eEnd = #rawText end
+                if qStart == nil then
+                    qStart = #rawText
+                end
+                if qEnd == nil then
+                    qEnd = #rawText
+                end
+                if lStart == nil then
+                    lStart = #rawText
+                end
+                if lEnd == nil then
+                    lEnd = #rawText
+                end
+                if eStart == nil then
+                    eStart = #rawText
+                end
+                if eEnd == nil then
+                    eEnd = #rawText
+                end
 
                 if math.min(eStart, lStart, qStart) == eStart then
                     nCStart = eStart
@@ -820,18 +840,13 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                 end
 
                 local doVolume = "none"
-                --in these modes, ignore the volume controls
-                if
-                    curMode == "radio"
-                    or curMode == "gOOC"
-                    or curMode == "lOOC"
-                    or curMode == "pOOC"
-                then
+                -- in these modes, ignore the volume controls
+                if curMode == "radio" or curMode == "gOOC" or curMode == "lOOC" or curMode == "pOOC" then
                     cInd = nCEnd + 1
                 elseif curMode == "action" then
                     local nextInd = rawText:find('["<]', cInd)
 
-                    if nextChar == nil then --if they just put this at the end for some reason
+                    if nextChar == nil then -- if they just put this at the end for some reason
                         cInd = nCEnd + 1
                     elseif nextInd ~= nil then
                         nextChar = rawSub(nextInd, nextInd)
@@ -887,7 +902,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                 parseDefault(":")
             end
         end,
-        ["*"] = function() --leave this for the visual alterations later on
+        ["*"] = function() -- leave this for the visual alterations later on
             -- i have this commented out so people can keep asterisks in actions if they want
             -- if curMode == 'action' then
             --   cInd = cInd + 1
@@ -918,25 +933,25 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                 cInd = cInd + 1
             end
         end,
-        ["("] = function() --check for number of parentheses
+        ["("] = function() -- check for number of parentheses
             local nextChar = rawSub(cInd + 1, cInd + 1)
             if nextChar == "(" then
                 local oocEnd = 0
                 local oocBump = 0
                 local oocType
                 local oocRad
-                --commenting this out. Use local mode if you want uncapped local ooc.
+                -- commenting this out. Use local mode if you want uncapped local ooc.
                 -- if not root.getConfiguration("DynamicProxChat::proximityOoc") then
                 --     uncapRad = true
                 -- end
                 if rawSub(cInd + 2, cInd + 2) == "(" then
-                    --global ooc
-                    _, oocEnd = rawText:find("%)%)%)+", cInd) --the + catches extra parentheses in case someone adds more than 3
+                    -- global ooc
+                    _, oocEnd = rawText:find("%)%)%)+", cInd) -- the + catches extra parentheses in case someone adds more than 3
                     oocType = "gOOC"
                     oocBump = 2
                     oocRad = -1
                 else
-                    --local ooc
+                    -- local ooc
                     _, oocEnd = rawText:find("%)%)+", cInd)
                     oocBump = 1
                     oocType = "lOOC"
@@ -958,12 +973,12 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                 parseDefault("(")
             end
         end,
-        ["{"] = function() --this should function as a global IC message, but finding the playercount is not possible (or i'm stupid) clientside
-            --i'm not doing secure radio because you can edit this file and ignore the password requirement with it
-            --if you want to do that, just do it over group chat or something
-            --this is where a stagehand serverside would be useful. In the future it might be worth exploring that
+        ["{"] = function() -- this should function as a global IC message, but finding the playercount is not possible (or i'm stupid) clientside
+            -- i'm not doing secure radio because you can edit this file and ignore the password requirement with it
+            -- if you want to do that, just do it over group chat or something
+            -- this is where a stagehand serverside would be useful. In the future it might be worth exploring that
 
-            --maybe set up multiple radio ranges with multiple brackets? seems kind of pointless imo
+            -- maybe set up multiple radio ranges with multiple brackets? seems kind of pointless imo
             newMode(curMode)
             radioMode = activeFreq["enabled"] or (activeFreq["enabled"] == nil and true)
             uncapRad = true
@@ -999,11 +1014,9 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
                 -- local roll = randSource:randInt(1, tonumber(numMax) or 20)
                 -- FezzedOne: Replaced dice roller with the more flexible one from FezzedTech.
                 local rollNum = rawSub(fStart + 1, fEnd)
-                local diceResults = rawSub(fStart + 1, fEnd):gsub("[ ]*", ""):gsub(
-                    "(.-)[,|]",
-                    function(die) return die .. " = ^rollColor;" .. tostring(rollDice(die) or "n/a") .. "^reset;, " end
-                )
-
+                local diceResults = rawSub(fStart + 1, fEnd):gsub("[ ]*", ""):gsub("(.-)[,|]", function(die)
+                    return die .. " = ^rollColor;" .. tostring(rollDice(die) or "n/a") .. "^reset;, "
+                end)
 
                 parseDefault("|" .. diceResults:sub(1, -3) .. "|")
                 cInd = fEnd + 1
@@ -1019,19 +1032,20 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
             if rawSub(cInd, cInd + 1) == "[[" then
                 parseDefault("[[")
                 cInd = cInd + 1
-            elseif rawSub(cInd, cInd + 1) == "[]" then --this should never happen anymore
+            elseif rawSub(cInd, cInd + 1) == "[]" then -- this should never happen anymore
                 newMode(curMode)
                 languageCode = defaultKey
                 cInd = cInd + 2
             elseif fStart ~= nil and fEnd ~= nil then
                 local newCode = rawSub(fStart + 1, fEnd)
-                if languageCode ~= newCode and curMode == "quote" then newMode(curMode) end
+                if languageCode ~= newCode and curMode == "quote" then
+                    newMode(curMode)
+                end
                 languageCode = newCode:upper()
                 if languageCode ~= "!!" and not langAlphabets[languageCode] and savedLangs[languageCode].preset == nil then
                     langAlphabets[languageCode] = genRandAlph(wordBytes(languageCode:upper()))
                 end
-                cInd = rawText:find("%S", fEnd + 2) or
-                    #rawText --set index to the next non whitespace character after the code
+                cInd = rawText:find("%S", fEnd + 2) or #rawText -- set index to the next non whitespace character after the code
             else
                 parseDefault("[")
             end
@@ -1039,12 +1053,12 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
         default = function(letter)
             charBuffer = charBuffer .. letter
             cInd = cInd + 1
-        end,
+        end
     }
 
     local c
 
-    --run this loop to generate textTable, then concatenate
+    -- run this loop to generate textTable, then concatenate
     while cInd <= #rawText do
         c = rawSub(cInd, cInd)
 
@@ -1054,7 +1068,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
             parseDefault(c)
         end
     end
-    newMode(curMode) --makes sure nothing is left out
+    newMode(curMode) -- makes sure nothing is left out
     local retArr = {
         maxRange = maxRad,
         text = textTable,
@@ -1066,8 +1080,8 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
     return retArr
 end
 
-local function processVisuals(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, maxRad, messageDistance,
-                              formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
+local function processVisuals(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, maxRad,
+    messageDistance, formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
     local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
     local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
     local savedLangs = savedLangs or {}
@@ -1077,15 +1091,13 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     -- local noiseRad = 30
     local textTable = sb.jsonMerge({}, formattedTable)
     local radioState = activeFreq["enabled"] or (activeFreq["enabled"] == nil and true)
-    --*re-hardcodes my radius values*
-
+    -- *re-hardcodes my radius values*
 
     local sharesWorld = message.sharesWorld
     local pathDistance = 0
     local doorCount = 0
     local hasPath = false
-    local inSight = sharesWorld and
-        not world.lineTileCollision(authorPos, recPos, { "Block", "Dynamic" }) --dynamic is for doors
+    local inSight = sharesWorld and not world.lineTileCollision(authorPos, recPos, {"Block", "Dynamic"}) -- dynamic is for doors
     -- FezzedOne: This will be used to determine whether to hide the nick and portrait.
     message.inSight = inSight
     message.inEarShot = false
@@ -1094,22 +1106,18 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     local collisionA = nil
     if authorPos and sharesWorld and not inSight then
         -- local collisionA = world.lineTileCollisionPoint(authorPos, recPos, { "Block", "Dynamic" }) or nil
-        collisionA = world.lineTileCollisionPoint(authorPos, recPos, { "Block" }) or nil
+        collisionA = world.lineTileCollisionPoint(authorPos, recPos, {"Block"}) or nil
     end
     local wallThickness = 0
-    if collisionA then --block collision
+    if collisionA then -- block collision
         -- FezzedOne: To find wall thickness, run collision checks in opposite directions.
-        local collisionB = world.lineTileCollisionPoint(
-            recPos,
-            authorPos,
-            { "Block" }
-        ) or { collisionA[1] }
+        local collisionB = world.lineTileCollisionPoint(recPos, authorPos, {"Block"}) or {collisionA[1]}
         wallThickness = math.floor(world.magnitude(collisionA[1], collisionB[1]))
-        hasPath = true      -- must check for a path anyway
-    elseif sharesWorld then --dynamic, used to check if we need to path
-        --if this is false, then that means there's nothing in between the two
-        --check for path
-        hasPath = world.lineTileCollisionPoint(authorPos, recPos, { "Dynamic" }) ~= nil or false
+        hasPath = true -- must check for a path anyway
+    elseif sharesWorld then -- dynamic, used to check if we need to path
+        -- if this is false, then that means there's nothing in between the two
+        -- check for path
+        hasPath = world.lineTileCollisionPoint(authorPos, recPos, {"Dynamic"}) ~= nil or false
     end
 
     local function degradeMessage(str, quality)
@@ -1156,40 +1164,11 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         return result
     end
 
-
-
     local function langRandLetters(word, byteLC)
         -- FezzedOne: The wordRoll parameter is now used.
-        local vowels = {
-            "a",
-            "e",
-            "i",
-            "o",
-            "u",
-            "y",
-        }
-        local consonants = {
-            "b",
-            "c",
-            "d",
-            "f",
-            "g",
-            "h",
-            "j",
-            "k",
-            "l",
-            "m",
-            "n",
-            "p",
-            "q",
-            "r",
-            "s",
-            "t",
-            "v",
-            "w",
-            "x",
-            "z",
-        }
+        local vowels = {"a", "e", "i", "o", "u", "y"}
+        local consonants = {"b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "t", "v", "w",
+                            "x", "z"}
 
         -- FezzedOne: Merge a list into a Lua pattern. Assumes input doesn't contain any characters that need to be escaped.
         local function mergePattern(list)
@@ -1216,7 +1195,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             elseif not char:match("[%d!\"%$%*%+%,%-%./:%;%?%@%[%\\%]%^_%`~]") then -- Don't mess with punctuation.
                 local randNum = randSource:randInt(1, #consonants)
                 char = consonants[randNum]
-            elseif char:match("%d") then --numbers, randomly choose const or vowels
+            elseif char:match("%d") then -- numbers, randomly choose const or vowels
                 local pick = randSource:randInt(1, 2)
                 if pick == 1 then
                     char = consonants[randSource:randInt(1, #consonants)]
@@ -1225,13 +1204,13 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 end
             end
 
-            if not isLower then char = char:upper() end
+            if not isLower then
+                char = char:upper()
+            end
             newWord = newWord .. char
         end
         return newWord
     end
-
-
 
     local function langRepAlph(word, newAlphabet)
         local newWord = ""
@@ -1251,11 +1230,11 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             local charLower = char:lower()
             local newChar = newAlphabet[charLower] or nil
 
-
             if isUpper and newChar then
                 if #newChar > 1 and #char == 1 then
                     newChar = newChar:sub(1, 1):upper() .. newChar:sub(2)
-                elseif #newChar == 1 or (not wordTable[index - 1] or wordTable[index - 1].upper) and (not wordTable[index + 1] or wordTable[index + 1].upper) then
+                elseif #newChar == 1 or (not wordTable[index - 1] or wordTable[index - 1].upper) and
+                    (not wordTable[index + 1] or wordTable[index + 1].upper) then
                     newChar = newChar:upper()
                 else
                     newChar = newChar:sub(1, 1):upper() .. newChar:sub(2)
@@ -1267,20 +1246,20 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     end
 
     local function langRandSounds(word, byteLC)
-        --later, make an alternative that takes each sound type and has an array of options, may be more expensive to run though
-        local consTable = { "b", "bb", "k", "ck", "qu", "dd", "ff", "ph", "gh", "gg", "dge", "ge", "ll", "le", "mm", "mb",
-            "nn", "kn", "pp", "rr", "wr", "ss", "ce", "se", "sc", "tt", "ve", "wh", "zz", "ze", "si", "ti", "tch", "c",
-            "d", "f", "g", "h", "j", "l", "m", "n", "p", "r", "s", "t", "v", "w", "x", "y", "z", "sh", "ch", "th", "ng" }
-        local vowelTable = { "a", "e", "ea", "i", "y", "o", "u", "ai", "ay", "ae", "ee", "ie", "ey", "igh", "oa", "ow",
-            "ew", "ue", "oo", "ou", "oi", "oy", "ar", "or", "aw", "au", "ore", "oar", "oor", "er", "ir", "ur", "ear",
-            "air", "are", "eer", "ere" }
-        local soundTable = { "b", "bb", "k", "ck", "qu", "dd", "ff", "ph", "gh", "gg", "dge", "ge", "ll", "le", "mm",
-            "mb",
-            "nn", "kn", "pp", "rr", "wr", "ss", "ce", "se", "sc", "tt", "ve", "wh", "zz", "ze", "si", "ti", "tch", "c",
-            "d", "f", "g", "h", "j", "l", "m", "n", "p", "r", "s", "t", "v", "w", "x", "y", "z", "sh", "ch", "th", "ng",
-            "a", "e", "ea", "i", "y", "o", "u", "ai", "ay", "ae", "ee", "ie", "ey", "igh", "oa", "ow",
-            "ew", "ue", "oo", "ou", "oi", "oy", "ar", "or", "aw", "au", "ore", "oar", "oor", "er", "ir", "ur", "ear",
-            "air", "are", "eer", "ere" }
+        -- later, make an alternative that takes each sound type and has an array of options, may be more expensive to run though
+        local consTable = {"b", "bb", "k", "ck", "qu", "dd", "ff", "ph", "gh", "gg", "dge", "ge", "ll", "le", "mm",
+                           "mb", "nn", "kn", "pp", "rr", "wr", "ss", "ce", "se", "sc", "tt", "ve", "wh", "zz", "ze",
+                           "si", "ti", "tch", "c", "d", "f", "g", "h", "j", "l", "m", "n", "p", "r", "s", "t", "v", "w",
+                           "x", "y", "z", "sh", "ch", "th", "ng"}
+        local vowelTable = {"a", "e", "ea", "i", "y", "o", "u", "ai", "ay", "ae", "ee", "ie", "ey", "igh", "oa", "ow",
+                            "ew", "ue", "oo", "ou", "oi", "oy", "ar", "or", "aw", "au", "ore", "oar", "oor", "er", "ir",
+                            "ur", "ear", "air", "are", "eer", "ere"}
+        local soundTable = {"b", "bb", "k", "ck", "qu", "dd", "ff", "ph", "gh", "gg", "dge", "ge", "ll", "le", "mm",
+                            "mb", "nn", "kn", "pp", "rr", "wr", "ss", "ce", "se", "sc", "tt", "ve", "wh", "zz", "ze",
+                            "si", "ti", "tch", "c", "d", "f", "g", "h", "j", "l", "m", "n", "p", "r", "s", "t", "v",
+                            "w", "x", "y", "z", "sh", "ch", "th", "ng", "a", "e", "ea", "i", "y", "o", "u", "ai", "ay",
+                            "ae", "ee", "ie", "ey", "igh", "oa", "ow", "ew", "ue", "oo", "ou", "oi", "oy", "ar", "or",
+                            "aw", "au", "ore", "oar", "oor", "er", "ir", "ur", "ear", "air", "are", "eer", "ere"}
 
         randSource:init(math.tointeger(byteLC))
         randSource:addEntropy(math.tointeger(wordBytes(word)))
@@ -1313,7 +1292,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         local vowelPercent = math.floor((vowelCount / #word) * 100)
 
         for i = soundsBefore * -1, soundsAfter, 1 do
-            if i ~= 0 then --if i is 0 then that's the initial vowel
+            if i ~= 0 then -- if i is 0 then that's the initial vowel
                 randSource:init(math.tointeger(byteLC))
                 randSource:addEntropy(math.tointeger(wordBytes(word)))
                 randSource:addEntropy(i)
@@ -1331,7 +1310,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             end
         end
 
-        if #word == 1 then allUpper = false end
+        if #word == 1 then
+            allUpper = false
+        end
         if allUpper then
             retWord = retWord:upper()
         elseif hasUpper then
@@ -1341,8 +1322,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         return retWord
     end
 
-    local function word2Sounds(word, byteLC, soundLib) --this has issues with short words, fix later
-        --basically get the library of sounds, divide the word length by some value to estimate syllables, then stitch together random sounds
+    local function word2Sounds(word, byteLC, soundLib) -- this has issues with short words, fix later
+        -- basically get the library of sounds, divide the word length by some value to estimate syllables, then stitch together random sounds
         local wordlength = #word
         local fakeSyls = math.max(1, math.floor(wordlength / 3)) or 1
         local retWord = ""
@@ -1357,7 +1338,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             end
         end
 
-        if #word == 1 then allUpper = false end
+        if #word == 1 then
+            allUpper = false
+        end
 
         for i = 1, fakeSyls, 1 do
             randSource:init(math.tointeger(byteLC + wordBytes(word)))
@@ -1422,7 +1405,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             if tonumber(char) then
                 result = result .. digitsToMorse[char]
             elseif morseLib[char:upper()] then
-                --originally decided to include dashes, but i thought it'd look weird
+                -- originally decided to include dashes, but i thought it'd look weird
                 result = result .. morseLib[char:upper()]
             else
                 result = result .. char
@@ -1433,7 +1416,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
     local presetLib = {
         ["encoded"] = function(word, byteLC, langCode)
-            --replace whole words with half their word's length in random digits
+            -- replace whole words with half their word's length in random digits
             local encLength = math.max(1, math.floor(#word / 2))
             local retWord = ""
 
@@ -1444,7 +1427,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             randSource:init()
             return retWord
         end,
-        ["mongol"] = function(word, byteLC, langCode) --for this, generate a new alphabet entry for the language
+        ["mongol"] = function(word, byteLC, langCode) -- for this, generate a new alphabet entry for the language
             local mongolAlph = langAlphabets[langCode]
             -- local specialWords = {
             --     ["word"] = "Stylized Word",
@@ -1454,24 +1437,24 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             --     return specialWords[word]
             -- end
 
-
             if #word > 3 then
                 word = word:sub(1, 3)
                 -- word = word:sub(1, math.max(1, math.ceil(#word - (#word / 2))))
             end
 
             if not mongolAlph then
-                local cons = { "n", "ng", "b", "p", "kh", "gh", "m", "l", "g", "s", "sh", "t", "d", "ch", "j", "y", "r",
-                    "v", "f", "ts", "k", "z", "lkn" }
-                local vowels = { "a", "e", "i", "o", "ü", "ye", "yo", "ya" }
-                local special = { "ne", "ge", "ni", "gi", "nö", "gö", "ba", "bi", "bo", "bö" }
+                local cons = {"n", "ng", "b", "p", "kh", "gh", "m", "l", "g", "s", "sh", "t", "d", "ch", "j", "y", "r",
+                              "v", "f", "ts", "k", "z", "lkn"}
+                local vowels = {"a", "e", "i", "o", "ü", "ye", "yo", "ya"}
+                local special = {"ne", "ge", "ni", "gi", "nö", "gö", "ba", "bi", "bo", "bö"}
                 mongolAlph = genPresetAlph(byteLC, cons, vowels, special)
                 langAlphabets[langCode] = mongolAlph
             end
             return langRepAlph(word, mongolAlph)
         end,
         ["crow"] = function(word, byteLC, langCode)
-            local soundLib = { "caw", "kaw", "haw", "raah", "ehh", "waah", "ek", "ooo", "woo", "ik", "khu", "huk", "rhoa" }
+            local soundLib =
+                {"caw", "kaw", "haw", "raah", "ehh", "waah", "ek", "ooo", "woo", "ik", "khu", "huk", "rhoa"}
             local exceptedWords = {}
             if exceptedWords[word] then
                 return word
@@ -1487,7 +1470,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                     allUpper = false
                 end
             end
-            if #word == 1 then allUpper = false end
+            if #word == 1 then
+                allUpper = false
+            end
             randSource:init(math.tointeger(byteLC))
             randSource:addEntropy(math.tointeger(wordBytes(word)))
             local retWord = soundLib[randSource:randInt(1, #soundLib)]
@@ -1501,7 +1486,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             return retWord
         end,
         ["mi"] = function(word, byteLC, langCode)
-            local soundLib = { "mi" }
+            local soundLib = {"mi"}
             local exceptedWords = {}
             if exceptedWords[word] then
                 return word
@@ -1534,7 +1519,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     end
 
     local function langSplit(inputstr, sep)
-        if sep == nil then sep = "%s" end
+        if sep == nil then
+            sep = "%s"
+        end
         local arg = ""
         local t = {}
         for c in inputstr:gmatch(".") do
@@ -1542,19 +1529,32 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 -- arg = trim(arg) --shouldn't be necessary
                 if #arg > 0 then
                     if arg:match("%^") then
-                        table.insert(t, { word = arg, nocolor = true })
+                        table.insert(t, {
+                            word = arg,
+                            nocolor = true
+                        })
                     else
-                        table.insert(t, { word = arg, nocolor = false })
+                        table.insert(t, {
+                            word = arg,
+                            nocolor = false
+                        })
                     end
                 end
-                table.insert(t, { word = c, nocolor = true, isSep = true })
+                table.insert(t, {
+                    word = c,
+                    nocolor = true,
+                    isSep = true
+                })
                 arg = ""
             else
                 arg = arg .. c
             end
         end
         if #arg > 0 then
-            table.insert(t, { word = arg, nocolor = false })
+            table.insert(t, {
+                word = arg,
+                nocolor = false
+            })
         end
         return t
     end
@@ -1575,12 +1575,12 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         local returnStr = ""
         str = str:gsub("  ", " ")
         -- local strDict = langSplit(str, "[%s%p]")
-        local strDict = langSplit(str, "[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]#%`~]") --all punctuation except apostrophe, and whitespace
+        local strDict = langSplit(str, "[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]#%`~]") -- all punctuation except apostrophe, and whitespace
         local byteLC = wordBytes(langCode)
         local uniqueIdBytes = wordBytes(tostring(receiverEntityId))
-        --no need for color, since it's always supplied
+        -- no need for color, since it's always supplied
 
-        --strDict is a table containing each character to make processing less fucky
+        -- strDict is a table containing each character to make processing less fucky
         local prevScrambled = false
 
         for _, value in ipairs(strDict) do
@@ -1593,28 +1593,29 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             else
                 local replacedWord = false
 
-                local subbedWord, poundCount = word:gsub("[_]","")
+                local subbedWord, poundCount = word:gsub("[_]", "")
                 if poundCount == 2 then
                     word = subbedWord
                     replacedWord = true
                 end
 
-                --run the checks then add
+                -- run the checks then add
                 local wordLength = #word
                 local byteWord = wordBytes(word)
                 randSource:init(math.tointeger(uniqueIdBytes + byteLC + byteWord))
                 local wordRoll = randSource:randInt(1, 100)
                 local euler = math.exp(1)
                 local rollResult = math.floor(wordRoll * euler ^ ((wordLength - 5) / 5))
-                if (not replacedWord or skipLangRecog[langPreset] or skipRecogWords[word:lower()]) and (prof < 5 or rollResult > prof) then
-                    --scramble
+                if (not replacedWord or skipLangRecog[langPreset] or skipRecogWords[word:lower()]) and
+                    (prof < 5 or rollResult > prof) then
+                    -- scramble
                     word = langWordRep(word, langCode, byteLC, langPreset, newAlphabet)
                     if not prevScrambled then
                         word = "^" .. langColor .. ";" .. word
                         prevScrambled = true
                     end
                 elseif #word > 0 then
-                    --no scramble
+                    -- no scramble
                     if prevScrambled then
                         word = "^" .. msgColor .. ";" .. word
                         prevScrambled = false
@@ -1644,12 +1645,13 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         return returnStr
     end
 
-    local quoteFont = message.font or nil
-    local actionFont = message.font or nil
-    local fontW8 = message.fontW8 or
-        true        --default for this is true if no font is specified, since the default does have weight
-    local resetFormat =
-    "#fff;^font=DB" --white for non sound based chunks --change DB to SB later for semi-bold, has to be done in the font files too
+    local quoteFont = message.quoteFont or nil
+    local actionFont = message.actionFont or nil
+    -- default for this is true if no font is specified, since the default does have weight
+    -- default SHOULD be false because you won't check font weight unless it's a custom font, IDIOT
+    -- not even to mention 'or true' overrides to true
+    local fontW8 = message.fontW8 or false
+    local resetFormat = "#fff;^font=DB" -- white for non sound based chunks --change DB to SB later for semi-bold, has to be done in the font files too
     local msgColor = "#fff;^font=M"
 
     local baseColorTable = {
@@ -1661,9 +1663,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         [1] = "#eee",
         [2] = "#daa",
         [3] = "#d66",
-        [4] = "#d00",
+        [4] = "#d00"
     }
-    local colorTable = { --transparency is an option here, but it makes things hard to read
+    local colorTable = { -- transparency is an option here, but it makes things hard to read
         [-4] = "#555",
         [-3] = "#777",
         [-2] = "#999",
@@ -1672,7 +1674,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         [1] = "#eee",
         [2] = "#daa",
         [3] = "#d66",
-        [4] = "#d00",
+        [4] = "#d00"
     }
     local fontTable = {}
 
@@ -1710,27 +1712,35 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             [1] = "^font=SB",
             [2] = "^font=B",
             [3] = "^font=EB",
-            [4] = "^font=BL",
+            [4] = "^font=BL"
         }
 
-        --i hate the nesting here but oh well
+        -- sb.logInfo("actionFont is %s", actionFont)
+
+        -- i hate the nesting here but oh well
         if actionFont then
-            resetFormat = "#fff;" .. fontTable[1]:gsub("=", "=" .. actionFont) --white for non sound based chunks
+            -- resetFormat = "#fff;" .. fontTable[1]:gsub("=", "=" .. actionFont) --white for non sound based chunks
+            resetFormat = "#fff;^font=" .. actionFont -- white for non sound based chunks
         end
 
+        -- sb.logInfo("quoteFont is %s", quoteFont)
+        -- sb.logInfo("font weight is %s", fontW8)
         if quoteFont then
             if fontW8 then
                 for index, value in ipairs(fontTable) do
                     fontTable[index] = value:gsub("=", "=" .. quoteFont)
                 end
             else
-                for index, value in ipairs(fontTable) do
-                    fontTable[index] = "^font=" .. quoteFont
+                for i = -4, 4 do
+                    fontTable[i] = "^font=" .. quoteFont
                 end
             end
             -- resetFormat = "#fff;" .. fontTable[1] --white for non sound based chunks
-            msgColor = "#fff;" .. fontTable[0] --white for non sound based chunks
+            msgColor = "#fff;" .. fontTable[0] -- white for non sound based chunks
         end
+
+        -- sb.logInfo("font table is %s", fontTable)
+        -- sb.logInfo("resetFormat is %s", resetFormat)
 
         colorTable = {
             [-4] = colorTable[-4] .. ";" .. fontTable[-4],
@@ -1741,12 +1751,12 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             [1] = colorTable[1] .. ";" .. fontTable[1],
             [2] = colorTable[2] .. ";" .. fontTable[2],
             [3] = colorTable[3] .. ";" .. fontTable[3],
-            [4] = colorTable[4] .. ";" .. fontTable[4],
+            [4] = colorTable[4] .. ";" .. fontTable[4]
         }
     end
 
     local function colorWithin(str, char, color, prevColor, volume, colorOn, hasChar)
-        --this also applies if there's only 1 character in the message
+        -- this also applies if there's only 1 character in the message
         if not hasChar then
             return {
                 ["string"] = str,
@@ -1758,29 +1768,29 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         local charBuffer = ""
         local prevChar = ""
         for i in str:gmatch(".") do
-            --escape char skips the slash entirely
+            -- escape char skips the slash entirely
             if i == char and prevChar ~= "\\" then
                 if colorOn == false then
                     if char ~= "`" and message.isOSB then
                         charBuffer = charBuffer .. fontTable[volume] .. "I;"
                     else
-                        charBuffer = charBuffer ..
-                            "^" .. color .. ";" .. ((message.isOSB and fontTable[volume] .. ";") or "")
+                        charBuffer = charBuffer .. "^" .. color .. ";" ..
+                                         ((message.isOSB and fontTable[volume] .. ";") or "")
                     end
                     colorOn = true
                 else
                     if char ~= "`" and message.isOSB then
                         charBuffer = charBuffer .. fontTable[volume] .. ";"
                     else
-                        charBuffer = charBuffer ..
-                            "^" .. prevColor .. ";" .. ((message.isOSB and fontTable[volume] .. ";") or "")
+                        charBuffer = charBuffer .. "^" .. prevColor .. ";" ..
+                                         ((message.isOSB and fontTable[volume] .. ";") or "")
                     end
                     colorOn = false
                 end
             elseif i == "\\" then
                 prevChar = i
             else
-                --put this outside the if statement to make the characters appear as well as colors
+                -- put this outside the if statement to make the characters appear as well as colors
                 charBuffer = charBuffer .. i
                 prevChar = i
             end
@@ -1792,7 +1802,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     end
 
     local function cleanDoubleSpaces(str)
-        --run a loop with the string, ignore codes (^whatever;), then remove more than one space in a row
+        -- run a loop with the string, ignore codes (^whatever;), then remove more than one space in a row
         local cleanStr = ""
         local iCount = 1
         local prevChar = ""
@@ -1807,7 +1817,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
                 if nextSemi ~= nil then
                     local colorCode = str:sub(iCount, nextSemi)
-                    if colorCode ~= prevColor then cleanStr = cleanStr .. colorCode end
+                    if colorCode ~= prevColor then
+                        cleanStr = cleanStr .. colorCode
+                    end
                     prevColor = colorCode
                     iCount = nextSemi
                 end
@@ -1822,8 +1834,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         return cleanStr
     end
 
-    --do visual formatting here.
-    --for dialogue (NOT sounds), start degrading the quality of the message at 50% of the quotes's radius
+    -- do visual formatting here.
+    -- for dialogue (NOT sounds), start degrading the quality of the message at 50% of the quotes's radius
     local tableStr = ""
     local prevStr = ""
     local quoteCombo = ""
@@ -1832,15 +1844,13 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     local hasValids = false
     local chunkStr = nil
     local chunkType = nil
-    local langBank = {}                            --populate with languages in inventory when you find them
-    local prevLang = recLangs["[DEFAULT]"] or "!!" --either the player's default language, or !!
+    local langBank = {} -- populate with languages in inventory when you find them
+    local prevLang = recLangs["[DEFAULT]"] or "!!" -- either the player's default language, or !!
     -- local prevCommCode = activeFreq["freq"] or "0"
     local prevCommCode = ""
     local prevRadio = false
     local emphOn = false
     local itemEmphOn = false
-
-
 
     if maxRad ~= -1 and messageDistance > maxRad then
         message.text = ""
@@ -1857,9 +1867,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
         local newTextTable = {}
 
-
         local rollColor = "#"
-        local rollLib = { "3", "5", "7", "9", "A", "B", "C", "D", "F" }
+        local rollLib = {"3", "5", "7", "9", "A", "B", "C", "D", "F"}
         local newColor = ""
 
         local uidSub = wordBytes(string.sub(receiverUUID, 5, 15))
@@ -1883,13 +1892,14 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         local pathMade = false
         for _, chunk in ipairs(textTable) do
             -- authorEntityId ~= receiverEntityId and
-            if (chunk["type"] == "quote" or chunk["type"] == "sound") and hasPath and not pathMade and chunk["radius"] > messageDistance then
+            if (chunk["type"] == "quote" or chunk["type"] == "sound") and hasPath and not pathMade and chunk["radius"] >
+                messageDistance then
                 local path = world.findPlatformerPath(authorPos, recPos, root.monsterMovementSettings("smallflying"))
                 if path then
                     hasPath = true
-                    --check the path for doors
+                    -- check the path for doors
                     for i, v in pairs(path) do
-                        if world.lineTileCollision(v.source.position, v.target.position, { "Dynamic" }) then
+                        if world.lineTileCollision(v.source.position, v.target.position, {"Dynamic"}) then
                             doorCount = doorCount + 1
                         end
                         pathDistance = pathDistance + world.magnitude(v.source.position, v.target.position)
@@ -1909,40 +1919,39 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             chunk["msgQuality"] = 100
 
             if messageDistance > 0 then
-                chunk["msgQuality"] = math.min(((useRad / 2) / messageDistance) * 100, 100) --basically, check half the radius and take the percentage of that vs the message distance, cap at 100
+                chunk["msgQuality"] = math.min(((useRad / 2) / messageDistance) * 100, 100) -- basically, check half the radius and take the percentage of that vs the message distance, cap at 100
                 if chunk["msgQuality"] < 0.1 then
                     chunk["msgQuality"] = 0
                 end
             end
 
-            chunk["hasLOS"] =
-                inSight           --this is literally never used for anything meaningful
+            chunk["hasLOS"] = inSight -- this is literally never used for anything meaningful
 
-            local isValid = false --start with false
+            local isValid = false -- start with false
             local noPathVol = nil
             local chunkDistance = (pathMade and pathDistance) or messageDistance
 
-
-            if radioMode and radioState and (activeFreq["freq"] and activeFreq["freq"] == chunk["commCode"] or chunk["commCode"] == 0) then
+            if radioMode and radioState and
+                (activeFreq["freq"] and activeFreq["freq"] == chunk["commCode"] or chunk["commCode"] == 0) then
                 inSight = true
             else
                 radioMode = false
             end
 
-            if chunkDistance <= useRad or useRad == -1 then                                 --if in range
-                isValid = true                                                              --the message is valid
-                if inSight == false and curMode == "action" then                            --if i can't see you and the mode is action
-                    isValid = false                                                         --the message isn't valid anymore
-                elseif inSight == false and (curMode == "quote" or curMode == "sound") then --else, if i can't see you and the mode is quote or sound
+            if chunkDistance <= useRad or useRad == -1 then -- if in range
+                isValid = true -- the message is valid
+                if inSight == false and curMode == "action" then -- if i can't see you and the mode is action
+                    isValid = false -- the message isn't valid anymore
+                elseif inSight == false and (curMode == "quote" or curMode == "sound") then -- else, if i can't see you and the mode is quote or sound
                     if authorPos then
-                        if sharesWorld and pathMade then                                    --if path is found
-                            --replace msg distance with path distance for this chunk
+                        if sharesWorld and pathMade then -- if path is found
+                            -- replace msg distance with path distance for this chunk
                             noPathVol = volTable[useRad] - (doorCount * 2)
-                        else --if the path isn't found
+                        else -- if the path isn't found
                             if wallThickness <= 2 then
                                 noPathVol = volTable[useRad] - (wallThickness * 2)
                             else
-                                noPathVol = volTable[useRad] - (wallThickness * 4) --this should never be valid
+                                noPathVol = volTable[useRad] - (wallThickness * 4) -- this should never be valid
                             end
                         end
                     elseif authorEntityId ~= receiverEntityId then
@@ -1954,20 +1963,18 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                         noPathVol = -4
                         isValid = false
                     end
-                    useRad = soundTable
-                        [noPathVol]                               --set the radius to whatever the soundelevel would be
+                    useRad = soundTable[noPathVol] -- set the radius to whatever the soundelevel would be
 
-                    isValid = isValid and chunkDistance <= useRad --set isvalid to the new value if it's still true
+                    isValid = isValid and chunkDistance <= useRad -- set isvalid to the new value if it's still true
                 end
             end
             chunk["radius"] = useRad
             if chunkDistance > 0 then
-                chunk["msgQuality"] = math.min(((useRad / 2) / chunkDistance) * 100, 100) --basically, check half the radius and take the percentage of that vs the message distance, cap at 100
+                chunk["msgQuality"] = math.min(((useRad / 2) / chunkDistance) * 100, 100) -- basically, check half the radius and take the percentage of that vs the message distance, cap at 100
                 if chunk["msgQuality"] < 0.1 then
                     chunk["msgQuality"] = 0
                 end
             end
-
 
             chunk["valid"] = isValid
             if isValid or radioMode then
@@ -1975,8 +1982,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             end
         end
 
-        table.insert(
-            newTextTable,
+        table.insert(newTextTable,
             { -- FezzedOne: Note to self: This dummy chunk is *required* for correct concatenation.
                 text = "",
                 radius = "0",
@@ -1985,13 +1991,10 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 valid = false,
                 msgQuality = 0,
                 isRadio = false,
-                commCode = "0",
-            }
-        )
+                commCode = "0"
+            })
 
-        textTable =
-            newTextTable --cut down the table to remove invalid messages. This shortens computing time by a negligable amount
-
+        textTable = newTextTable -- cut down the table to remove invalid messages. This shortens computing time by a negligable amount
 
         local numChunks = #textTable
 
@@ -2000,14 +2003,10 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         local firstBlock = true
 
         for _, v in ipairs(textTable) do
-            if v["hasLOS"] == false and chunkType == "action" then v["valid"] = false end
-            if
-                v["valid"]
-                and v["type"] ~= "pOOC"
-                and v["type"] ~= "lOOC"
-                and v["type"] ~= "gOOC"
-                and not v["isRadio"]
-            then
+            if v["hasLOS"] == false and chunkType == "action" then
+                v["valid"] = false
+            end
+            if v["valid"] and v["type"] ~= "pOOC" and v["type"] ~= "lOOC" and v["type"] ~= "gOOC" and not v["isRadio"] then
                 hasValids = true
             end
         end
@@ -2015,16 +2014,15 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         for k, v in ipairs(textTable) do
             local lastChunk = k == numChunks
 
-            if
-                v["radius"] == -1 or v["type"] == "gOOC"
-            then
+            if v["radius"] == -1 or v["type"] == "gOOC" then
                 v["valid"] = true
             end
 
             local rawStr = v["text"]
             -- FezzedOne: Strip out radio brackets. We'll re-add them later.
             v["text"] = rawStr:gsub("^{{", ""):gsub("^{", ""):gsub("}}$", ""):gsub("}$", "")
-            if v["isRadio"] and radioState and (activeFreq["freq"] and activeFreq["freq"] == v["commCode"] or v["commCode"] == 0) then
+            if v["isRadio"] and radioState and
+                (activeFreq["freq"] and activeFreq["freq"] == v["commCode"] or v["commCode"] == 0) then
                 v["valid"] = true
             else
                 v["isRadio"] = false
@@ -2032,35 +2030,31 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
             chunkStr = v["text"]
             chunkType = v["type"]
-            if chunkType == "quote" and v["valid"] then message.inEarShot = true end
+            if chunkType == "quote" and v["valid"] then
+                message.inEarShot = true
+            end
             local langKey = tostring(v["langKey"])
-            if
-                v["valid"] == true
-                or (
-                    chunkType == "quote"
-                    and (
-                        (k > 1 and textTable[k - 1]["type"] == "quote")
-                        or (k < #textTable and textTable[k + 1]["type"] == "quote")
-                    )
-                )
-            then                  --check if this is surrounded by quotes
-                v["valid"] = true --this should be set to true in here, since everything in this block should show up on the screen
+            if v["valid"] == true or (chunkType == "quote" and
+                ((k > 1 and textTable[k - 1]["type"] == "quote") or
+                    (k < #textTable and textTable[k + 1]["type"] == "quote"))) then -- check if this is surrounded by quotes
+                v["valid"] = true -- this should be set to true in here, since everything in this block should show up on the screen
                 -- remember, noiserad is a const and radius is for the message
 
-                local colorOverride = chunkStr:find("%^%#") ~=
-                    nil               --don't touch colors if this is true
-                colorOverride = false --manually shutting this off
+                local colorOverride = chunkStr:find("%^%#") ~= nil -- don't touch colors if this is true
+                colorOverride = false -- manually shutting this off
 
                 local emphChar = ""
-                local chunkVolColor = colorTable[volTable[v["radius"]]] --i hope to God nobody makes this happen
-                if emphOn then emphChar = "I" else emphChar = "" end
+                local chunkVolColor = colorTable[volTable[v["radius"]]] -- i hope to God nobody makes this happen
+                if emphOn then
+                    emphChar = "I"
+                else
+                    emphChar = ""
+                end
                 if itemEmphOn then
-                    chunkVolColor = iEmphColor ..
-                        ((message.isOSB and ";" .. fontTable[volTable[v["radius"]]]) or "")
+                    chunkVolColor = iEmphColor .. ((message.isOSB and ";" .. fontTable[volTable[v["radius"]]]) or "")
                 end
 
-
-                --disguise unheard stuff
+                -- disguise unheard stuff
                 if chunkType == "sound" then
                     if not colorOverride then
                         msgColor = chunkVolColor .. emphChar
@@ -2072,15 +2066,14 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
                     if chunkType == "quote" and langKey ~= "!!" then
                         local langProf, langColor, langPreset
-                        --checking langbank (and the var existing) is kind of redundant on the server, since i'm passing the giantass config var anyway
+                        -- checking langbank (and the var existing) is kind of redundant on the server, since i'm passing the giantass config var anyway
                         langProf = (recLangs[langKey] or 0) * 10
                         langColor = (savedLangs[langKey] and savedLangs[langKey]["color"]) or nil
                         langPreset = (savedLangs[langKey] and savedLangs[langKey]["preset"]) or false
 
-
                         if (not v["noScramble"]) and langProf < 100 then
                             if not langAlphabets[langKey] and (not langPreset or langPreset:match("[^%s]") == nil) then
-                                --this should never happen, but i'll leave it here just in case
+                                -- this should never happen, but i'll leave it here just in case
                                 langAlphabets[langKey] = genRandAlph(wordBytes(langKey:upper()))
                             end
                             local newAlphabet = langAlphabets[langKey]
@@ -2095,8 +2088,10 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                             str = str:gsub("(%$#)","")
                             ]]
                         end
+                    elseif chunkStr:match("[<_>]") then
+                        chunkStr = chunkStr:gsub("[<_>]", "")
                     end
-                    --check message quality
+                    -- check message quality
                     if v["msgQuality"] and v["msgQuality"] < 100 and not v["isRadio"] and chunkType == "quote" then
                         chunkStr = degradeMessage(trim(chunkStr), v["msgQuality"])
                     end
@@ -2106,9 +2101,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                         chunkStr = "^" .. msgColor .. ";" .. chunkStr
                     end
 
-                    --add in language indicator
+                    -- add in language indicator
                     if langKey ~= prevLang then
-                        --used to be "#fff;^font=M"
+                        -- used to be "#fff;^font=M"
                         chunkStr = "^#fff;" .. fontTable[0] .. ";[" .. langKey .. "] " .. chunkStr
                         prevLang = langKey
                     end
@@ -2117,19 +2112,16 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 end
                 chunkStr = chunkStr:gsub("%^%#fff%;%^%#fff;", "^#fff;")
                 chunkStr = chunkStr:gsub("%^" .. msgColor .. ";%^#fff;", "^#fff;")
-                chunkStr = chunkStr:gsub(
-                    "%^" .. msgColor .. ";%^" .. msgColor .. ";",
-                    "^" .. msgColor .. ";"
-                )
+                chunkStr = chunkStr:gsub("%^" .. msgColor .. ";%^" .. msgColor .. ";", "^" .. msgColor .. ";")
 
-                --recolors certain things for emphasis
+                -- recolors certain things for emphasis
                 local eFontVol = volTable[v["radius"]]
-                if chunkType ~= "action" then       --allow asterisks to stay in actions
+                if chunkType ~= "action" then -- allow asterisks to stay in actions
                     local asterCheck = colorWithin(chunkStr, "*", "#fe7", msgColor, eFontVol, emphOn, asterCount > 1)
-                    chunkStr = asterCheck["string"] --yellow
+                    chunkStr = asterCheck["string"] -- yellow
                     emphOn = asterCheck["italicsOn"] or false
                 else
-                    eFontVol = 1 --change this if the action font is changed
+                    eFontVol = 1 -- change this if the action font is changed
                 end
                 local slashCheck = colorWithin(chunkStr, "/", "#fe7", msgColor, eFontVol, emphOn, slashCount > 1)
                 chunkStr = slashCheck["string"]
@@ -2137,7 +2129,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 -- FezzedOne: This now uses backticks.
                 local iEmphCheck = colorWithin(chunkStr, "`", iEmphColor, msgColor, eFontVol, itemEmphOn, tickCount > 1)
                 itemEmphOn = iEmphCheck["italicsOn"] or false
-                chunkStr = iEmphCheck["string"] --orange
+                chunkStr = iEmphCheck["string"] -- orange
             elseif chunkType == "quote" and hasValids and prevType ~= "quote" then
                 chunkStr = "Says something."
                 v["valid"] = true
@@ -2153,9 +2145,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                         commAlias = activeFreq["alias"]
                     end
 
-                    chunkStr = "^"
-                        .. (commAlias and "#88f" or "#44f")
-                        .. ";{" .. (commAlias or commKey) .. "}^" .. msgColor .. "; " .. chunkStr
+                    chunkStr = "^" .. (commAlias and "#88f" or "#44f") .. ";{" .. (commAlias or commKey) .. "}^" ..
+                                   msgColor .. "; " .. chunkStr
                     prevCommCode = commKey
                 end
             end
@@ -2173,7 +2164,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 prevRadio = v["isRadio"]
             end
 
-            --after check, this puts formatted chunks in
+            -- after check, this puts formatted chunks in
             if chunkType ~= "quote" and prevType == "quote" then
                 local checkCombo = quoteCombo:gsub("%[%w%w%]", "")
 
@@ -2210,11 +2201,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                     --     .. (isEmpty and "" or '"')
                     quoteCombo = removeFirstSpace(quoteCombo)
                     local localReset = "^" .. resetFormat .. ";"
-                    quoteCombo = (endRadio and localReset .. "} " or "")
-                        .. (beginRadio and localReset .. "{" or "")
-                        .. (isEmpty and "" or localReset .. '"')
-                        .. trim(quoteCombo)
-                        .. (isEmpty and "" or localReset .. '"')
+                    quoteCombo = (endRadio and localReset .. "} " or "") .. (beginRadio and localReset .. "{" or "") ..
+                                     (isEmpty and "" or localReset .. '"') .. trim(quoteCombo) ..
+                                     (isEmpty and "" or localReset .. '"')
                 end
                 tableStr = tableStr .. " " .. quoteCombo
                 quoteCombo = ""
@@ -2245,11 +2234,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                     --     .. soundCombo
                     --     .. (isEmpty and "" or ">")
                     local localReset = "^" .. resetFormat .. ";"
-                    soundCombo = (endRadio and localReset .. "} " or "")
-                        .. (beginRadio and localReset .. "{" or "")
-                        .. (isEmpty and "" or localReset .. "<")
-                        .. soundCombo
-                        .. (isEmpty and "" or localReset .. ">")
+                    soundCombo = (endRadio and localReset .. "} " or "") .. (beginRadio and localReset .. "{" or "") ..
+                                     (isEmpty and "" or localReset .. "<") .. soundCombo ..
+                                     (isEmpty and "" or localReset .. ">")
                     tableStr = tableStr .. " " .. soundCombo
                 end
                 soundCombo = ""
@@ -2257,21 +2244,22 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
             if v["valid"] and chunkType == "quote" then
                 if quoteCombo:sub(#quoteCombo):match("%p") then
-                    --this adds the space after a quote
+                    -- this adds the space after a quote
                     quoteCombo = quoteCombo .. " " .. chunkStr
                 else
                     quoteCombo = quoteCombo .. chunkStr
                 end
             elseif v["valid"] and chunkType == "sound" then
                 if soundCombo:sub(#soundCombo):match("%p") then
-                    --this adds the space after a quote
+                    -- this adds the space after a quote
                     soundCombo = soundCombo .. " " .. chunkStr
                 else
                     soundCombo = soundCombo .. chunkStr
                 end
-            elseif v["valid"] then --everything that isn't a sound or a quote goes here
+            elseif v["valid"] then -- everything that isn't a sound or a quote goes here
                 if firstBlock then
-                    tableStr = fontTable[1] .. ";" .. tableStr
+                    -- tableStr = fontTable[1] .. ";" .. tableStr
+                    tableStr = "^" .. resetFormat .. ";" .. tableStr
                     tableStr = tableStr .. chunkStr
                 else
                     tableStr = tableStr .. " " .. chunkStr
@@ -2280,15 +2268,17 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 prevStr = chunkStr
             end
 
-            if lastChunk and prevRadio then tableStr = tableStr .. "}" end
+            if lastChunk and prevRadio then
+                tableStr = tableStr .. "}"
+            end
 
             prevType = chunkType
             firstBlock = false
         end
-        tableStr = cleanDoubleSpaces(tableStr)     --removes double spaces, ignores colors
+        tableStr = cleanDoubleSpaces(tableStr) -- removes double spaces, ignores colors
         tableStr = tableStr:gsub(' "%s', ' "')
-        tableStr = tableStr:gsub("}}%s*{{", "...") --for multiple radios
-        tableStr = tableStr:gsub("}%s*{", "...")   --for multiple radios
+        tableStr = tableStr:gsub("}}%s*{{", "...") -- for multiple radios
+        tableStr = tableStr:gsub("}%s*{", "...") -- for multiple radios
         tableStr = trim(tableStr)
         message.text = tableStr
 
@@ -2302,10 +2292,9 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         end
     end
 
-    --forced this to always pass at the request of users
+    -- forced this to always pass at the request of users
     if true or message.inSight then
-        message.portrait = message.portrait and message.portrait ~= "" and message.portrait
-            or message.connection
+        message.portrait = message.portrait and message.portrait ~= "" and message.portrait or message.connection
     else -- FezzedOne: Remove the portrait from the message if the receiver can't see the sender.
         -- Use a dummy negative connection ID so that a portrait is never "grabbed" by SCC.
         message.connection = -message.connection
@@ -2317,7 +2306,6 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     -- message.nickname = message.receiverName and (message.nickname .. " -> " .. message.receiverName)
     --     or message.nickname
 
-
     -- local result = nil
     -- local promise =
     -- while not promise:finished() do
@@ -2325,7 +2313,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     -- end
     -- if promise:succeeded() then result = promise:result() end
     -- return result
-    --this is for the client so it skips processing
+    -- this is for the client so it skips processing
     message.fromServer = true
     message.processed = true
     local newMsg = {}
@@ -2362,7 +2350,7 @@ end
 
 local function checkVersion(data)
     local userVersion = data.version
-    --hard code this comparison, i don't care
+    -- hard code this comparison, i don't care
     if userVersion < 203 then
         world.sendEntityMessage(data.player, "dpcServerMessage",
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.0.3 to ensure functionality with the server. Use /ignoreversion to suppress this.")
@@ -2371,14 +2359,13 @@ local function checkVersion(data)
 end
 
 local function processMessage(data)
-    --get a list of players, then process the message per player before sending it to each
+    -- get a list of players, then process the message per player before sending it to each
     local isGlobal = data.globalFlag
     local playerList = {}
     local playerWorlds = {}
     local playerUniques = {}
 
-
-    --temporary addition to see if it stops crashes
+    -- temporary addition to see if it stops crashes
     -- isGlobal = false --this didn't fix anything, apparently
 
     if isGlobal == true or isGlobal == "true" then
@@ -2396,32 +2383,27 @@ local function processMessage(data)
 
     local authorPos = world.entityPosition(data.playerId)
 
-    --when setting these up, format them as {uuid:{code:prof,code:prof...}} and {uuid:{channel:alias,channel:alias...}}
-    --create another config for a limit that's set by the server (never change this with the stagehand), compare it somewhere in processing
+    -- when setting these up, format them as {uuid:{code:prof,code:prof...}} and {uuid:{channel:alias,channel:alias...}}
+    -- create another config for a limit that's set by the server (never change this with the stagehand), compare it somewhere in processing
     -- langs is previously set
-    playerLangs = root.getConfiguration("DPC::playerLangs") or
-        {}                                                                      --{uuid:{code{"prof":prof,"color":color},code{"prof":prof,"color":color}...}}
-    playerCommChannels = root.getConfiguration("DPC::playerCommChannels") or {} --{uuid:{channel:name,channel:name...}}
+    playerLangs = root.getConfiguration("DPC::playerLangs") or {} -- {uuid:{code{"prof":prof,"color":color},code{"prof":prof,"color":color}...}}
+    playerCommChannels = root.getConfiguration("DPC::playerCommChannels") or {} -- {uuid:{channel:name,channel:name...}}
     savedLangs = root.getConfiguration("DPC::savedLangs") or {}
-    randSource = sb.makeRandomSource()                                          --i dont think this is null safe
-    langSubWords = root.getConfiguration("DPC::langSubWords") or
-        {}                                                                      -- [code] = {[word] replacement, [word] : replacement}
+    randSource = sb.makeRandomSource() -- i dont think this is null safe
+    langSubWords = root.getConfiguration("DPC::langSubWords") or {} -- [code] = {[word] replacement, [word] : replacement}
     local msgTime = os.clock() * 100000000000
 
     data.defaultFreq = data.defaultComms and data.defaultComms["freq"] or 0
 
-    --run handlemessage once, then processVisuals for each player, should cut down on comp time
+    -- run handlemessage once, then processVisuals for each player, should cut down on comp time
     local handleTable = {}
     -- handleMessage(data.playerId, authorPos, msgTime, data)
     local handleStat, returnError = pcall(handleMessage, data.playerId, data.playerUid, authorPos, msgTime, data)
     if handleStat then
         handleTable = returnError
     else
-        sb.logWarn(
-            "[DynamicProxChat] Error occurred while handling raw message: %s\n  Message data: %s",
-            returnError,
-            data
-        )
+        sb.logWarn("[DynamicProxChat] Error occurred while handling raw message: %s\n  Message data: %s", returnError,
+            data)
     end
 
     local formattedTable = handleTable.text
@@ -2431,9 +2413,11 @@ local function processMessage(data)
     local asterCount = handleTable.asterCount or 0
     local tickCount = handleTable.tickCount or false
 
+    sb.logInfo("quoteFont in outside is %s", data.quoteFont)
+
     -- process Visuals
     for _, recPlayer in ipairs(playerList) do
-        --find distances here, process the msg for the player if it's estimated as valid
+        -- find distances here, process the msg for the player if it's estimated as valid
         local recPos, msgDistance, recUUID = nil, nil, nil
 
         if isGlobal then
@@ -2444,27 +2428,25 @@ local function processMessage(data)
 
         data.sharesWorld = playerWorlds[recPlayer] == playerWorlds[data.playerId]
         if data.sharesWorld then
-            recPos = world.entityPosition(
-                world.entityExists(recPlayer) and recPlayer
-            )
+            recPos = world.entityPosition(world.entityExists(recPlayer) and recPlayer)
             msgDistance = world.magnitude(recPos, authorPos)
             recUUID = world.entityUniqueId(recPlayer)
         end
 
         if msgDistance <= maxRange or isGlobal then
-            if not data.sharesWorld then msgDistance = math.huge end
-            local status, errorMsg = pcall(processVisuals, data.playerId, authorPos, recPlayer, recUUID, recPos, maxRange,
-                msgDistance, formattedTable, playerWorlds[recPlayer], langAlphabets, slashCount, tickCount, asterCount,
-                data)
+            if not data.sharesWorld then
+                msgDistance = math.huge
+            end
+            local status, errorMsg = pcall(processVisuals, data.playerId, authorPos, recPlayer, recUUID, recPos,
+                maxRange, msgDistance, formattedTable, playerWorlds[recPlayer], langAlphabets, slashCount, tickCount,
+                asterCount, data)
             if status then
-                --don't return because we want it to loop
+                -- don't return because we want it to loop
                 -- return errorMsg
             else
                 sb.logWarn(
                     "[DynamicProxChat] Error occurred while formatting visuals for message: %s\n  Message data: %s",
-                    errorMsg,
-                    data
-                )
+                    errorMsg, data)
             end
         end
     end
@@ -2485,32 +2467,26 @@ function init()
     if purpose == "sendDynamicMessage" then
         -- world.sendEntityMessage(data.playerId, "dpcServerMessage",
         --     "[DEBUG] Checks are on. Remove them before going to production.")
-        --log and process here
+        -- log and process here
         local status, errorMsg = pcall(logNewMessage, purpose, data)
         if status then
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while logging message: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
-            world.sendEntityMessage(data.playerId, "dpcServerMessage", "[DEBUG] DPC Chat failed with error: " .. errorMsg)
+            sb.logWarn("[DynamicProxChat] Error occurred while logging message: %s\n  Message data: %s", errorMsg, data)
+            world.sendEntityMessage(data.playerId, "dpcServerMessage",
+                "[DEBUG] DPC Chat failed with error: " .. errorMsg)
         end
         local status, errorMsg = pcall(processMessage, data)
         if status then
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while formatting proximity message: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while formatting proximity message: %s\n  Message data: %s",
+                errorMsg, data)
         end
         -- promises:add(processMessage(data))
-        --promises is returning as a nil global, not sure why
+        -- promises is returning as a nil global, not sure why
     elseif purpose == "checkVersion" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(checkVersion, data)
@@ -2518,11 +2494,7 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while adding language: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while adding language: %s\n  Message data: %s", errorMsg, data)
         end
     elseif purpose == "editLangPhrase" then
         logCommand(purpose, data)
@@ -2531,11 +2503,8 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while adding replacement word: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while adding replacement word: %s\n  Message data: %s",
+                errorMsg, data)
         end
     elseif purpose == "addLang" then
         logCommand(purpose, data)
@@ -2544,11 +2513,7 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while adding language: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while adding language: %s\n  Message data: %s", errorMsg, data)
         end
     elseif purpose == "resetLangs" then
         logCommand(purpose, data)
@@ -2557,11 +2522,8 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while resetting languages: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while resetting languages: %s\n  Message data: %s", errorMsg,
+                data)
         end
     elseif purpose == "defaultLang" then
         logCommand(purpose, data)
@@ -2570,11 +2532,8 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while setting default language: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while setting default language: %s\n  Message data: %s",
+                errorMsg, data)
         end
     elseif purpose == "langlist" then
         logCommand(purpose, data)
@@ -2583,11 +2542,8 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while checking language list: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while checking language list: %s\n  Message data: %s",
+                errorMsg, data)
         end
     elseif purpose == "editlang" then
         logCommand(purpose, data)
@@ -2596,11 +2552,7 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while editing language: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while editing language: %s\n  Message data: %s", errorMsg, data)
         end
     elseif purpose == "setfreq" then
         logCommand(purpose, data)
@@ -2609,11 +2561,8 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s", errorMsg,
+                data)
         end
     elseif purpose == "toggleradio" then
         logCommand(purpose, data)
@@ -2622,19 +2571,25 @@ function init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s",
-                errorMsg,
-                data
-            )
+            sb.logWarn("[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s", errorMsg,
+                data)
+        end
+    elseif purpose == "checkStatus" then
+        logCommand(purpose, data)
+        local status, errorMsg = pcall(checkStatus, data)
+        if status then
+            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
+            -- return errorMsg
+        else
+            sb.logWarn("[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s", errorMsg,
+                data)
         end
     else
         -- All the other stuff
         local nickname = data.nickname or "N/A"
         local uuid = data.playerUid or data.uuid or "N/A"
-        sb.logInfo("Player " ..
-            nickname ..
-            " (UUID: " .. uuid .. ") spawned a stagehand with unidentified purpose: " .. purpose)
+        sb.logInfo("Player " .. nickname .. " (UUID: " .. uuid .. ") spawned a stagehand with unidentified purpose: " ..
+                       purpose)
     end
 
     killStagehand() -- We don't need it anymore
