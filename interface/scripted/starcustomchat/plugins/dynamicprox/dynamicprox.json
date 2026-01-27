@@ -23,5 +23,6 @@
     "proxTalkRadius": 30
   },
 
-  "script": "/interface/scripted/starcustomchat/plugins/dynamicprox/proximity.lua"
+  "script": "/interface/scripted/starcustomchat/plugins/dynamicprox/proximity.lua",
+  "commands": "/interface/scripted/starcustomchat/plugins/dynamicprox/commands.conf"
 }
