@@ -1360,7 +1360,8 @@ function dynamicprox:onSendMessage(data)
 
         local function sendMessageToPlayers()
 
-            sb.logInfo("checking serverValid, which is %s", self.serverValid)
+            --todo: set this up to send via old methods, then insert the old formatincoming
+            --kind of a messy solution, but it'll work as a secondary (which is the point)
             if self.serverValid == nil then
 
                 local status, resultOrError = pcall(function(data)
@@ -1375,11 +1376,9 @@ function dynamicprox:onSendMessage(data)
                     })
                 end, data)
                 if status then
-                    sb.logInfo("Server plugin loaded successfully.")
                     self.serverValid = true
                 else
                     -- set up the client processor
-                    sb.logInfo("Server plugin not found, using client processing.")
                     self.serverValid = false
                 end
             end
@@ -1396,6 +1395,7 @@ function dynamicprox:onSendMessage(data)
                 })
             else
                 --send locally to players
+                sb.logWarn("Clientside sending needed.")
             end
             return true -- this should stop global strings from running (which i want in this case)
             -- later on i may make this a client config setting
@@ -1574,6 +1574,7 @@ function dynamicprox:onModeChange(mode)
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Before getting started with this mod, be aware that currently the mod is set up only with server configurations. If the chat mod doesn't work, odds are it isn't mounted on the server. To use the language system, use ^cyan;/learnlang^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
         if self.serverDefault then
             root.setConfiguration("dpcOverServer", true)
+            self.serverValid = true
         end
         player.setProperty("DPC::firstLoad", true)
     end

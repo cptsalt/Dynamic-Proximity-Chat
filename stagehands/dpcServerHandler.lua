@@ -21,9 +21,77 @@ end
 
 local function checkStatus(data)
     sb.logInfo("checkStatus ran")
-    --do nothing, just needs to not throw an error
+    -- do nothing, just needs to not throw an error
     -- world.sendEntityMessage(data.player, "dpcStagehandExists")
 end
+
+-- ===ADMIN COMMANDS===--
+
+local function adminCheck(data)
+    local playerUUID = data.uuid
+    local playerSecret = data.playerSecret
+    local serverSavedSecret = playerSecrets[playerUUID] or false
+    local adminChars = root.getConfiguration("DPC::adminCharacters") or {}
+
+    if not adminChars[playerUUID] then
+        world.sendEntityMessage(data.player, "dpcServerMessage", "Invalid permission, command aborted.")
+        return false
+    end
+
+    if serverSavedSecret ~= playerSecret then
+        world.sendEntityMessage(data.player, "dpcServerMessage", "Bad authentication, command aborted.")
+        return false
+    end
+
+    return true
+end
+
+--[[
+Make sure ALL of these have an adminChars check.
+
+
+don't add this one just yet
+local function editAdmin(data)
+    local playerUUID = data.uuid
+    local playerSecret = data.playerSecret
+    local serverSavedSecret = playerSecrets[playerUUID] or false
+    local adminChars = root.getConfiguration("DPC::adminCharacters") or {}
+
+    if not adminChars[playerUUID] then
+        world.sendEntityMessage(data.player, "dpcServerMessage", "Invalid permission, command aborted.")
+    end
+
+    if serverSavedSecret ~= playerSecret then
+        world.sendEntityMessage(data.player, "dpcServerMessage", "Bad authentication, command aborted.")
+        return
+    end
+end
+]] --
+
+local function editCharHearing(data)
+    -- edits a (yet to be implemented) value which will change an individual character's range for hearing noises 
+    if not adminCheck(data) then
+        return
+    end
+end
+
+local function adminMode(data)
+    if not adminCheck(data) then
+        return
+    end
+    local uuid = data.uuid
+    local adminActive = root.getConfiguration("DPC::activeAdmins") or {}
+    local isActive = adminActive[uuid] or false
+
+    if isActive then
+        adminActive[uuid] = nil
+    else
+        adminActive[uuid] = true
+    end
+    root.setConfiguration("DPC::activeAdmins", adminActive)
+end
+
+-- ===LANGUAGE COMMANDS===--
 
 local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords = nil, nil, nil, nil, nil
 local randSource = nil
