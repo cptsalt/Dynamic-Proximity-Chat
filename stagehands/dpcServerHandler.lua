@@ -155,6 +155,7 @@ local function addLang(data)
                 name = newLang.name or newLang.code,
                 color = newLang.color or nil,
                 preset = newLang.preset or nil,
+                font = newLang.font or nil,
                 creator = playerUUID
             }
             root.setConfiguration("DPC::savedLangs", savedLangs)
@@ -343,7 +344,7 @@ local function editLang(data)
     end
 
     if not savedLangs[dCode] or savedLangs[dCode].creator ~= playerUUID or not dCode or
-        (subject ~= "color" and subject ~= "name" and subject ~= "preset") or not newVal then
+        (subject ~= "color" and subject ~= "name" and subject ~= "font" and subject ~= "preset") or not newVal then
         world.sendEntityMessage(data.player, "dpcServerMessage", "Bad arguments, language edit aborted.")
         return
     end
@@ -1639,7 +1640,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         ["in"] = true
     }
 
-    local function langScramble(str, prof, langCode, msgColor, langColor, langPreset, newAlphabet)
+    local function langScramble(str, prof, langCode, msgColor, langFont, langColor, langPreset, newAlphabet)
         local returnStr = ""
         str = str:gsub("  ", " ")
         -- local strDict = langSplit(str, "[%s%p]")
@@ -1650,6 +1651,10 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
         -- strDict is a table containing each character to make processing less fucky
         local prevScrambled = false
+
+        if langFont then
+            langColor = "font=" .. langFont .. ";^" .. langColor
+        end
 
         for _, value in ipairs(strDict) do
             local word = value.word
@@ -2138,6 +2143,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                         langProf = (recLangs[langKey] or 0) * 10
                         langColor = (savedLangs[langKey] and savedLangs[langKey]["color"]) or nil
                         langPreset = (savedLangs[langKey] and savedLangs[langKey]["preset"]) or false
+                        local langFont = (savedLangs[langKey] and savedLangs[langKey]["font"]) or nil
 
                         if (not v["noScramble"]) and langProf < 100 then
                             if not langAlphabets[langKey] and (not langPreset or langPreset:match("[^%s]") == nil) then
@@ -2145,7 +2151,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                                 langAlphabets[langKey] = genRandAlph(wordBytes(langKey:upper()))
                             end
                             local newAlphabet = langAlphabets[langKey]
-                            chunkStr = langScramble(chunkStr, langProf, langKey, baseColorTable[volTable[v["radius"]]],
+                            chunkStr = langScramble(chunkStr, langProf, langKey, baseColorTable[volTable[v["radius"]]], langFont,
                                 langColor, langPreset, newAlphabet)
                         elseif chunkStr:match("[<_>]") then
                             chunkStr = chunkStr:gsub("[<_>]", "")

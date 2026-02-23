@@ -249,11 +249,11 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
 
     starcustomchat.utils.setMessageHandler("/learnlang", function(_, _, data)
         local splitArgs = splitStr(data, " ")
-        local langKey, langLevel, langName, color, preset = (splitArgs[1] or nil), (tonumber(splitArgs[2]) or 10),
-            (splitArgs[3] or nil), (splitArgs[4] or nil), (splitArgs[5] or nil)
+        local langKey, langLevel, langName, color, font, preset = (splitArgs[1] or nil), (tonumber(splitArgs[2]) or 10),
+            (splitArgs[3] or nil), (splitArgs[4] or nil), (splitArgs[5] or nil), (splitArgs[6] or nil)
 
         if not langKey or #langKey < 1 then
-            return "Missing arguments for /learnlang, need {code, prof, [name], [hex color], [preset]}"
+            return "Missing arguments for /learnlang, need {code, prof, [name], [hex color], [font], [preset]}"
         end
 
         langKey = langKey:upper()
@@ -291,6 +291,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             code = langKey,
             prof = langLevel,
             color = color,
+            font = font,
             preset = preset
         }
 
@@ -298,7 +299,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         if not playerSecret then
             playerSecret = sb.makeUuid()
             player.setProperty("DPC::playerCheck", playerSecret)
-            player.setProperty("DPC:playerCheck", nil)
+            
         end
 
         local addInfo = {
@@ -346,7 +347,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         local dCode, subject, newVal, extra = splitArgs[1]:upper() or nil, splitArgs[2]:lower() or nil,
             splitArgs[3] or nil, splitArgs[4] or nil
 
-        if not dCode or (subject ~= "color" and subject ~= "name" and subject ~= "preset") or not newVal then
+        if not dCode or (subject ~= "color" and subject ~= "name" and subject ~= "preset" and subject ~= "font") or not newVal then
             return "Bad arguments, use (code, subject, new value)."
         end
 
@@ -358,7 +359,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         if not playerSecret then
             playerSecret = sb.makeUuid()
             player.setProperty("DPC::playerCheck", playerSecret)
-            player.setProperty("DPC:playerCheck", nil)
+            
         end
 
         local addInfo = {
@@ -1301,7 +1302,7 @@ function dynamicprox:formatOutcomingMessage(data)
             -- if not playerSecret then
             --     playerSecret = sb.makeUuid()
             --     player.setProperty("DPC::playerCheck", playerSecret)
-            --     player.setProperty("DPC:playerCheck", nil)
+            --     
             -- end
             -- if data.updatedLangs then
             --     data.playerplayerSecret = playerSecret
