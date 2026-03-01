@@ -1,8 +1,10 @@
 {
   "type" : "dpcServerHandler",
 
-  "scripts" : ["/stagehands/dpcServerHandler.lua"],
-  "scriptDelta" : 1, // run update() every scriptDelta frames. 1 is every, 0 is never
+  "scripts" : [
+    "/scripts/quest/messaging.lua",
+    "/stagehands/mailbox.lua"],
+  "scriptDelta" : 1,
 
-  "broadcastArea" : [-16, -16, 16, 16] // bounding box of the stagehand, affects its shape in entity queries, /debug and can be read by the script
+  "broadcastArea" : [-16, -16, 16, 16]
 }

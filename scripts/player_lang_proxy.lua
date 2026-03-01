@@ -104,6 +104,10 @@ function init()
         end
     end)
 
+    message.setHandler("dpcStagehandExists", function(_, isLocal)
+        player.setProperty("DPC::serverValid", true)
+    end)
+
     message.setHandler("dpcGetRecogs", function(_, isLocal)
         if isLocal then
             return player.getProperty("DPC::recognizedPlayers") or {}

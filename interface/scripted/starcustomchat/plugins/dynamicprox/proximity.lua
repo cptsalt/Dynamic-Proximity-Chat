@@ -1,4 +1,6 @@
 require("/interface/scripted/starcustomchat/plugin.lua")
+require "/scripts/scctimer.lua"
+SCCTimer = TimerKeeper.new()
 
 -- Need this to copy message tables.
 local function copy(obj, seen)
@@ -77,8 +79,10 @@ function dynamicprox:uninit()
     end
 end
 
-local function splitStr(inputstr, sep) --replaced this with a less efficient linear search in order to be system agnostic
-    if sep == nil then sep = "%s" end
+local function splitStr(inputstr, sep) -- replaced this with a less efficient linear search in order to be system agnostic
+    if sep == nil then
+        sep = "%s"
+    end
     local arg = ""
     local t = {}
     local qFlag = false
@@ -299,7 +303,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         if not playerSecret then
             playerSecret = sb.makeUuid()
             player.setProperty("DPC::playerCheck", playerSecret)
-            
+
         end
 
         local addInfo = {
@@ -347,7 +351,8 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         local dCode, subject, newVal, extra = splitArgs[1]:upper() or nil, splitArgs[2]:lower() or nil,
             splitArgs[3] or nil, splitArgs[4] or nil
 
-        if not dCode or (subject ~= "color" and subject ~= "name" and subject ~= "preset" and subject ~= "font") or not newVal then
+        if not dCode or (subject ~= "color" and subject ~= "name" and subject ~= "preset" and subject ~= "font") or
+            not newVal then
             return "Bad arguments, use (code, subject, new value)."
         end
 
@@ -359,7 +364,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         if not playerSecret then
             playerSecret = sb.makeUuid()
             player.setProperty("DPC::playerCheck", playerSecret)
-            
+
         end
 
         local addInfo = {
@@ -1120,6 +1125,7 @@ local function applyRecogToQuotes(str, recogList)
 end
 
 function dynamicprox:formatOutcomingMessage(data)
+    sb.logInfo("message info is %s", data)
     local currentPlayerName = ""
 
     -- think about running this in local to allow players without the mod to still see messages
@@ -1361,41 +1367,20 @@ function dynamicprox:onSendMessage(data)
 
         local function sendMessageToPlayers()
 
-            --todo: set this up to send via old methods, then insert the old formatincoming
-            --kind of a messy solution, but it'll work as a secondary (which is the point)
-            if self.serverValid == nil then
-
-                local status, resultOrError = pcall(function(data)
-                    sb.logInfo("running pcall")
-                    local addInfo = {
-                        player = player.id(),
-                        uuid = player.uniqueId()
-                    }
-                    starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
-                        message = "checkStatus",
-                        data = addInfo
-                    })
-                end, data)
-                if status then
-                    self.serverValid = true
-                else
-                    -- set up the client processor
-                    self.serverValid = false
-                end
-            end
+            -- todo: set this up to send via old methods, then insert the old formatincoming
+            -- kind of a messy solution, but it'll work as a secondary (which is the point)
 
             -- check for alias stuff here
             data.fakeName = player.getProperty("DPC::unknownAlias") or nil
             data.playerName = world.entityName(player.id())
 
-
-            if self.serverValid then
+            if true or self.serverValid then
                 starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
                     message = "sendDynamicMessage",
                     data = data
                 })
             else
-                --send locally to players
+                -- send locally to players
                 sb.logWarn("Clientside sending needed.")
             end
             return true -- this should stop global strings from running (which i want in this case)
@@ -1579,5 +1564,40 @@ function dynamicprox:onModeChange(mode)
         end
         player.setProperty("DPC::firstLoad", true)
     end
+
+    sb.logInfo("mode is %s, valid is %s", mode, self.serverValid)
+    if mode == "Prox" and self.serverValid == nil then
+        sb.logInfo("DPC: Running server check.")
+
+        SCCTimer:add(0.5, function()
+            local status, resultOrError = pcall(function(data)
+                sb.logInfo("running pcall")
+                local addInfo = {
+                    player = player.id(),
+                    uuid = player.uniqueId()
+                }
+                starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+                    message = "checkStatus",
+                    data = addInfo
+                })
+            end, data)
+            SCCTimer:add(1, function()
+                if player.getProperty("DPC::serverValid") then
+                    self.serverValid = true
+                    sb.logInfo("DPC Server stagehand is installed.")
+                else
+                    self.serverValid = false
+                    sb.logInfo("DPC Server stagehand is NOT installed.")
+                end
+                player.setProperty("DPC::serverValid", nil)
+            end)
+        end)
+    end
+
     setTextHint(mode)
+end
+
+
+function dynamicprox:update(dt)
+  SCCTimer:update(dt)
 end

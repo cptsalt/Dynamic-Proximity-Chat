@@ -1,3 +1,46 @@
+--provided by Degranon
+function init()
+  if not Outbox then
+    stagehand.die()
+    return
+  end
+  self.outbox = Outbox.new("outbox", ContactList.new("contacts"))
+
+  self.dpcStagehand = stagehand.typeName() == "dpcServerHandler"
+  if self.dpcStagehand and dpc_init then
+    dpc_init()
+  end
+end
+
+function uninit()
+  if not self.outbox then
+    return
+  end
+  self.outbox:uninit()
+end
+
+function update(dt)
+  if not self.outbox then
+    stagehand.die()
+    return
+  end
+  self.outbox:update()
+
+  if self.outbox:empty() and not self.dpcStagehand then
+    stagehand.die()
+  end
+end
+
+function post(contacts, messages)
+  self.outbox.contactList:registerContacts(contacts)
+  for _,messageData in ipairs(messages) do
+    self.outbox:logMessage(messageData, "mailbox received")
+    self.outbox:postpone(messageData)
+  end
+end
+
+--DPC Functions
+
 local function killStagehand()
     stagehand.die()
 end
@@ -20,9 +63,8 @@ local function logCommand(purpose, data)
 end
 
 local function checkStatus(data)
-    sb.logInfo("checkStatus ran")
     -- do nothing, just needs to not throw an error
-    -- world.sendEntityMessage(data.player, "dpcStagehandExists")
+    world.sendEntityMessage(data.player, "dpcStagehandExists")
 end
 
 -- ===ADMIN COMMANDS===--
@@ -2534,7 +2576,7 @@ local function processMessage(data)
     -- killStagehand() -- We don't need it anymore
 end
 
-function init()
+function dpc_init()
     local purpose = config.getParameter("message") or "nil"
     local data = config.getParameter("data") or "no data"
 
