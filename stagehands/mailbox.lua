@@ -6,7 +6,7 @@ function init()
   end
   self.outbox = Outbox.new("outbox", ContactList.new("contacts"))
 
-  self.dpcStagehand = stagehand.typeName() == "dpcServerHandler"
+  self.dpcStagehand = stagehand.typeName() == "dpcStagehand"
   if self.dpcStagehand and dpc_init then
     dpc_init()
   end
@@ -63,7 +63,13 @@ local function logCommand(purpose, data)
 end
 
 local function checkStatus(data)
-    -- do nothing, just needs to not throw an error
+    --[[ send player server saved language and other info
+    players won't use this info on client processing mode
+    but in case they leave and join a server without the stagehand they will use it as a backup
+    this is here to reset those values to the server's record so things don't break,
+    in the event that someone joined a different server or added/removed languages in singleplayer or on another server
+    ]]
+
     world.sendEntityMessage(data.player, "dpcStagehandExists")
 end
 
@@ -94,6 +100,7 @@ Make sure ALL of these have an adminChars check.
 
 don't add this one just yet
 local function editAdmin(data)
+    --adds or removes people from admin perms
     local playerUUID = data.uuid
     local playerSecret = data.playerSecret
     local serverSavedSecret = playerSecrets[playerUUID] or false
@@ -118,6 +125,7 @@ local function editCharHearing(data)
 end
 
 local function adminMode(data)
+    --turns on "admin mode", which lets you see all messages sent
     if not adminCheck(data) then
         return
     end
@@ -2529,7 +2537,7 @@ local function processMessage(data)
     local asterCount = handleTable.asterCount or 0
     local tickCount = handleTable.tickCount or false
 
-    sb.logInfo("quoteFont in outside is %s", data.quoteFont)
+    -- sb.logInfo("quoteFont in outside is %s", data.quoteFont)
 
     -- process Visuals
     for _, recPlayer in ipairs(playerList) do

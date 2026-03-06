@@ -1,5 +1,5 @@
 {
-  "type" : "dpcServerHandler",
+  "type" : "dpcStagehand",
 
   "scripts" : [
     "/scripts/quest/messaging.lua",

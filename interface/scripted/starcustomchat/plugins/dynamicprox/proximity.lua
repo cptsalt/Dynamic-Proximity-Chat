@@ -312,7 +312,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             playerSecret = playerSecret,
             newLang = langInfo
         }
-        starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
             message = "addLang",
             data = addInfo
         })
@@ -340,7 +340,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             player = player.id(),
             uuid = player.uniqueId()
         }
-        starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
             message = "langlist",
             data = addInfo
         })
@@ -375,7 +375,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             subject = subject,
             newVal = newVal
         }
-        starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
             message = "editlang",
             data = addInfo
         })
@@ -397,7 +397,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 uuid = player.uniqueId(),
                 playerSecret = playerSecret
             }
-            starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
                 message = "resetLangs",
                 data = addInfo
             })
@@ -436,7 +436,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             playerSecret = playerSecret,
             dCode = defaultCode
         }
-        starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
             message = "defaultLang",
             data = addInfo
         })
@@ -472,7 +472,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 playerSecret = playerSecret,
                 radioState = radioState
             }
-            starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
                 message = "toggleradio",
                 data = addInfo
             })
@@ -531,7 +531,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 playerSecret = playerSecret,
                 activeFreq = activeFreq
             }
-            starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
                 message = "setfreq",
                 data = addInfo
             })
@@ -967,7 +967,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 phrase = phrase,
                 replacement = replacement
             }
-            starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
                 message = "editLangPhrase",
                 data = addInfo
             })
@@ -1125,7 +1125,7 @@ local function applyRecogToQuotes(str, recogList)
 end
 
 function dynamicprox:formatOutcomingMessage(data)
-    sb.logInfo("message info is %s", data)
+    -- sb.logInfo("message info is %s", data)
     local currentPlayerName = ""
 
     -- think about running this in local to allow players without the mod to still see messages
@@ -1375,7 +1375,7 @@ function dynamicprox:onSendMessage(data)
             data.playerName = world.entityName(player.id())
 
             if true or self.serverValid then
-                starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+                starcustomchat.utils.createStagehandWithData("dpcStagehand", {
                     message = "sendDynamicMessage",
                     data = data
                 })
@@ -1576,7 +1576,7 @@ function dynamicprox:onModeChange(mode)
                     player = player.id(),
                     uuid = player.uniqueId()
                 }
-                starcustomchat.utils.createStagehandWithData("dpcServerHandler", {
+                starcustomchat.utils.createStagehandWithData("dpcStagehand", {
                     message = "checkStatus",
                     data = addInfo
                 })
@@ -1588,6 +1588,8 @@ function dynamicprox:onModeChange(mode)
                 else
                     self.serverValid = false
                     sb.logInfo("DPC Server stagehand is NOT installed.")
+                    chat.addMessage(
+                        "^CornFlowerBlue;Dynamic Prox Chat^reset;: It appears this server does not have DPC installed. Messages in the Dynamic tab will not send as a result of this (for now, I'm working on clientside processing).")
                 end
                 player.setProperty("DPC::serverValid", nil)
             end)
@@ -1597,7 +1599,6 @@ function dynamicprox:onModeChange(mode)
     setTextHint(mode)
 end
 
-
 function dynamicprox:update(dt)
-  SCCTimer:update(dt)
+    SCCTimer:update(dt)
 end
