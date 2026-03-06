@@ -1565,7 +1565,6 @@ function dynamicprox:onModeChange(mode)
         player.setProperty("DPC::firstLoad", true)
     end
 
-    sb.logInfo("mode is %s, valid is %s", mode, self.serverValid)
     if mode == "Prox" and self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
 
