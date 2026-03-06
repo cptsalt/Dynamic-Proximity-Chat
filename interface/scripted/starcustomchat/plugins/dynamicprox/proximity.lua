@@ -1560,7 +1560,7 @@ function dynamicprox:onModeChange(mode)
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Before getting started with this mod, be aware that currently the mod is set up only with server configurations. If the chat mod doesn't work, odds are it isn't mounted on the server. To use the language system, use ^cyan;/learnlang^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
         if self.serverDefault then
             root.setConfiguration("dpcOverServer", true)
-            self.serverValid = true
+            -- self.serverValid = true
         end
         player.setProperty("DPC::firstLoad", true)
     end
