@@ -160,18 +160,6 @@ end
 
 -- this messagehandler function runs if the chat preview exists
 function dynamicprox:registerMessageHandlers(shared) -- look at this function in irden chat's editchat thing
-    starcustomchat.utils.setMessageHandler("/proxdebug", function(_, _, data)
-        if string.lower(data) == "on" then
-            DEBUG = true
-            return "^green;ENABLED^reset; debug mode for Dynamic Proximity Chat"
-        elseif string.lower(data) == "off" then
-            DEBUG = false
-            return "^red;DISABLED^reset; debug mode for Dynamic Proximity Chat"
-        else
-            return "Debug mode for Dynamic Proximity Chat is " .. (DEBUG and "^green;ENABLED" or "^red;DISABLED") ..
-                       "^reset;. To change this setting, pass ^orange;on^reset; or ^orange;off^reset; to this command."
-        end
-    end)
     starcustomchat.utils.setMessageHandler("/togglejoinmsgs", function(_, _, data)
         local showConnection = root.getConfiguration("DPC::showConnection") or false
         showConnection = not showConnection
@@ -1367,13 +1355,15 @@ function dynamicprox:onSendMessage(data)
             data.fakeName = player.getProperty("DPC::unknownAlias") or nil
             data.playerName = world.entityName(player.id())
 
-            if true or self.serverValid then
+            if self.serverValid then
                 sendStagehand({
                     message = "sendDynamicMessage",
                     data = data
                 })
             else
                 -- send locally to players
+                chat.addMessage(
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Server processing is not supported on this server, and chat messages will not send properly. In the future there will be a client processor, but that is not yet implemented.")
                 sb.logWarn("Clientside sending needed.")
             end
             return true -- this should stop global strings from running (which i want in this case)
@@ -1563,7 +1553,7 @@ function dynamicprox:onModeChange(mode)
     if mode == "Prox" and self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
 
-        SCCTimer:add(0.5, function()
+        SCCTimer:add(1, function()
             local status, resultOrError = pcall(function(data)
                 local playerSecret = player.getProperty("DPC::playerCheck") or false
                 if not playerSecret then
@@ -1581,7 +1571,7 @@ function dynamicprox:onModeChange(mode)
                     data = addInfo
                 })
             end, data)
-            SCCTimer:add(1, function()
+            SCCTimer:add(2, function()
                 if player.getProperty("DPC::serverValid") then
                     self.serverValid = true
                     sb.logInfo("DPC Server stagehand is installed.")
