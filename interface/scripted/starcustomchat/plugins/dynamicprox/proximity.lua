@@ -107,29 +107,18 @@ local function splitStr(inputstr, sep) -- replaced this with a less efficient li
     return t
 end
 
-local function getDefaultLang(onServer)
-    local defaultKey
-    if onServer or false then
-        defaultKey = player.getProperty("DPC::defaultLang") or "!!"
-    else
-        local langItem = player.getItemWithParameter("defaultLang", true) -- checks for an item with the "defaultLang" parameter
-        if langItem == nil then
-            defaultKey = "!!"
-        else
-            defaultKey = langItem["parameters"]["langKey"] or "!!"
-        end
-    end
-    return defaultKey
+local function getDefaultLang()
+    return player.getProperty("DPC::defaultLang") or "!!"
 end
 
 local function setTextHint(mode, override)
     local override = override or false
     if override or mode ~= "Prox" or root.getConfiguration("DPC::hideHints") then
-        widget.setText("lblTextboxHint", starcustomchat.utils.getTranslation("chat.textbox.hint"))
+        widget.setHint("tbxInput", starcustomchat.utils.getTranslation("chat.textbox.hint"))
         return
     end
 
-    local defaultLang = getDefaultLang(root.getConfiguration("dpcOverServer") or false)
+    local defaultLang = getDefaultLang()
 
     local hintStr = ""
     if defaultLang ~= "!!" then
@@ -149,7 +138,7 @@ local function setTextHint(mode, override)
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
 
-    widget.setText("lblTextboxHint", hintStr)
+    widget.setHint("tbxInput", hintStr)
 end
 
 local function checktypo(toggle)
@@ -163,6 +152,10 @@ local function checktypo(toggle)
     setTextHint("Prox")
     local typoStatus = (typoTable["typosActive"] and "on") or "off"
     return "Typo correction is " .. typoStatus
+end
+
+local function sendStagehand(data)
+    starcustomchat.utils.createStagehandWithData("dpcStagehand", data)
 end
 
 -- this messagehandler function runs if the chat preview exists
@@ -312,7 +305,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             playerSecret = playerSecret,
             newLang = langInfo
         }
-        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+        sendStagehand({
             message = "addLang",
             data = addInfo
         })
@@ -340,7 +333,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             player = player.id(),
             uuid = player.uniqueId()
         }
-        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+        sendStagehand({
             message = "langlist",
             data = addInfo
         })
@@ -375,7 +368,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             subject = subject,
             newVal = newVal
         }
-        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+        sendStagehand({
             message = "editlang",
             data = addInfo
         })
@@ -397,7 +390,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 uuid = player.uniqueId(),
                 playerSecret = playerSecret
             }
-            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+            sendStagehand({
                 message = "resetLangs",
                 data = addInfo
             })
@@ -436,7 +429,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             playerSecret = playerSecret,
             dCode = defaultCode
         }
-        starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+        sendStagehand({
             message = "defaultLang",
             data = addInfo
         })
@@ -472,7 +465,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 playerSecret = playerSecret,
                 radioState = radioState
             }
-            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+            sendStagehand({
                 message = "toggleradio",
                 data = addInfo
             })
@@ -531,7 +524,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 playerSecret = playerSecret,
                 activeFreq = activeFreq
             }
-            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+            sendStagehand({
                 message = "setfreq",
                 data = addInfo
             })
@@ -967,7 +960,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 phrase = phrase,
                 replacement = replacement
             }
-            starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+            sendStagehand({
                 message = "editLangPhrase",
                 data = addInfo
             })
@@ -1160,7 +1153,7 @@ function dynamicprox:formatOutcomingMessage(data)
             local iCount = 1
             local globalFlag = false
             local hasNoise = false
-            local defaultKey = getDefaultLang(true)
+            local defaultKey = getDefaultLang()
             data.defaultLang = defaultKey
             local typoTable = root.getConfiguration("DPC::typos") or {}
             local typoVar = typoTable["typosActive"]
@@ -1296,7 +1289,7 @@ function dynamicprox:formatOutcomingMessage(data)
                 data.aliasPrio = recogPrio
             end
 
-            data.playerName = xsb and currentPlayerName or world.entityName(player.id())
+            data.playerName = currentPlayerName
             -- FezzedOne: Moved these to ensure full recog support in client-side mode.
             data.playerId = player.id()
             data.playerUid = player.uniqueId()
@@ -1327,7 +1320,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 210
+            data.version = 211
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
             data.globalFlag = globalFlag
@@ -1375,7 +1368,7 @@ function dynamicprox:onSendMessage(data)
             data.playerName = world.entityName(player.id())
 
             if true or self.serverValid then
-                starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+                sendStagehand({
                     message = "sendDynamicMessage",
                     data = data
                 })
@@ -1432,6 +1425,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
 
         if message.mode == "Prox" then
             message.isDpc = true
+        else
+            return
         end
 
         local cleanText = message.text:gsub("%^[^^;]-;", "")
@@ -1570,12 +1565,18 @@ function dynamicprox:onModeChange(mode)
 
         SCCTimer:add(0.5, function()
             local status, resultOrError = pcall(function(data)
-                sb.logInfo("running pcall")
+                local playerSecret = player.getProperty("DPC::playerCheck") or false
+                if not playerSecret then
+                    playerSecret = sb.makeUuid()
+                    player.setProperty("DPC::playerCheck", playerSecret)
+
+                end
                 local addInfo = {
                     player = player.id(),
-                    uuid = player.uniqueId()
+                    uuid = player.uniqueId(),
+                    secret = playerSecret
                 }
-                starcustomchat.utils.createStagehandWithData("dpcStagehand", {
+                sendStagehand({
                     message = "checkStatus",
                     data = addInfo
                 })

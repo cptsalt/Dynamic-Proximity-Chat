@@ -1,45 +1,45 @@
---provided by Degranon
+-- provided by Degranon
 function init()
-  if not Outbox then
-    stagehand.die()
-    return
-  end
-  self.outbox = Outbox.new("outbox", ContactList.new("contacts"))
+    if not Outbox then
+        stagehand.die()
+        return
+    end
+    self.outbox = Outbox.new("outbox", ContactList.new("contacts"))
 
-  self.dpcStagehand = stagehand.typeName() == "dpcStagehand"
-  if self.dpcStagehand and dpc_init then
-    dpc_init()
-  end
+    self.dpcStagehand = stagehand.typeName() == "dpcStagehand"
+    if self.dpcStagehand and dpc_init then
+        dpc_init()
+    end
 end
 
 function uninit()
-  if not self.outbox then
-    return
-  end
-  self.outbox:uninit()
+    if not self.outbox then
+        return
+    end
+    self.outbox:uninit()
 end
 
 function update(dt)
-  if not self.outbox then
-    stagehand.die()
-    return
-  end
-  self.outbox:update()
+    if not self.outbox then
+        stagehand.die()
+        return
+    end
+    self.outbox:update()
 
-  if self.outbox:empty() and not self.dpcStagehand then
-    stagehand.die()
-  end
+    if self.outbox:empty() and not self.dpcStagehand then
+        stagehand.die()
+    end
 end
 
 function post(contacts, messages)
-  self.outbox.contactList:registerContacts(contacts)
-  for _,messageData in ipairs(messages) do
-    self.outbox:logMessage(messageData, "mailbox received")
-    self.outbox:postpone(messageData)
-  end
+    self.outbox.contactList:registerContacts(contacts)
+    for _, messageData in ipairs(messages) do
+        self.outbox:logMessage(messageData, "mailbox received")
+        self.outbox:postpone(messageData)
+    end
 end
 
---DPC Functions
+-- DPC Functions
 
 local function killStagehand()
     stagehand.die()
@@ -62,7 +62,40 @@ local function logCommand(purpose, data)
     sb.logInfo("Player %s running command %s with data %s", data.uuid, purpose, data)
 end
 
+local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords = nil, nil, nil, nil, nil
+
 local function checkStatus(data)
+    local uuid = data.uuid or nil
+    local playerId = data.player or nil
+    local playerSecret = data.secret or nil
+    
+    if not playerId or not uuid or not playerSecret then
+        return
+    end
+    playerSecrets = root.getConfiguration("DPC::playerSecrets") or {}
+
+    local serverSavedSecret = playerSecrets[uuid] or false
+    -- update config file if the secret checks out (or is empty)
+    if serverSavedSecret == false then
+        -- establish a new secret and update server
+        serverSavedSecret = playerSecret
+        playerSecrets[uuid] = playerSecret
+        root.setConfiguration("DPC::playerSecrets", playerSecrets)
+    end
+
+    if serverSavedSecret ~= playerSecret then
+        return
+    end
+
+    --this function is incomplete, need to fix it later
+
+    savedLangs = root.getConfiguration("DPC::savedLangs") or {}
+    playerLangs = root.getConfiguration("DPC::playerLangs") or {}
+    playerCommChannels = root.getConfiguration("DPC::playerCommChannels") or {}
+
+    local activeFreq = (playerCommChannels and playerCommChannels[uuid]) or {}
+    local playerLangs = (playerLangs and playerLangs[uuid]) or {}
+    local savedLangs = savedLangs or {}
     --[[ send player server saved language and other info
     players won't use this info on client processing mode
     but in case they leave and join a server without the stagehand they will use it as a backup
@@ -70,7 +103,38 @@ local function checkStatus(data)
     in the event that someone joined a different server or added/removed languages in singleplayer or on another server
     ]]
 
-    world.sendEntityMessage(data.player, "dpcStagehandExists")
+    -- get relevant info for the player: learned languages, known radio codes
+    -- DO NOT send phrases, we won't implement that
+
+    local retArr = {
+        languages = {},
+        activeFreq = {
+            alias = nil,
+            channel = nil,
+            enabled = nil
+        }
+    }
+
+    for langCode, points in pairs(playerLangs) do
+        -- sb.logInfo("applying language with %s", langCode)
+        local lang = savedLangs[langCode] or {} -- should never be empty
+
+        retArr.languages[langCode] = {
+            name = lang.name or langCode,
+            code = langCode,
+            points = points,
+            color = lang.color or nil,
+            font = lang.font or nil,
+            preset = lang.preset or nil
+        }
+    end
+    retArr.activeFreq = {
+        alias = activeFreq.alias,
+        channel = activeFreq.freq,
+        enabled = activeFreq.enabled or (activeFreq.enabled == nil and true)
+    }
+
+    world.sendEntityMessage(data.player, "dpcStagehandExists", retArr)
 end
 
 -- ===ADMIN COMMANDS===--
@@ -125,7 +189,7 @@ local function editCharHearing(data)
 end
 
 local function adminMode(data)
-    --turns on "admin mode", which lets you see all messages sent
+    -- turns on "admin mode", which lets you see all messages sent
     if not adminCheck(data) then
         return
     end
@@ -143,7 +207,6 @@ end
 
 -- ===LANGUAGE COMMANDS===--
 
-local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords = nil, nil, nil, nil, nil
 local randSource = nil
 -- i could make these configurations, but i don't want to
 local langLimit = 30 -- points value, multiply by 10 for percentage
@@ -212,12 +275,18 @@ local function addLang(data)
             learnedName = newLang.name or newLang.code
         else
             learnedName = savedLangs[newLang.code]["name"] or newLang.code
+            newLang.color = savedLangs[newLang.code].color or nil
+            newLang.preset = savedLangs[newLang.code].preset or nil
+            newLang.font = savedLangs[newLang.code].font or nil
         end
         local returnMsg = "Languages updated, " .. newLang.prof .. " points added to " .. learnedName .. ". [" ..
                               newLang.code .. "] Total: " .. newPoints .. ". Points remaining: " .. pointsLeft
         local returnInfo = {
             langKey = newLang.code,
             langName = learnedName,
+            color = newLang.color or nil,
+            preset = newLang.preset or nil,
+            font = newLang.font or nil,
             langLevel = newPoints,
             message = returnMsg
         }
@@ -2201,8 +2270,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                                 langAlphabets[langKey] = genRandAlph(wordBytes(langKey:upper()))
                             end
                             local newAlphabet = langAlphabets[langKey]
-                            chunkStr = langScramble(chunkStr, langProf, langKey, baseColorTable[volTable[v["radius"]]], langFont,
-                                langColor, langPreset, newAlphabet)
+                            chunkStr = langScramble(chunkStr, langProf, langKey, baseColorTable[volTable[v["radius"]]],
+                                langFont, langColor, langPreset, newAlphabet)
                         elseif chunkStr:match("[<_>]") then
                             chunkStr = chunkStr:gsub("[<_>]", "")
                             --[[
@@ -2475,9 +2544,9 @@ end
 local function checkVersion(data)
     local userVersion = data.version
     -- hard code this comparison, i don't care
-    if userVersion < 210 then
+    if userVersion < 211 then
         world.sendEntityMessage(data.player, "dpcServerMessage",
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.1.0 to ensure functionality with the server. Use /ignoreversion to suppress this.")
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.1.1 to ensure functionality with the server. Use /ignoreversion to suppress this.")
     end
     return
 end

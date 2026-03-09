@@ -1,0 +1,20 @@
+This is for readding the client processing.
+
+LIST OF THINGS that depend on the server:
+- Language
+- Radio channels
+- Processing everything (obviously)
+
+GENERAL Solution
+- When checking for a server, run a function that sends the player relevant language and radio information for them. This should be any languages they know and their properties, as well as saved radio frequencies
+- Rely on the receiver for processing information, since otherwise it would take a very long time for players to send messages
+- Alternatively, process on the sender for messages requiring language and radio segments. I dont wanna do that though.
+
+In general:
+- Client sound range will be based on the sender, the receiver will not have an option to change how far they hear things from
+
+For langauges:
+- If the receiving client scrambles the message, people could easily mod a feature that logs the pre-scrambled information. Considering the circumstances though, I don't really care, since someone could just as easily program a mod that unscrambles the information
+- If the server exists, use that (duh), if not, then the sender will send a list of used languages with their colors, presets, fonts, and other info if applicable
+- Fancy features like phrases will need to be on the sender's side, it's not there already because the player doesn't have that data when they learn a language, and the script needs to know if the segment is in quotes
+- Technically it's doable, but I don't think it's worth it. If people want those features, they should just subscribe to the mod.

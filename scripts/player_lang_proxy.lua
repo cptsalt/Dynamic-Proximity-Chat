@@ -53,7 +53,10 @@ function init()
             local learnedLangs = player.getProperty("DPC::learnedLangs") or {}
             learnedLangs[langKey] = {
                 name = langName,
-                prof = langLevel
+                prof = langLevel,
+                color = data.color,
+                preset = data.preset,
+                font = data.font
             }
             player.setProperty("DPC::learnedLangs", learnedLangs)
 
@@ -104,7 +107,8 @@ function init()
         end
     end)
 
-    message.setHandler("dpcStagehandExists", function(_, isLocal)
+    message.setHandler("dpcStagehandExists", function(_, _, data)
+        sb.logInfo("data is %s",data)
         player.setProperty("DPC::serverValid", true)
     end)
 
