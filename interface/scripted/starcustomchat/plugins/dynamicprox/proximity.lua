@@ -1363,7 +1363,7 @@ function dynamicprox:onSendMessage(data)
             else
                 -- send locally to players
                 chat.addMessage(
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Server processing is not supported on this server, and chat messages will not send properly. In the future there will be a client processor, but that is not yet implemented.")
+                    "^CornFlowerBlue;Dynamic Prox Chat^reset;: Server processing is not supported on this server, and chat messages will not send properly. In the future there will be a client processor, but that is not yet implemented.")
                 sb.logWarn("Clientside sending needed.")
             end
             return true -- this should stop global strings from running (which i want in this case)
@@ -1550,43 +1550,46 @@ function dynamicprox:onModeChange(mode)
         player.setProperty("DPC::firstLoad", true)
     end
 
-    if mode == "Prox" and self.serverValid == nil then
+    setTextHint(mode)
+end
+
+function dynamicprox:registerMessageHandlers()
+    if self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
+        chat.addMessage(
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Running server check. Please wait 1 second before sending a message.")
 
+        local status, resultOrError = pcall(function(data)
+            local playerSecret = player.getProperty("DPC::playerCheck") or false
+            if not playerSecret then
+                playerSecret = sb.makeUuid()
+                player.setProperty("DPC::playerCheck", playerSecret)
+
+            end
+            local addInfo = {
+                player = player.id(),
+                uuid = player.uniqueId(),
+                secret = playerSecret
+            }
+            sendStagehand({
+                message = "checkStatus",
+                data = addInfo
+            })
+        end, data)
         SCCTimer:add(1, function()
-            local status, resultOrError = pcall(function(data)
-                local playerSecret = player.getProperty("DPC::playerCheck") or false
-                if not playerSecret then
-                    playerSecret = sb.makeUuid()
-                    player.setProperty("DPC::playerCheck", playerSecret)
-
-                end
-                local addInfo = {
-                    player = player.id(),
-                    uuid = player.uniqueId(),
-                    secret = playerSecret
-                }
-                sendStagehand({
-                    message = "checkStatus",
-                    data = addInfo
-                })
-            end, data)
-            SCCTimer:add(2, function()
-                if player.getProperty("DPC::serverValid") then
-                    self.serverValid = true
-                    sb.logInfo("DPC Server stagehand is installed.")
-                else
-                    self.serverValid = false
-                    sb.logInfo("DPC Server stagehand is NOT installed.")
-                    chat.addMessage(
-                        "^CornFlowerBlue;Dynamic Prox Chat^reset;: It appears this server does not have DPC installed. Messages in the Dynamic tab will not send as a result of this (for now, I'm working on clientside processing).")
-                end
-                player.setProperty("DPC::serverValid", nil)
-            end)
+            if player.getProperty("DPC::serverValid") then
+                self.serverValid = true
+                sb.logInfo("DPC Server stagehand is installed.")
+                chat.addMessage("^CornFlowerBlue;Dynamic Prox Chat^reset;: Server file is installed.")
+            else
+                self.serverValid = false
+                sb.logInfo("DPC Server stagehand is NOT installed.")
+                chat.addMessage(
+                    "^CornFlowerBlue;Dynamic Prox Chat^reset;: It appears this server does not have DPC installed. Messages in the Dynamic tab will not send as a result of this (for now, I'm working on clientside processing).")
+            end
+            player.setProperty("DPC::serverValid", nil)
         end)
     end
-
-    setTextHint(mode)
 end
 
 function dynamicprox:update(dt)
