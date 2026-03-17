@@ -122,11 +122,15 @@ local function checkStatus(data)
         retArr.languages[langCode] = {
             name = lang.name or langCode,
             code = langCode,
-            points = points,
+            points = points, --for the default lang, this will be the code of the language 
             color = lang.color or nil,
             font = lang.font or nil,
             preset = lang.preset or nil
         }
+
+        if langCode == "[DEFAULT]" or langCode == "[pointsLeft]" then
+            retArr.languages[langCode] = points
+        end
     end
     retArr.activeFreq = {
         alias = activeFreq.alias,

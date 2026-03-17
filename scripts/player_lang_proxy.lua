@@ -54,6 +54,7 @@ function init()
             learnedLangs[langKey] = {
                 name = langName,
                 prof = langLevel,
+                code = langKey,
                 color = data.color,
                 preset = data.preset,
                 font = data.font
@@ -108,8 +109,27 @@ function init()
     end)
 
     message.setHandler("dpcStagehandExists", function(_, _, data)
-        -- sb.logInfo("data is %s",data)
+        sb.logInfo("data is %s",data)
         player.setProperty("DPC::serverValid", true)
+
+        --set player data to collected information for languages and radio codes, even if the data is empty
+        local langData = data.languages or {}
+        local freqData = data.activeFreq or {}
+
+        -- sb.logInfo("learnedLangs is %s",player.getProperty("DPC::learnedLangs")) --should be safe to overwrite with the server data
+        player.setProperty("DPC::defaultLang", langData["[DEFAULT]"] or "!!")
+        player.setProperty("DPC::langPointsLeft",langData["[pointsLeft]"] or 30)
+        langData["[DEFAULT]"] = nil
+        langData["[pointsLeft]"] = nil
+
+
+        local activeFreq = {
+                ["freq"] = freqData.channel,
+                ["alias"] = freqData.alias
+            }
+        player.setProperty("DPC::radioState", freqData.enabled or false)
+        player.setProperty("DPC::activeFreq", activeFreq)
+        player.setProperty("DPC::learnedLangs",langData)
     end)
 
     message.setHandler("dpcGetRecogs", function(_, isLocal)
