@@ -251,16 +251,16 @@ local function addLang(data)
         local langProf = serverLangList[newLang.code] or 0
         local newPoints = 0
 
-        newLang.prof = math.max(0, math.min(pointsLeft, newLang.prof))
+        newLang.points = math.max(0, math.min(pointsLeft, newLang.points))
 
-        if langProf + newLang.prof > 10 then
-            newLang.prof = 10 - langProf
+        if langProf + newLang.points > 10 then
+            newLang.points = 10 - langProf
         end
-        -- newPoints = math.min(pointsLeft, langProf + newLang.prof)
-        newPoints = langProf + newLang.prof
+        -- newPoints = math.min(pointsLeft, langProf + newLang.points)
+        newPoints = langProf + newLang.points
 
         -- check here in case people have more than x languages
-        pointsLeft = pointsLeft - newLang.prof
+        pointsLeft = pointsLeft - newLang.points
         serverLangList[newLang.code] = newPoints
         serverLangList["[pointsLeft]"] = pointsLeft
         playerLangs[playerUUID] = serverLangList
@@ -283,7 +283,7 @@ local function addLang(data)
             newLang.preset = savedLangs[newLang.code].preset or nil
             newLang.font = savedLangs[newLang.code].font or nil
         end
-        local returnMsg = "Languages updated, " .. newLang.prof .. " points added to " .. learnedName .. ". [" ..
+        local returnMsg = "Languages updated, " .. newLang.points .. " points added to " .. learnedName .. ". [" ..
                               newLang.code .. "] Total: " .. newPoints .. ". Points remaining: " .. pointsLeft
         local returnInfo = {
             langKey = newLang.code,
@@ -1770,7 +1770,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
         -- local strDict = langSplit(str, "[%s%p]")
         local strDict = langSplit(str, "[%s!\"%$%*%+%,%-%./:%;%?%@%[%\\%]#%`~]") -- all punctuation except apostrophe, and whitespace
         local byteLC = wordBytes(langCode)
-        local uniqueIdBytes = wordBytes(tostring(receiverEntityId))
+        local uniqueIdBytes = wordBytes(tostring(receiverUUID))
         -- no need for color, since it's always supplied
 
         -- strDict is a table containing each character to make processing less fucky
@@ -2692,7 +2692,7 @@ function dpc_init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn("[DynamicProxChat] Error occurred while adding language: %s\n  Message data: %s", errorMsg, data)
+            sb.logWarn("[DynamicProxChat] Error occurred while checking version: %s\n  Message data: %s", errorMsg, data)
         end
     elseif purpose == "editLangPhrase" then
         logCommand(purpose, data)

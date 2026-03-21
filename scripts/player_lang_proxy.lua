@@ -53,7 +53,7 @@ function init()
             local learnedLangs = player.getProperty("DPC::learnedLangs") or {}
             learnedLangs[langKey] = {
                 name = langName,
-                prof = langLevel,
+                points = langLevel,
                 code = langKey,
                 color = data.color,
                 preset = data.preset,
