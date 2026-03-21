@@ -1637,6 +1637,10 @@ function dynamicprox:onSendMessage(data)
     end
 end
 
+function dynamicprox:processClientMessage(message)
+
+end
+
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
         if message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
@@ -1664,6 +1668,12 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if cleanText:gsub("%s", "") == "" then
             message.text = ""
             return message
+        end
+
+        --from here we need to check if the message has been processed yet
+        if not message.processed then
+            --process the message here and then continue
+                dynamicprox:processClientMessage(message)
         end
 
         if message.isDpc then
@@ -1758,7 +1768,6 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         -- message.text = message.text:gsub("_", "") --this needs to be here, otherwise people will put autotune crying baby to shame
         return message
     end
-    -- return messageFormatter(rawMessage)
 
     local messageData = copy(rawMessage)
     local rawText = messageData.text

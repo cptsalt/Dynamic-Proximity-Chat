@@ -68,7 +68,7 @@ local function checkStatus(data)
     local uuid = data.uuid or nil
     local playerId = data.player or nil
     local playerSecret = data.secret or nil
-    
+
     if not playerId or not uuid or not playerSecret then
         return
     end
@@ -87,7 +87,7 @@ local function checkStatus(data)
         return
     end
 
-    --this function is incomplete, need to fix it later
+    -- this function is incomplete, need to fix it later
 
     savedLangs = root.getConfiguration("DPC::savedLangs") or {}
     playerLangs = root.getConfiguration("DPC::playerLangs") or {}
@@ -122,7 +122,7 @@ local function checkStatus(data)
         retArr.languages[langCode] = {
             name = lang.name or langCode,
             code = langCode,
-            points = points, --for the default lang, this will be the code of the language 
+            points = points, -- for the default lang, this will be the code of the language 
             color = lang.color or nil,
             font = lang.font or nil,
             preset = lang.preset or nil
@@ -1422,11 +1422,12 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             local charLower = char:lower()
             local newChar = newAlphabet[charLower] or nil
 
+            local prevLetter = wordTable[index - 1]
+            local nextLetter = wordTable[index + 1]
+
             if isUpper and newChar then
-                if #newChar > 1 and #char == 1 then
-                    newChar = newChar:sub(1, 1):upper() .. newChar:sub(2)
-                elseif #newChar == 1 or (not wordTable[index - 1] or wordTable[index - 1].upper) and
-                    (not wordTable[index + 1] or wordTable[index + 1].upper) then
+                if #newChar == 1 or (nextLetter and nextLetter.upper) or
+                    ((prevLetter and prevLetter.upper) and (nextLetter == nil or nextLetter.upper)) then
                     newChar = newChar:upper()
                 else
                     newChar = newChar:sub(1, 1):upper() .. newChar:sub(2)
