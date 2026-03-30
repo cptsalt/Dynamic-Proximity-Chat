@@ -61,7 +61,7 @@ local DEBUG = false
 local DEBUG_PREFIX = "[DynamicProx::Debug] "
 
 function dynamicprox:init(chat)
-    PluginClass.init(self,chat)
+    PluginClass.init(self, chat)
     self:_loadConfig()
     local currentName, _ = getNames()
     if player.setNametag then
@@ -80,7 +80,7 @@ function dynamicprox:uninit()
     end
 end
 
---readded since the commands conf thing appears to have broken
+-- readded since the commands conf thing appears to have broken
 function dynamicprox:addCustomCommandPreview(availableCommands, substr)
     if string.find("/learnlang", substr, nil, true) then
         table.insert(availableCommands, {
@@ -848,6 +848,13 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         local status, resultOrError = pcall(function(data)
             -- do a playerQuery at the aim position , then use world.entityUniqueId
             local cursorPlayer = world.playerQuery(player.aimPosition(), 0)[1] or nil
+            local splitArgs = splitStr(data, " ")
+            local manualUUID = splitArgs[1] or nil
+
+            if manualUUID == "self" then -- if true, print the uuid as a result. I'm pretty sure there's an identity command to do this, but this doesn't hurt
+                return "Your current UUID is: " .. world.entityUniqueId(player.id())
+            end
+
             if not cursorPlayer then
                 return "No player detected on the cursor, try again."
             end
@@ -1189,7 +1196,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         end
     end)
 
-    --check the stagehand here
+    -- check the stagehand here
     if self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
         chat.addMessage(
@@ -1225,7 +1232,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             end
             local params = config.getParameter("gui")["rgChatMode"]["buttons"]
             local curMode = root.getConfiguration("scc_message_mode")
-            setTextHint(params[tonumber(curMode)].data.mode,false)
+            setTextHint(params[tonumber(curMode)].data.mode, false)
             player.setProperty("DPC::serverValid", nil)
         end)
     end
@@ -1670,10 +1677,10 @@ function dynamicprox:formatIncomingMessage(rawMessage)
             return message
         end
 
-        --from here we need to check if the message has been processed yet
+        -- from here we need to check if the message has been processed yet
         if not message.processed then
-            --process the message here and then continue
-                dynamicprox:processClientMessage(message)
+            -- process the message here and then continue
+            dynamicprox:processClientMessage(message)
         end
 
         if message.isDpc then

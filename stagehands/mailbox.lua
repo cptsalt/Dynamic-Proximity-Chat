@@ -62,7 +62,8 @@ local function logCommand(purpose, data)
     sb.logInfo("Player %s running command %s with data %s", data.uuid, purpose, data)
 end
 
-local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords = nil, nil, nil, nil, nil
+local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords, playerTraits = nil, nil, nil, nil, nil,
+    nil
 
 local function checkStatus(data)
     local uuid = data.uuid or nil
@@ -154,7 +155,7 @@ local function adminCheck(data)
         return false
     end
 
-    if serverSavedSecret ~= playerSecret then
+    if serverSavedSecret == false or serverSavedSecret ~= playerSecret then
         world.sendEntityMessage(data.player, "dpcServerMessage", "Bad authentication, command aborted.")
         return false
     end
@@ -163,10 +164,10 @@ local function adminCheck(data)
 end
 
 --[[
-Make sure ALL of these have an adminChars check.
+Make sure ALL of these have a check to ensure they're on the admin list.
 
 
-don't add this one just yet
+don't add this one just yet, it should add or remove people from the admin list
 local function editAdmin(data)
     --adds or removes people from admin perms
     local playerUUID = data.uuid
@@ -190,6 +191,9 @@ local function editCharHearing(data)
     if not adminCheck(data) then
         return
     end
+
+    local targetUUID = data.targetUUID or nil
+    local newValue = data.newValue or nil -- if this is nil then return the current value
 end
 
 local function adminMode(data)
@@ -800,6 +804,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
     local prevMode = "action"
     local prevDiffMode = "action"
     local maxRad = 0 -- Remove the maximum radius restriction from global messages.
+    local maxSoundRad = 0
     local rawText = message.text
     local textTable = {} -- this will eventually be smashed together to make filterText
     local validSum = 0 -- number of valid entries in the table
@@ -875,7 +880,10 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
         local useRad
         useRad = modeRadTypes[curMode]()
 
-        maxRad = math.max(maxRad, useRad)
+        maxRad = math.max(maxRad, useRad) -- swapped for the if statement due to maxType
+        if useRad > maxSoundRad and (curMode == "quote" or curMode == "sound") then
+            maxSoundRad = useRad
+        end
 
         -- insert replacement words for qutoes in languages here
         if curMode == "quote" and replacementDict[languageCode:upper()] then
@@ -1263,6 +1271,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
     newMode(curMode) -- makes sure nothing is left out
     local retArr = {
         maxRange = maxRad,
+        maxSoundRad = maxSoundRad,
         text = textTable,
         langAlphabets = langAlphabets,
         slashCount = slashCount,
@@ -1276,6 +1285,8 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     messageDistance, formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
     local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
     local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
+    local recTraits = (playerTraits and playerTraits[receiverUUID]) or {}
+    local recHearing = (recTraits.hearing and recTraits.hearing.modifier) or 1
     local savedLangs = savedLangs or {}
     local iEmphColor = message.emphColor or "#d80"
     -- local actionRad = 200
@@ -2128,6 +2139,10 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             local noPathVol = nil
             local chunkDistance = (pathMade and pathDistance) or messageDistance
 
+            if curMode == "quote" or curMode == "sound" then -- check if the current chunk is a sound for hearing modification
+                chunkDistance = chunkDistance / recHearing -- should be equal to the mult modifier set in the command (2x, 3x, 0.5x, etc)
+            end
+
             if radioMode and radioState and
                 (activeFreq["freq"] and activeFreq["freq"] == chunk["commCode"] or chunk["commCode"] == 0) then
                 inSight = true
@@ -2587,6 +2602,7 @@ local function processMessage(data)
     playerLangs = root.getConfiguration("DPC::playerLangs") or {} -- {uuid:{code{"prof":prof,"color":color},code{"prof":prof,"color":color}...}}
     playerCommChannels = root.getConfiguration("DPC::playerCommChannels") or {} -- {uuid:{channel:name,channel:name...}}
     savedLangs = root.getConfiguration("DPC::savedLangs") or {}
+    playerTraits = root.getConfiguration("DPC::playerTraits") or {}
     randSource = sb.makeRandomSource() -- i dont think this is null safe
     langSubWords = root.getConfiguration("DPC::langSubWords") or {} -- [code] = {[word] replacement, [word] : replacement}
     local msgTime = os.clock() * 100000000000
@@ -2606,6 +2622,7 @@ local function processMessage(data)
 
     local formattedTable = handleTable.text
     local maxRange = handleTable.maxRange
+    local maxSoundRad = handleTable.maxSoundRad
     local langAlphabets = handleTable.langAlphabets
     local slashCount = handleTable.slashCount or false
     local asterCount = handleTable.asterCount or 0
@@ -2629,7 +2646,15 @@ local function processMessage(data)
             recPos = world.entityPosition(world.entityExists(recPlayer) and recPlayer)
             msgDistance = world.magnitude(recPos, authorPos)
             recUUID = world.entityUniqueId(recPlayer)
+            if maxSoundRad > 0 then --only run this if there is a sound radius, checks to modify hearing for max radius
+                local recTraits = (playerTraits and playerTraits[recUUID]) or {}
+                local recHearing = (recTraits.hearing and recTraits.hearing.modifier) or 1
+                maxRange = math.max(maxRange, maxSoundRad * recHearing) --in this one we multiply since we're comparing radius and not distance
+            end
+        else
+            maxRange = -1 -- set this just in case
         end
+
 
         if msgDistance <= maxRange or isGlobal then
             if not data.sharesWorld then
