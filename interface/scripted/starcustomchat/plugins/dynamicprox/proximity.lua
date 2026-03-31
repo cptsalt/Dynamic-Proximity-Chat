@@ -1195,6 +1195,83 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             return "^red;Error occurred while running command, check log"
         end
     end)
+    -- admin commands
+    -- do these with pasted uuid's, don't use chid for it
+    starcustomchat.utils.setMessageHandler("/adminmode", function(_, _, data)
+        -- needs target uuid
+        local status, resultOrError = pcall(function(data)
+            -- local splitArgs = splitStr(data, " ")
+            local targetUUID = chat.parseArguments(data)
+
+            if not targetUUID then
+                return "No UUID provided, aborting."
+            end
+
+            local playerSecret = player.getProperty("DPC::playerCheck") or false
+
+            if not playerSecret then
+                playerSecret = sb.makeUuid()
+                player.setProperty("DPC::playerCheck", playerSecret)
+            end
+
+            local addInfo = {
+                player = player.id(),
+                uuid = player.uniqueId(),
+                playerSecret = playerSecret,
+                targetUUID = targetUUID
+            }
+            sendStagehand({
+                message = "adminMode",
+                data = addInfo
+            })
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
+    starcustomchat.utils.setMessageHandler("/edithearing", function(_, _, data)
+        -- needs target uuid and new mult value
+        local status, resultOrError = pcall(function(data)
+            local splitArgs = splitStr(data, " ")
+            local targetUUID, newValue = chat.parseArguments(data)
+
+            if not targetUUID then
+                return "No UUID provided, aborting."
+            end
+
+            if not newValue then
+                return "No modifier provided, aborting."
+            end
+
+            local playerSecret = player.getProperty("DPC::playerCheck") or false
+
+            if not playerSecret then
+                playerSecret = sb.makeUuid()
+                player.setProperty("DPC::playerCheck", playerSecret)
+            end
+
+            local addInfo = {
+                player = player.id(),
+                uuid = player.uniqueId(),
+                playerSecret = playerSecret,
+                targetUUID = targetUUID,
+                newValue = newValue
+            }
+            sendStagehand({
+                message = "editCharHearing",
+                data = addInfo
+            })
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
 
     -- check the stagehand here
     if self.serverValid == nil then

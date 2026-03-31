@@ -62,8 +62,14 @@ local function logCommand(purpose, data)
     sb.logInfo("Player %s running command %s with data %s", data.uuid, purpose, data)
 end
 
-local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords, playerTraits = nil, nil, nil, nil, nil,
-    nil
+local playerLangs, playerCommChannels, playerSecrets, savedLangs, langSubWords, playerTraits, activeAdmins = nil, nil,
+    nil, nil, nil, nil, nil
+-- langs is a collection of uuids with associated language and point vlaues
+-- savedlangs is the server's list of saved languages
+-- subwords is a list of word substitutions for a language
+-- playercommchannels is the list of alias and channel pairs for each player
+-- playerTraits is a list of various traits related to DPC, namely things like hearing modifiers
+-- todo: set up admin list here
 
 local function checkStatus(data)
     local uuid = data.uuid or nil
@@ -139,6 +145,12 @@ local function checkStatus(data)
         enabled = activeFreq.enabled or (activeFreq.enabled == nil and true)
     }
 
+    local adminActive = root.getConfiguration("DPC::activeAdmins") or {}
+    if adminActive[uuid] then
+        adminActive[uuid] = nil
+        root.setConfiguration("DPC::activeAdmins", adminActive)
+    end
+
     world.sendEntityMessage(data.player, "dpcStagehandExists", retArr)
 end
 
@@ -147,6 +159,7 @@ end
 local function adminCheck(data)
     local playerUUID = data.uuid
     local playerSecret = data.playerSecret
+    local playerSecrets = root.getConfiguration("DPC::playerSecrets") or {}
     local serverSavedSecret = playerSecrets[playerUUID] or false
     local adminChars = root.getConfiguration("DPC::adminCharacters") or {}
 
@@ -194,6 +207,37 @@ local function editCharHearing(data)
 
     local targetUUID = data.targetUUID or nil
     local newValue = data.newValue or nil -- if this is nil then return the current value
+    local playerTraits = root.getConfiguration("DPC::playerTraits") or {}
+
+    -- check to see if the player is connected. Continue if not, but it won't send a message to them
+    local connections = universe.clientIds()
+    local targetId = nil
+    local targetName = nil
+
+    for _, id in pairs(connections) do
+        local conUUID = universe.uuidForClient(id)
+        if conUUID == targetUUID then
+            targetId = id
+            targetName = universe.clientNick(id)
+            break
+        end
+    end
+
+    if newValue then -- clamp to 0 and 10
+        newValue = math.min(10, math.max(0, newValue))
+    end
+
+    playerTraits[targetUUID].hearing = {
+        modifier = newValue,
+        admin = data.uuid
+    }
+    root.setConfiguration("DPC::playerTraits", playerTraits)
+    world.sendEntityMessage(data.player, "dpcServerMessage", "Character sound multiplier for " ..
+        (targetName or targetUUID) .. " modified to " .. newValue .. " times baseline.")
+    if targetId then
+        universe.adminWhisper(targetId,
+            "Your character's hearing has been modified to " .. newValue .. " times baseline.")
+    end
 end
 
 local function adminMode(data)
@@ -201,16 +245,45 @@ local function adminMode(data)
     if not adminCheck(data) then
         return
     end
-    local uuid = data.uuid
+    local uuid = data.targetUUID
+
+    -- first check to see if the player is connected. if they're not, this won't do anything even if it continued
+    local connections = universe.clientIds()
+    local uuidValid = false
+    local targetId = ""
+    local targetName = ""
+
+    for _, id in pairs(connections) do
+        local conUUID = universe.uuidForClient(id)
+        if conUUID == uuid then
+            uuidValid = true
+            targetId = id
+            targetName = universe.clientNick(id)
+            break
+        end
+    end
+
+    if not uuidValid then
+        world.sendEntityMessage(data.player, "dpcServerMessage",
+            "No player with UUID \"" .. uuid .. "\" is currently connected, aborting.")
+        return
+    end
+
     local adminActive = root.getConfiguration("DPC::activeAdmins") or {}
     local isActive = adminActive[uuid] or false
+    local newState = "no longer"
 
     if isActive then
         adminActive[uuid] = nil
     else
         adminActive[uuid] = true
+        newState = "now"
     end
     root.setConfiguration("DPC::activeAdmins", adminActive)
+    world.sendEntityMessage(data.player, "dpcServerMessage",
+        "Admin mode for player " .. targetName .. " is " .. newState .. " active.")
+    sb.logInfo("target id is %s", targetId)
+    universe.adminWhisper(targetId, "Admin mode for your character is " .. newState .. " active.")
 end
 
 -- ===LANGUAGE COMMANDS===--
@@ -1284,6 +1357,7 @@ end
 local function processVisuals(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, maxRad,
     messageDistance, formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
     local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
+    local adminActive = activeAdmins[receiverUUID] or false
     local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
     local recTraits = (playerTraits and playerTraits[receiverUUID]) or {}
     local recHearing = (recTraits.hearing and recTraits.hearing.modifier) or 1
@@ -2139,7 +2213,14 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             local noPathVol = nil
             local chunkDistance = (pathMade and pathDistance) or messageDistance
 
-            if curMode == "quote" or curMode == "sound" then -- check if the current chunk is a sound for hearing modification
+            if adminActive and chunkDistance <= 200 then -- do admin mode overrides here rather than messing with it before
+                -- if admin is active and the distance is good, treat it as if they said it right next to them
+                -- don't mess with radio stuff though
+                isValid = true
+                inSight = true
+                chunk["hasLOS"] = true
+                chunkDistance = 0
+            elseif curMode == "quote" or curMode == "sound" then -- check if the current chunk is a sound for hearing modification
                 chunkDistance = chunkDistance / recHearing -- should be equal to the mult modifier set in the command (2x, 3x, 0.5x, etc)
             end
 
@@ -2189,6 +2270,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             end
 
             chunk["valid"] = isValid
+
             if isValid or radioMode then
                 table.insert(newTextTable, chunk)
             end
@@ -2284,7 +2366,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                         langPreset = (savedLangs[langKey] and savedLangs[langKey]["preset"]) or false
                         local langFont = (savedLangs[langKey] and savedLangs[langKey]["font"]) or nil
 
-                        if (not v["noScramble"]) and langProf < 100 then
+                        if (not adminActive) and (not v["noScramble"]) and langProf < 100 then
                             if not langAlphabets[langKey] and (not langPreset or langPreset:match("[^%s]") == nil) then
                                 -- this should never happen, but i'll leave it here just in case
                                 langAlphabets[langKey] = genRandAlph(wordBytes(langKey:upper()))
@@ -2603,6 +2685,7 @@ local function processMessage(data)
     playerCommChannels = root.getConfiguration("DPC::playerCommChannels") or {} -- {uuid:{channel:name,channel:name...}}
     savedLangs = root.getConfiguration("DPC::savedLangs") or {}
     playerTraits = root.getConfiguration("DPC::playerTraits") or {}
+    activeAdmins = root.getConfiguration("DPC::activeAdmins") or {}
     randSource = sb.makeRandomSource() -- i dont think this is null safe
     langSubWords = root.getConfiguration("DPC::langSubWords") or {} -- [code] = {[word] replacement, [word] : replacement}
     local msgTime = os.clock() * 100000000000
@@ -2646,17 +2729,17 @@ local function processMessage(data)
             recPos = world.entityPosition(world.entityExists(recPlayer) and recPlayer)
             msgDistance = world.magnitude(recPos, authorPos)
             recUUID = world.entityUniqueId(recPlayer)
-            if maxSoundRad > 0 then --only run this if there is a sound radius, checks to modify hearing for max radius
+            if maxSoundRad > 0 then -- only run this if there is a sound radius, checks to modify hearing for max radius
                 local recTraits = (playerTraits and playerTraits[recUUID]) or {}
                 local recHearing = (recTraits.hearing and recTraits.hearing.modifier) or 1
-                maxRange = math.max(maxRange, maxSoundRad * recHearing) --in this one we multiply since we're comparing radius and not distance
+                maxRange = math.max(maxRange, maxSoundRad * recHearing) -- in this one we multiply since we're comparing radius and not distance
             end
         else
             maxRange = -1 -- set this just in case
         end
 
-
-        if msgDistance <= maxRange or isGlobal then
+        -- 200 for now with admin mode, might make it dynamic later
+        if (activeAdmins[recUUID] and msgDistance <= 200) or msgDistance <= maxRange or isGlobal then
             if not data.sharesWorld then
                 msgDistance = math.huge
             end
@@ -2806,6 +2889,28 @@ function dpc_init()
         else
             sb.logWarn("[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s", errorMsg,
                 data)
+        end
+        -- admin stuff
+    elseif purpose == "adminMode" then
+        logCommand(purpose, data)
+        local status, errorMsg = pcall(adminMode, data)
+        if status then
+            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
+            -- return errorMsg
+        else
+            sb.logWarn("[DynamicProxChat] Error occurred while running admin mode: %s\n  Message data: %s", errorMsg,
+                data)
+        end
+    elseif purpose == "editCharHearing" then
+        logCommand(purpose, data)
+        local status, errorMsg = pcall(editCharHearing, data)
+        if status then
+            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
+            -- return errorMsg
+        else
+            sb.logWarn(
+                "[DynamicProxChat] Error occurred while running editing character hearing: %s\n  Message data: %s",
+                errorMsg, data)
         end
     else
         -- All the other stuff
