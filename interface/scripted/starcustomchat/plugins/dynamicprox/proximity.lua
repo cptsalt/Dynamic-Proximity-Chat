@@ -1797,7 +1797,8 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         -- from here we need to check if the message has been processed yet
         if not message.processed then
             -- process the message here and then continue
-            dynamicprox:processClientMessage(message)
+            -- dynamicprox:processClientMessage(message)
+            return --disabling this for now, i'll add client processing eventually but it isn't a high priority for me right now
         end
 
         if message.isDpc then
