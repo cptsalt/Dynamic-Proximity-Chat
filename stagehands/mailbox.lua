@@ -199,47 +199,6 @@ local function editAdmin(data)
 end
 ]] --
 
-local function editCharHearing(data)
-    -- edits a (yet to be implemented) value which will change an individual character's range for hearing noises 
-    if not adminCheck(data) then
-        return
-    end
-
-    local targetUUID = data.targetUUID or nil
-    local newValue = data.newValue or nil -- if this is nil then return the current value
-    local playerTraits = root.getConfiguration("DPC::playerTraits") or {}
-
-    -- check to see if the player is connected. Continue if not, but it won't send a message to them
-    local connections = universe.clientIds()
-    local targetId = nil
-    local targetName = nil
-
-    for _, id in pairs(connections) do
-        local conUUID = universe.uuidForClient(id)
-        if conUUID == targetUUID then
-            targetId = id
-            targetName = universe.clientNick(id)
-            break
-        end
-    end
-
-    if newValue then -- clamp to 0 and 10
-        newValue = math.min(10, math.max(0, newValue))
-    end
-
-    playerTraits[targetUUID].hearing = {
-        modifier = newValue,
-        admin = data.uuid
-    }
-    root.setConfiguration("DPC::playerTraits", playerTraits)
-    world.sendEntityMessage(data.player, "dpcServerMessage", "Character sound multiplier for " ..
-        (targetName or targetUUID) .. " modified to " .. newValue .. " times baseline.")
-    if targetId then
-        universe.adminWhisper(targetId,
-            "Your character's hearing has been modified to " .. newValue .. " times baseline.")
-    end
-end
-
 local function adminMode(data)
     -- turns on "admin mode", which lets you see all messages sent
     if not adminCheck(data) then
@@ -282,8 +241,107 @@ local function adminMode(data)
     root.setConfiguration("DPC::activeAdmins", adminActive)
     world.sendEntityMessage(data.player, "dpcServerMessage",
         "Admin mode for player " .. targetName .. " is " .. newState .. " active.")
-    sb.logInfo("target id is %s", targetId)
     universe.adminWhisper(targetId, "Admin mode for your character is " .. newState .. " active.")
+end
+
+local function editCharHearing(data)
+    if not adminCheck(data) then
+        return
+    end
+
+    local targetUUID = data.targetUUID or nil
+    local newValue = data.newValue or nil -- if this is nil then return the current value
+    local playerTraits = root.getConfiguration("DPC::playerTraits") or {}
+
+    -- check to see if the player is connected. Continue if not, but it won't send a message to them
+    local connections = universe.clientIds()
+    local targetId = nil
+    local targetName = nil
+
+    for _, id in pairs(connections) do
+        local conUUID = universe.uuidForClient(id)
+        if conUUID == targetUUID then
+            targetId = id
+            targetName = universe.clientNick(id)
+            break
+        end
+    end
+
+    if newValue then -- clamp to 0 and 10
+        newValue = math.min(10, math.max(0, newValue))
+    end
+
+    playerTraits[targetUUID].hearing = {
+        modifier = newValue,
+        admin = data.uuid
+    }
+    root.setConfiguration("DPC::playerTraits", playerTraits)
+    world.sendEntityMessage(data.player, "dpcServerMessage", "Character sound multiplier for " ..
+        (targetName or targetUUID) .. " modified to " .. newValue .. " times baseline.")
+    if targetId then
+        universe.adminWhisper(targetId,
+            "Your character's hearing has been modified to " .. newValue .. " times baseline.")
+    end
+end
+
+local function editLangPoints(data)
+    -- set a point capacity value in playertraits for the uuid
+    -- then, edit the current pointsleft value in the langs table
+    -- do this by taking the current sum of points and subtracting from the new capacity, allow it to go negative if needed
+    -- when resetting languages, reference the point cap value or default to the global default
+    if not adminCheck(data) then
+        return
+    end
+
+    local targetUUID = data.targetUUID or nil
+    local newValue = data.newValue or nil -- if this is nil then return the current value
+    local playerTraits = root.getConfiguration("DPC::playerTraits") or {}
+
+    -- check to see if the player is connected. Continue if not, but it won't send a message to them
+    local connections = universe.clientIds()
+    local targetId = nil
+    local targetName = nil
+
+    for _, id in pairs(connections) do
+        local conUUID = universe.uuidForClient(id)
+        if conUUID == targetUUID then
+            targetId = id
+            targetName = universe.clientNick(id)
+            break
+        end
+    end
+
+    if newValue then -- clamp to 0 min
+        newValue = math.max(0, newValue)
+    end
+
+    playerTraits[targetUUID].langPoints = {
+        capacity = newValue,
+        admin = data.uuid
+    }
+
+    playerLangs = root.getConfiguration("DPC::playerLangs") or {}
+    local targetLangs = playerLangs[targetUUID] or {}
+    local usedTotal = 0
+
+    for langCode, points in pairs(targetLangs) do
+        if langCode ~= "[pointsLeft]" and langCode ~= "[DEFAULT]" then
+            usedTotal = usedTotal + points
+        end
+    end
+
+    targetLangs["[pointsLeft]"] = newValue - usedTotal
+    local pointAlloc = usedTotal .. "/"..newValue
+    playerLangs[targetUUID] = targetLangs
+
+    root.setConfiguration("DPC::playerTraits", playerTraits)
+    root.setConfiguration("DPC::playerLangs", playerLangs)
+    world.sendEntityMessage(data.player, "dpcServerMessage", "Language point capacity for " ..
+        (targetName or targetUUID) .. " set to " .. newValue .. " points. Current allocation is "..pointAlloc)
+    if targetId then
+        universe.adminWhisper(targetId,
+            "Your character's language point capacity has been set to " .. newValue .. " points. Current allocation is "..pointAlloc)
+    end
 end
 
 -- ===LANGUAGE COMMANDS===--
@@ -319,7 +377,10 @@ local function addLang(data)
 
     if playerSecret == serverSavedSecret then
         local serverLangList = playerLangs[playerUUID] or {}
-        local pointsLeft = serverLangList["[pointsLeft]"] or langLimit
+        local playerTraits = root.getConfiguration("DPC::playerTraits") or {}
+        local pointCap = playerTraits[playerUUID].langPoints.capacity or langLimit
+
+        local pointsLeft = serverLangList["[pointsLeft]"] or pointCap
         if pointsLeft < 1 then
             world.sendEntityMessage(data.player, "dpcServerMessage",
                 "Out of points, use /resetLangs to reset your languages.")
@@ -2910,6 +2971,17 @@ function dpc_init()
         else
             sb.logWarn(
                 "[DynamicProxChat] Error occurred while running editing character hearing: %s\n  Message data: %s",
+                errorMsg, data)
+        end
+    elseif purpose == "editLangPoints" then
+        logCommand(purpose, data)
+        local status, errorMsg = pcall(editLangPoints, data)
+        if status then
+            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
+            -- return errorMsg
+        else
+            sb.logWarn(
+                "[DynamicProxChat] Error occurred while running editing language points: %s\n  Message data: %s",
                 errorMsg, data)
         end
     else
