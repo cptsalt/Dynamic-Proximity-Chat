@@ -1348,7 +1348,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                     "^CornFlowerBlue;Dynamic Prox Chat^reset;: It appears this server does not have DPC installed. Messages in the Dynamic tab will not send as a result of this (for now, I'm working on clientside processing).")
             end
             local params = config.getParameter("gui")["rgChatMode"]["buttons"]
-            local curMode = root.getConfiguration("scc_message_mode")
+            local curMode = root.getConfiguration("scc_message_mode") or 1
             setTextHint(params[tonumber(curMode)].data.mode, false)
             player.setProperty("DPC::serverValid", nil)
         end)
