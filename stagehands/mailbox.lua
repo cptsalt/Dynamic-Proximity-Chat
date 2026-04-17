@@ -271,6 +271,10 @@ local function editCharHearing(data)
         newValue = math.min(10, math.max(0, newValue))
     end
 
+    if not playerTraits[targetUUID] then
+        playerTraits[targetUUID] = {}
+    end
+
     playerTraits[targetUUID].hearing = {
         modifier = newValue,
         admin = data.uuid
@@ -331,16 +335,18 @@ local function editLangPoints(data)
     end
 
     targetLangs["[pointsLeft]"] = newValue - usedTotal
-    local pointAlloc = usedTotal .. "/"..newValue
+    local pointAlloc = usedTotal .. "/" .. newValue
     playerLangs[targetUUID] = targetLangs
 
     root.setConfiguration("DPC::playerTraits", playerTraits)
     root.setConfiguration("DPC::playerLangs", playerLangs)
-    world.sendEntityMessage(data.player, "dpcServerMessage", "Language point capacity for " ..
-        (targetName or targetUUID) .. " set to " .. newValue .. " points. Current allocation is "..pointAlloc)
+    world.sendEntityMessage(data.player, "dpcServerMessage",
+        "Language point capacity for " .. (targetName or targetUUID) .. " set to " .. newValue ..
+            " points. Current allocation is " .. pointAlloc)
     if targetId then
         universe.adminWhisper(targetId,
-            "Your character's language point capacity has been set to " .. newValue .. " points. Current allocation is "..pointAlloc)
+            "Your character's language point capacity has been set to " .. newValue .. " points. Current allocation is " ..
+                pointAlloc)
     end
 end
 
@@ -2261,19 +2267,15 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
             local radioMode = chunk["isRadio"]
             chunk["msgQuality"] = 100
 
-            if messageDistance > 0 then
-                chunk["msgQuality"] = math.min(((useRad / 2) / messageDistance) * 100, 100) -- basically, check half the radius and take the percentage of that vs the message distance, cap at 100
-                if chunk["msgQuality"] < 0.1 then
-                    chunk["msgQuality"] = 0
-                end
-            end
-
             chunk["hasLOS"] = inSight -- this is literally never used for anything meaningful
 
             local isValid = false -- start with false
             local noPathVol = nil
             local chunkDistance = (pathMade and pathDistance) or messageDistance
 
+            if curMode == "quote" or curMode == "sound" then -- check if the current chunk is a sound for hearing modification
+                chunkDistance = chunkDistance / recHearing -- should be equal to the mult modifier set in the command (2x, 3x, 0.5x, etc)
+            end
             if adminActive and chunkDistance <= 200 then -- do admin mode overrides here rather than messing with it before
                 -- if admin is active and the distance is good, treat it as if they said it right next to them
                 -- don't mess with radio stuff though
@@ -2281,8 +2283,13 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
                 inSight = true
                 chunk["hasLOS"] = true
                 chunkDistance = 0
-            elseif curMode == "quote" or curMode == "sound" then -- check if the current chunk is a sound for hearing modification
-                chunkDistance = chunkDistance / recHearing -- should be equal to the mult modifier set in the command (2x, 3x, 0.5x, etc)
+            end
+
+            if not adminActive and messageDistance > 0 then
+                chunk["msgQuality"] = math.min(((useRad / 2) / messageDistance) * 100, 100) -- basically, check half the radius and take the percentage of that vs the message distance, cap at 100
+                if chunk["msgQuality"] < 0.1 then
+                    chunk["msgQuality"] = 0
+                end
             end
 
             if radioMode and radioState and
@@ -2980,8 +2987,7 @@ function dpc_init()
             -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
             -- return errorMsg
         else
-            sb.logWarn(
-                "[DynamicProxChat] Error occurred while running editing language points: %s\n  Message data: %s",
+            sb.logWarn("[DynamicProxChat] Error occurred while running editing language points: %s\n  Message data: %s",
                 errorMsg, data)
         end
     else
