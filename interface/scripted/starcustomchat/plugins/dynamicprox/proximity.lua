@@ -313,7 +313,7 @@ local function setTextHint(mode, override)
     -- sb.logInfo("mode is %s",mode)
     local override = override or false
     if override or mode ~= "Prox" or root.getConfiguration("DPC::hideHints") then
-        widget.setHint("tbxInput", starcustomchat.utils.getTranslation("chat.textbox.hint"))
+        self.customChat:resetHint()
         return
     end
 
@@ -336,8 +336,7 @@ local function setTextHint(mode, override)
     hintStr = hintStr .. radioState
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
-
-    widget.setHint("tbxInput", hintStr)
+    self.customChat:setHint(hintStr)
 end
 
 local function checktypo(toggle)
