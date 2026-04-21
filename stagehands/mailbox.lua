@@ -384,7 +384,7 @@ local function addLang(data)
     if playerSecret == serverSavedSecret then
         local serverLangList = playerLangs[playerUUID] or {}
         local playerTraits = root.getConfiguration("DPC::playerTraits") or {}
-        local pointCap = playerTraits[playerUUID].langPoints.capacity or langLimit
+        local pointCap = (playerTraits[playerUUID] and playerTraits[playerUUID].langPoints.capacity) or langLimit
 
         local pointsLeft = serverLangList["[pointsLeft]"] or pointCap
         if pointsLeft < 1 then
