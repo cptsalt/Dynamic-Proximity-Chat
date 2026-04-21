@@ -433,10 +433,11 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
 
     starcustomchat.utils.setMessageHandler("/learnlang", function(_, _, data)
         local splitArgs = splitStr(data, " ")
-        local langKey, langLevel, langName, color, font, preset = (splitArgs[1] or nil), (tonumber(splitArgs[2]) or 10),
-            (splitArgs[3] or nil), (splitArgs[4] or nil), (splitArgs[5] or nil), (splitArgs[6] or nil)
+        -- local langKey, langLevel, langName, color, font, preset = (splitArgs[1] or nil), (tonumber(splitArgs[2]) or 10),
+        --     (splitArgs[3] or nil), (splitArgs[4] or nil), (splitArgs[5] or nil), (splitArgs[6] or nil)
+        local langKey, langLevel, langName, color, font, preset = chat.parseArguments(data)
 
-        if not langKey or #langKey < 1 then
+        if not langKey then
             return "Missing arguments for /learnlang, need {code, points, [name], [hex color], [font], [preset]}"
         end
 
@@ -444,7 +445,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         langKey = langKey:gsub("[%[%]]", "")
 
         local learnedLangs = player.getProperty("DPC::learnedLangs") or {}
-        if color == "random" or color == "false" or color == nil then
+        if color == "random" or color == "false" or color == false or color == nil then
             local hexDigits = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
             -- local randSource = sb.makeRandomSource()
             local hexMin = 4 -- make the minimum so people can still see stuff in case of weird random shit where you get lots of low values
@@ -1235,7 +1236,6 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
     starcustomchat.utils.setMessageHandler("/edithearing", function(_, _, data)
         -- needs target uuid and new mult value
         local status, resultOrError = pcall(function(data)
-            local splitArgs = splitStr(data, " ")
             local targetUUID, newValue = chat.parseArguments(data)
 
             if not targetUUID then
@@ -1275,7 +1275,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
     starcustomchat.utils.setMessageHandler("/editlangpoints", function(_, _, data)
         -- needs target uuid and new mult value
         local status, resultOrError = pcall(function(data)
-            local splitArgs = splitStr(data, " ")
+            -- local splitArgs = splitStr(data, " ")
             local targetUUID, newValue = chat.parseArguments(data)
 
             if not targetUUID then
@@ -1316,6 +1316,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
     -- check the stagehand here
     if self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
+        self.serverValid = "running"
         chat.addMessage(
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Running server check. Please wait 1 second before sending a message.")
 
@@ -1719,7 +1720,7 @@ function dynamicprox:onSendMessage(data)
             data.fakeName = player.getProperty("DPC::unknownAlias") or nil
             data.playerName = world.entityName(player.id())
 
-            if self.serverValid then
+            if self.serverValid == true then
                 sendStagehand({
                     message = "sendDynamicMessage",
                     data = data
@@ -1919,7 +1920,6 @@ function dynamicprox:onModeChange(mode)
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Before getting started with this mod, be aware that currently the mod is set up only with server configurations. If the chat mod doesn't work, odds are it isn't mounted on the server. To use the language system, use ^cyan;/learnlang^reset; to manage languages for chat. This notice will only appear once, but its information can be found on the mod page.")
         if self.serverDefault then
             root.setConfiguration("dpcOverServer", true)
-            -- self.serverValid = true
         end
         player.setProperty("DPC::firstLoad", true)
     end
