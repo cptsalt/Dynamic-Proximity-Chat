@@ -2714,7 +2714,7 @@ end
 local function checkVersion(data)
     local userVersion = data.version
     -- hard code this comparison, i don't care
-    if userVersion < 221 then
+    if userVersion < 222 then
         world.sendEntityMessage(data.player, "dpcServerMessage",
             "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.2.2 to ensure functionality with the server. Use /ignoreversion to suppress this.")
     end
