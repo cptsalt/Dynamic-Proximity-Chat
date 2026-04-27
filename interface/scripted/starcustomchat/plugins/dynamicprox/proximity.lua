@@ -1317,8 +1317,8 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
     if self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
         self.serverValid = "running"
-        chat.addMessage(
-            -- "^CornFlowerBlue;Dynamic Prox Chat^reset;: Running server check. Please wait 1 second before sending a message.")
+        -- chat.addMessage(
+        --     "^CornFlowerBlue;Dynamic Prox Chat^reset;: Running server check. Please wait 1 second before sending a message.")
 
         local status, resultOrError = pcall(function(data)
             local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -1673,7 +1673,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 223
+            data.version = 222
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
             data.globalFlag = globalFlag
