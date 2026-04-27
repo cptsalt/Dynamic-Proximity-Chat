@@ -319,6 +319,10 @@ local function editLangPoints(data)
         newValue = math.max(0, newValue)
     end
 
+    if not playerTraits[targetUUID] then
+        playerTraits[targetUUID] = {}
+    end
+
     playerTraits[targetUUID].langPoints = {
         capacity = newValue,
         admin = data.uuid

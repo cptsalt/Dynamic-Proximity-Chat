@@ -1318,7 +1318,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         sb.logInfo("DPC: Running server check.")
         self.serverValid = "running"
         chat.addMessage(
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Running server check. Please wait 1 second before sending a message.")
+            -- "^CornFlowerBlue;Dynamic Prox Chat^reset;: Running server check. Please wait 1 second before sending a message.")
 
         local status, resultOrError = pcall(function(data)
             local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -1341,7 +1341,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             if player.getProperty("DPC::serverValid") then
                 self.serverValid = true
                 sb.logInfo("DPC Server stagehand is installed.")
-                chat.addMessage("^CornFlowerBlue;Dynamic Prox Chat^reset;: Server file is installed.")
+                -- chat.addMessage("^CornFlowerBlue;Dynamic Prox Chat^reset;: Server file is installed.")
             else
                 self.serverValid = false
                 sb.logInfo("DPC Server stagehand is NOT installed.")
