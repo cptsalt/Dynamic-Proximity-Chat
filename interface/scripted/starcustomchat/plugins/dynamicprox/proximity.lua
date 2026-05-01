@@ -435,10 +435,10 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         local splitArgs = splitStr(data, " ")
         -- local langKey, langLevel, langName, color, font, preset = (splitArgs[1] or nil), (tonumber(splitArgs[2]) or 10),
         --     (splitArgs[3] or nil), (splitArgs[4] or nil), (splitArgs[5] or nil), (splitArgs[6] or nil)
-        local langKey, langLevel, langName, color, font, preset = chat.parseArguments(data)
+        local langKey, langLevel, langName, color, preset, font = chat.parseArguments(data)
 
         if not langKey then
-            return "Missing arguments for /learnlang, need {code, points, [name], [hex color], [font], [preset]}"
+            return "Missing arguments for /learnlang, need {code, points, [name], [hex color], [preset], [font]}"
         end
 
         langKey = langKey:upper()
@@ -470,6 +470,14 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         end
 
         langLevel = math.max(0, math.min(langLevel, 10))
+
+        if font == "default" then
+            font = nil
+        end
+
+        if preset == "default" then
+            preset = nil
+        end
 
         local langInfo = {
             name = langName or langKey,
@@ -1673,7 +1681,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 222
+            data.version = 224
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
             data.globalFlag = globalFlag

@@ -2362,6 +2362,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
         textTable = newTextTable -- cut down the table to remove invalid messages. This shortens computing time by a negligable amount
 
+        
         local numChunks = #textTable
 
         -- [11:29:21.434] [Info] table is {1: {valid: true, isRadio: false, langKey: !!, hasLOS: true, msgQuality: 100, commCode: 0, noScramble: false, type: quote, radius: 30, text: testing /italics }, 2: {valid: true, isRadio: false, langKey: !!, hasLOS: true, msgQuality: 100, commCode: 0, noScramble: false, type: quote, radius: 45, text:  with volume/}, 3: {type: bad, radius: 0, commCode: 0, text: , isRadio: false, msgQuality: 0, langKey: :(, valid: false}}
@@ -2718,9 +2719,9 @@ end
 local function checkVersion(data)
     local userVersion = data.version
     -- hard code this comparison, i don't care
-    if userVersion < 223 then
+    if userVersion < 224 then
         world.sendEntityMessage(data.player, "dpcServerMessage",
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.2.3 to ensure functionality with the server. Use /ignoreversion to suppress this.")
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.2.4 to ensure functionality with the server. Use /ignoreversion to suppress this.")
     end
     return
 end
@@ -2764,7 +2765,7 @@ local function processMessage(data)
 
     data.defaultFreq = data.defaultComms and data.defaultComms["freq"] or 0
 
-    -- run handlemessage once, then processVisuals for each player, should cut down on comp time
+    -- run handlemessage once, then pvisuals for each player, should cut down on comp time
     local handleTable = {}
     -- handleMessage(data.playerId, authorPos, msgTime, data)
     local handleStat, returnError = pcall(handleMessage, data.playerId, data.playerUid, authorPos, msgTime, data)
@@ -2796,10 +2797,12 @@ local function processMessage(data)
             maxRange = -1
         end
 
-        data.sharesWorld = playerWorlds[recPlayer] == playerWorlds[data.playerId]
-        if data.sharesWorld then
+        data.sharesWorld = (playerWorlds[recPlayer] and playerWorlds[data.playerId]) and playerWorlds[recPlayer] ==
+                               playerWorlds[data.playerId] -- this check is stupid and should probably be changed to always be checked instead of only when a global message is passed. do this if more problems show up
+
+        if not isGlobal or data.sharesWorld then
             recPos = world.entityPosition(world.entityExists(recPlayer) and recPlayer)
-            msgDistance = world.magnitude(recPos, authorPos)
+            msgDistance = world.magnitude(recPos, authorPos) or 0
             recUUID = world.entityUniqueId(recPlayer)
             if maxSoundRad > 0 then -- only run this if there is a sound radius, checks to modify hearing for max radius
                 local recTraits = (playerTraits and playerTraits[recUUID]) or {}
@@ -2807,12 +2810,14 @@ local function processMessage(data)
                 maxRange = math.max(maxRange, maxSoundRad * recHearing) -- in this one we multiply since we're comparing radius and not distance
             end
         else
+            -- this happens if the two do not share a world
             maxRange = -1 -- set this just in case
+            msgDistance = math.huge
         end
 
         -- 200 for now with admin mode, might make it dynamic later
         if (activeAdmins[recUUID] and msgDistance <= 200) or msgDistance <= maxRange or isGlobal then
-            if not data.sharesWorld then
+            if isGlobal and not data.sharesWorld then
                 msgDistance = math.huge
             end
             local status, errorMsg = pcall(processVisuals, data.playerId, authorPos, recPlayer, recUUID, recPos,
