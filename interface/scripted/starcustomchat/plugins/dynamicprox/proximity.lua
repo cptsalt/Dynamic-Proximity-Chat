@@ -1321,6 +1321,8 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         end
     end)
 
+    self.serverValid = true --override to run server no matter what. Later on I can make something more robust, but since the mod only works with the server anyway, there's no point in making a check
+
     -- check the stagehand here
     if self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
@@ -1681,7 +1683,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 224
+            data.version = 225
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
             data.globalFlag = globalFlag

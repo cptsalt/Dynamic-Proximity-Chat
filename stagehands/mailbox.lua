@@ -1428,7 +1428,7 @@ end
 local function processVisuals(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, maxRad,
     messageDistance, formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
     local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
-    local adminActive = activeAdmins[receiverUUID] or false
+    local adminActive = activeAdmins[receiverUUID] == true or false
     local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
     local recTraits = (playerTraits and playerTraits[receiverUUID]) or {}
     local recHearing = (recTraits.hearing and recTraits.hearing.modifier) or 1
@@ -2362,7 +2362,6 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
 
         textTable = newTextTable -- cut down the table to remove invalid messages. This shortens computing time by a negligable amount
 
-        
         local numChunks = #textTable
 
         -- [11:29:21.434] [Info] table is {1: {valid: true, isRadio: false, langKey: !!, hasLOS: true, msgQuality: 100, commCode: 0, noScramble: false, type: quote, radius: 30, text: testing /italics }, 2: {valid: true, isRadio: false, langKey: !!, hasLOS: true, msgQuality: 100, commCode: 0, noScramble: false, type: quote, radius: 45, text:  with volume/}, 3: {type: bad, radius: 0, commCode: 0, text: , isRadio: false, msgQuality: 0, langKey: :(, valid: false}}
@@ -2719,9 +2718,9 @@ end
 local function checkVersion(data)
     local userVersion = data.version
     -- hard code this comparison, i don't care
-    if userVersion < 224 then
+    if userVersion < 225 then
         world.sendEntityMessage(data.player, "dpcServerMessage",
-            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.2.4 to ensure functionality with the server. Use /ignoreversion to suppress this.")
+            "^CornFlowerBlue;Dynamic Prox Chat^reset;: Your mod is out of date! Please go install version 2.2.5 to ensure functionality with the server. Use /ignoreversion to suppress this.")
     end
     return
 end
@@ -2736,6 +2735,7 @@ local function processMessage(data)
     -- temporary addition to see if it stops crashes
     -- isGlobal = false --this didn't fix anything, apparently
 
+    -- OVERRIDING to ALWAYS set up sharedworld conditions, might make chat messages a little less performant
     if isGlobal == true or isGlobal == "true" then
         local clientList = universe.clientIds()
 
@@ -2747,6 +2747,7 @@ local function processMessage(data)
         end
     else
         playerList = world.players()
+        data.sharesWorld = true --since receivers are in 1 world, sharesworld is always true
     end
 
     local authorPos = world.entityPosition(data.playerId)
@@ -2797,10 +2798,8 @@ local function processMessage(data)
             maxRange = -1
         end
 
-        data.sharesWorld = (playerWorlds[recPlayer] and playerWorlds[data.playerId]) and playerWorlds[recPlayer] ==
-                               playerWorlds[data.playerId] -- this check is stupid and should probably be changed to always be checked instead of only when a global message is passed. do this if more problems show up
-
-        if not isGlobal or data.sharesWorld then
+        data.sharesWorld = data.sharesWorld or (playerWorlds[recPlayer] == playerWorlds[data.playerId])
+        if data.sharesWorld then
             recPos = world.entityPosition(world.entityExists(recPlayer) and recPlayer)
             msgDistance = world.magnitude(recPos, authorPos) or 0
             recUUID = world.entityUniqueId(recPlayer)
@@ -2817,7 +2816,7 @@ local function processMessage(data)
 
         -- 200 for now with admin mode, might make it dynamic later
         if (activeAdmins[recUUID] and msgDistance <= 200) or msgDistance <= maxRange or isGlobal then
-            if isGlobal and not data.sharesWorld then
+            if not data.sharesWorld then
                 msgDistance = math.huge
             end
             local status, errorMsg = pcall(processVisuals, data.playerId, authorPos, recPlayer, recUUID, recPos,
