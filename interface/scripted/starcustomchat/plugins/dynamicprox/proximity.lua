@@ -113,7 +113,6 @@ local function getDefaultLang()
 end
 
 local function setTextHint(mode, override)
-    -- sb.logInfo("mode is %s",mode)
     local override = override or false
     if override or mode ~= "Prox" or root.getConfiguration("DPC::hideHints") then
         widget.setHint("tbxInput", starcustomchat.utils.getTranslation("chat.textbox.hint"))
@@ -1573,7 +1572,6 @@ function dynamicprox:onSendMessage(data)
                     data = data
                 })
             else
-                sb.logInfo("serverValid is %s", self.serverValid)
                 -- send locally to players
                 chat.addMessage(
                     "^CornFlowerBlue;Dynamic Prox Chat^reset;: Server processing is not supported on this server, and chat messages will not send properly. In the future there will be a client processor, but that is not yet implemented.")

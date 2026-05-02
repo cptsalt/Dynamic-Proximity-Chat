@@ -2690,6 +2690,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     newMsg.text = message.text
     newMsg.portrait = message.portrait
     newMsg.playerUid = message.playerUid
+    newMsg.receiverUid = receiverUUID
     newMsg.connection = message.connection
     newMsg.nickname = message.nickname
     newMsg.skipRecog = message.skipRecog
