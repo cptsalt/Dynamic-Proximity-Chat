@@ -165,7 +165,7 @@ function dynamicprox:checkServerState(attempt)
     local curMode = root.getConfiguration("scc_message_mode") or 1
 
     SCCTimer:add(1, function()
-        if player.getProperty("DPC::serverValid")then
+        if player.getProperty("DPC::serverValid") then
             self.serverValid = true
             sb.logInfo("DPC Server stagehand is installed.")
             player.setProperty("DPC::serverValid", nil)
@@ -174,7 +174,7 @@ function dynamicprox:checkServerState(attempt)
             return true
         elseif attempt < 6 then
             self.serverValid = false
-            widget.setHint("tbxInput", "^orange;DPC Loading: ("..attempt..") Allowing server to respond...^reset;")
+            widget.setHint("tbxInput", "^orange;DPC Loading: (" .. attempt .. ") Allowing server to respond...^reset;")
             local attempt = attempt + 1
             dynamicprox:checkServerState(attempt)
         else
@@ -185,6 +185,7 @@ function dynamicprox:checkServerState(attempt)
             chat.addMessage(
                 "^CornFlowerBlue;Dynamic Prox Chat^reset;: If this is a false positive, use ^#green;\"/dpcserver\"^reset; to manually override this.")
             setTextHint(params[tonumber(curMode)].data.mode, false)
+            return false
         end
     end)
 end
@@ -1191,12 +1192,12 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 data = addInfo
             })
             widget.setHint("tbxInput", "^yellow;DPC Loading: Allowing server to respond...^reset;")
-        end, data)
-        local tries = 0
-        local params = config.getParameter("gui")["rgChatMode"]["buttons"]
-        local curMode = root.getConfiguration("scc_message_mode") or 1
+            local tries = 0
+            local params = config.getParameter("gui")["rgChatMode"]["buttons"]
+            local curMode = root.getConfiguration("scc_message_mode") or 1
 
-        dynamicprox:checkServerState(1)
+            self.serverValid = dynamicprox:checkServerState(1)
+        end, data)
         -- SCCTimer:add(1, function()
         -- end)
     end
@@ -1572,6 +1573,7 @@ function dynamicprox:onSendMessage(data)
                     data = data
                 })
             else
+                sb.logInfo("serverValid is %s", self.serverValid)
                 -- send locally to players
                 chat.addMessage(
                     "^CornFlowerBlue;Dynamic Prox Chat^reset;: Server processing is not supported on this server, and chat messages will not send properly. In the future there will be a client processor, but that is not yet implemented.")

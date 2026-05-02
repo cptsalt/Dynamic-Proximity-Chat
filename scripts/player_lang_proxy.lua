@@ -109,7 +109,6 @@ function init()
     end)
 
     message.setHandler("dpcStagehandExists", function(_, _, data)
-        sb.logInfo("data is %s",data)
         player.setProperty("DPC::serverValid", true)
 
         --set player data to collected information for languages and radio codes, even if the data is empty
