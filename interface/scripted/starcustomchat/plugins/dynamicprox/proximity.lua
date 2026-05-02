@@ -80,203 +80,6 @@ function dynamicprox:uninit()
     end
 end
 
--- readded since the commands conf thing appears to have broken
-function dynamicprox:addCustomCommandPreview(availableCommands, substr)
-    if string.find("/learnlang", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/learnlang",
-            description = "commands.learnlang.desc",
-            data = "/learnlang"
-        })
-    elseif string.find("/showlangs", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/showlangs",
-            description = "commands.showlangs.desc",
-            data = "/showlangs"
-        })
-    elseif string.find("/langlist", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/langlist",
-            description = "commands.langlist.desc",
-            data = "/langlist"
-        })
-    elseif string.find("/editlang", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/editlang",
-            description = "commands.editlang.desc",
-            data = "/editlang"
-        })
-    elseif string.find("/resetlangs", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/resetlangs",
-            description = "commands.resetlangs.desc",
-            data = "/resetlangs"
-        })
-    elseif string.find("/defaultlang", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/defaultlang",
-            description = "commands.defaultlang.desc",
-            data = "/defaultlang"
-        })
-    elseif string.find("/addtypo", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/addtypo",
-            description = "commands.addtypo.desc",
-            data = "/addtypo"
-        })
-    elseif string.find("/removetypo", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/removetypo",
-            description = "commands.removetypo.desc",
-            data = "/removetypo"
-        })
-    elseif string.find("/toggletypos", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/toggletypos",
-            description = "commands.toggletypos.desc",
-            data = "/toggletypos"
-        })
-    elseif string.find("/checktypo", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/checktypo",
-            description = "commands.checktypo.desc",
-            data = "/checktypo"
-        })
-    elseif string.find("/showtypos", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/showtypos",
-            description = "commands.showtypos.desc",
-            data = "/showtypos"
-        })
-    elseif string.find("/togglehints", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/togglehints",
-            description = "commands.togglehints.desc",
-            data = "/togglehints"
-        })
-    elseif string.find("/toggleradio", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/toggleradio",
-            description = "commands.toggleradio.desc",
-            data = "/toggleradio"
-        })
-    elseif string.find("/freq", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/freq",
-            description = "commands.freq.desc",
-            data = "/freq"
-        })
-    elseif string.find("/chatbubble", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/chatbubble",
-            description = "commands.chatbubble.desc",
-            data = "/chatbubble"
-        })
-    elseif string.find("/skiprecog", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/skiprecog",
-            description = "commands.skiprecog.desc",
-            data = "/skiprecog"
-        })
-    elseif string.find("/resetrecog", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/resetrecog",
-            description = "commands.resetrecog.desc",
-            data = "/resetrecog"
-        })
-    elseif string.find("/grouprecog", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/grouprecog",
-            description = "commands.grouprecog.desc",
-            data = "/grouprecog"
-        })
-    elseif string.find("/font", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/font",
-            description = "commands.font.desc",
-            data = "/font"
-        })
-    elseif string.find("/chid", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/chid",
-            description = "commands.chid.desc",
-            data = "/chid"
-        })
-    elseif string.find("/addnick", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/addnick",
-            description = "commands.addnick.desc",
-            data = "/addnick"
-        })
-    elseif string.find("/clearnick", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/clearnick",
-            description = "commands.clearnick.desc",
-            data = "/clearnick"
-        })
-    elseif string.find("/addalias", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/addalias",
-            description = "commands.addalias.desc",
-            data = "/addalias"
-        })
-    elseif string.find("/resetalias", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/resetalias",
-            description = "commands.resetalias.desc",
-            data = "/resetalias"
-        })
-    elseif string.find("/showalias", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/showalias",
-            description = "commands.showalias.desc",
-            data = "/showalias"
-        })
-    elseif string.find("/apply", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/apply",
-            description = "commands.apply.desc",
-            data = "/apply"
-        })
-    elseif string.find("/nametag", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/nametag",
-            description = "commands.nametag.desc",
-            data = "/nametag"
-        })
-    elseif string.find("/ignoreversion", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/ignoreversion",
-            description = "commands.ignoreversion.desc",
-            data = "/ignoreversion"
-        })
-    elseif string.find("/talkvol", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/talkvol",
-            description = "commands.talkvol.desc",
-            data = "/talkvol"
-        })
-    elseif string.find("/editlangphrase", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/editlangphrase",
-            description = "commands.editlangphrase.desc",
-            data = "/editlangphrase"
-        })
-    elseif string.find("/emphcolor", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/emphcolor",
-            description = "commands.emphcolor.desc",
-            data = "/emphcolor"
-        })
-    elseif string.find("/togglejoinmsgs", substr, nil, true) then
-        table.insert(availableCommands, {
-            name = "/togglejoinmsgs",
-            description = "commands.togglejoinmsgs.desc",
-            data = "/togglejoinmsgs"
-        })
-    end
-end
-
 local function splitStr(inputstr, sep) -- replaced this with a less efficient linear search in order to be system agnostic
     if sep == nil then
         sep = "%s"
@@ -355,6 +158,35 @@ end
 
 local function sendStagehand(data)
     starcustomchat.utils.createStagehandWithData("dpcStagehand", data)
+end
+
+function dynamicprox:checkServerState(attempt)
+    local params = config.getParameter("gui")["rgChatMode"]["buttons"]
+    local curMode = root.getConfiguration("scc_message_mode") or 1
+
+    SCCTimer:add(1, function()
+        if player.getProperty("DPC::serverValid")then
+            self.serverValid = true
+            sb.logInfo("DPC Server stagehand is installed.")
+            player.setProperty("DPC::serverValid", nil)
+            setTextHint(params[tonumber(curMode)].data.mode, false)
+            -- chat.addMessage("^CornFlowerBlue;Dynamic Prox Chat^reset;: Server file is installed.")
+            return true
+        elseif attempt < 6 then
+            self.serverValid = false
+            widget.setHint("tbxInput", "^orange;DPC Loading: ("..attempt..") Allowing server to respond...^reset;")
+            local attempt = attempt + 1
+            dynamicprox:checkServerState(attempt)
+        else
+            self.serverValid = false
+            sb.logInfo("DPC Server stagehand is NOT installed.")
+            chat.addMessage(
+                "^CornFlowerBlue;Dynamic Prox Chat^reset;: It appears this server does not have DPC installed (failed to detect a stagehand file after 6 attempts). Messages in the Dynamic tab will not send as a result of this (for now, I'm working on clientside processing).")
+            chat.addMessage(
+                "^CornFlowerBlue;Dynamic Prox Chat^reset;: If this is a false positive, use ^#green;\"/dpcserver\"^reset; to manually override this.")
+            setTextHint(params[tonumber(curMode)].data.mode, false)
+        end
+    end)
 end
 
 -- this messagehandler function runs if the chat preview exists
@@ -1175,6 +1007,18 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
             return "^red;Error occurred while running command, check log"
         end
     end)
+    starcustomchat.utils.setMessageHandler("/dpcserver", function(_, _, data)
+        local status, resultOrError = pcall(function(data)
+            self.serverValid = not self.serverValid
+            return "Server processing is manually " .. self.serverValid and "enabled" or "disabled."
+        end, data)
+        if status then
+            return resultOrError
+        else
+            sb.logError("Error occurred while running DPC command: %s", resultOrError)
+            return "^red;Error occurred while running command, check log"
+        end
+    end)
     starcustomchat.utils.setMessageHandler("/emphcolor", function(_, _, data)
         local status, resultOrError = pcall(function(data)
             local splitArgs = splitStr(data, " ")
@@ -1321,11 +1165,10 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         end
     end)
 
-    self.serverValid = true --override to run server no matter what. Later on I can make something more robust, but since the mod only works with the server anyway, there's no point in making a check
-
     -- check the stagehand here
     if self.serverValid == nil then
         sb.logInfo("DPC: Running server check.")
+        widget.setHint("tbxInput", "^red;Loading Dynamic Prox Chat...^reset;")
         self.serverValid = "running"
         -- chat.addMessage(
         --     "^CornFlowerBlue;Dynamic Prox Chat^reset;: Running server check. Please wait 1 second before sending a message.")
@@ -1346,23 +1189,15 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 message = "checkStatus",
                 data = addInfo
             })
+            widget.setHint("tbxInput", "^yellow;DPC Loading: Allowing server to respond...^reset;")
         end, data)
-        SCCTimer:add(1, function()
-            if player.getProperty("DPC::serverValid") then
-                self.serverValid = true
-                sb.logInfo("DPC Server stagehand is installed.")
-                -- chat.addMessage("^CornFlowerBlue;Dynamic Prox Chat^reset;: Server file is installed.")
-            else
-                self.serverValid = false
-                sb.logInfo("DPC Server stagehand is NOT installed.")
-                chat.addMessage(
-                    "^CornFlowerBlue;Dynamic Prox Chat^reset;: It appears this server does not have DPC installed. Messages in the Dynamic tab will not send as a result of this (for now, I'm working on clientside processing).")
-            end
-            local params = config.getParameter("gui")["rgChatMode"]["buttons"]
-            local curMode = root.getConfiguration("scc_message_mode") or 1
-            setTextHint(params[tonumber(curMode)].data.mode, false)
-            player.setProperty("DPC::serverValid", nil)
-        end)
+        local tries = 0
+        local params = config.getParameter("gui")["rgChatMode"]["buttons"]
+        local curMode = root.getConfiguration("scc_message_mode") or 1
+
+        dynamicprox:checkServerState(1)
+        -- SCCTimer:add(1, function()
+        -- end)
     end
 end
 
@@ -1683,7 +1518,7 @@ function dynamicprox:formatOutcomingMessage(data)
 
             -- data.recogList = recogList
 
-            data.version = 225
+            data.version = 226
             data.ignoreVersion = root.getConfiguration("DPC::ignoreVersion") or nil
 
             data.globalFlag = globalFlag
@@ -1809,7 +1644,7 @@ function dynamicprox:formatIncomingMessage(rawMessage)
         if not message.processed then
             -- process the message here and then continue
             -- dynamicprox:processClientMessage(message)
-            return --disabling this for now, i'll add client processing eventually but it isn't a high priority for me right now
+            return -- disabling this for now, i'll add client processing eventually but it isn't a high priority for me right now
         end
 
         if message.isDpc then
