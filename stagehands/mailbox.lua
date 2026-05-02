@@ -2697,6 +2697,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     newMsg.alias = message.alias
     newMsg.aliasPrio = message.aliasPrio
     newMsg.fakeName = message.fakeName
+    newMsg.processed = true
 
     newMsg.data = {}
     newMsg.data.replyUUID = message.data and message.data.replyUUID
