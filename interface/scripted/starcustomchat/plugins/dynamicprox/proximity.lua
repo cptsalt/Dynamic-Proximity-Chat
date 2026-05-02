@@ -1010,7 +1010,8 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
     starcustomchat.utils.setMessageHandler("/dpcserver", function(_, _, data)
         local status, resultOrError = pcall(function(data)
             self.serverValid = not self.serverValid
-            return "Server processing is manually " .. self.serverValid and "enabled" or "disabled."
+            local validStr = (self.serverValid and "enabled") or "disabled."
+            return "Server processing is manually " .. validStr
         end, data)
         if status then
             return resultOrError
