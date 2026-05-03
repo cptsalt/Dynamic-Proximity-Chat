@@ -1066,6 +1066,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
         if useRad == -1 and maxRad ~= -1 then
             maxRad = -1
         end
+        --radio mode doesn't take into account if you turn your radio off, but i don't really care about this edge case
         formatInsert(charBuffer, useRad, curMode, languageCode, radioMode, commCode, noScramble)
         charBuffer = ""
         prevMode = curMode
@@ -1438,7 +1439,7 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     -- local loocRad = 2 * actionRad
     -- local noiseRad = 30
     local textTable = sb.jsonMerge({}, formattedTable)
-    local radioState = activeFreq["enabled"] or (activeFreq["enabled"] == nil and true)
+    local radioState = activeFreq["enabled"] or (activeFreq["enabled"] == nil)
     -- *re-hardcodes my radius values*
 
     local sharesWorld = message.sharesWorld
@@ -2749,7 +2750,7 @@ local function processMessage(data)
         end
     else
         playerList = world.players()
-        data.sharesWorld = true --since receivers are in 1 world, sharesworld is always true
+        data.sharesWorld = true -- since receivers are in 1 world, sharesworld is always true
     end
 
     local authorPos = world.entityPosition(data.playerId)
@@ -2805,7 +2806,7 @@ local function processMessage(data)
             recPos = world.entityPosition(world.entityExists(recPlayer) and recPlayer)
             msgDistance = world.magnitude(recPos, authorPos) or 0
             recUUID = world.entityUniqueId(recPlayer)
-            if maxSoundRad > 0 then -- only run this if there is a sound radius, checks to modify hearing for max radius
+            if maxSoundRad > 0 and not isGlobal then -- only run this if there is a sound radius, checks to modify hearing for max radius
                 local recTraits = (playerTraits and playerTraits[recUUID]) or {}
                 local recHearing = (recTraits.hearing and recTraits.hearing.modifier) or 1
                 maxRange = math.max(maxRange, maxSoundRad * recHearing) -- in this one we multiply since we're comparing radius and not distance
