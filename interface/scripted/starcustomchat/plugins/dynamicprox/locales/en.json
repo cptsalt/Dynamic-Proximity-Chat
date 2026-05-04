@@ -9,7 +9,7 @@
   "commands.showtypos.desc": "Returns a list of your saved typos and corrections",
   "commands.freq.desc": "View or set your current radio frequency, {[frequency], [alias]}",
   "commands.toggleradio.desc": "Turns your radio on or off.",
-  "commands.learnlang.desc": "Commit unspent language points to a language, {code, points, [name], [hex color], [font], [preset]}",
+  "commands.learnlang.desc": "Commit unspent language points to a language, {code, points, [name], [hex color], [preset], [font]}",
   "commands.resetlangs.desc": "Resets your language allocations, requires 1st argument to be 'reset'",
   "commands.defaultlang.desc": "Assign a language to automatically apply in chat {lang code}",
   "commands.togglehints.desc": "Toggle text hints shown in the input bar",

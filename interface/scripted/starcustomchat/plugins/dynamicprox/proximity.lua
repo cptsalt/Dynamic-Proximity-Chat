@@ -73,6 +73,12 @@ function dynamicprox:init(chat)
     self.unchecked = true
 end
 
+-- function dynamicprox:registerStagehandHandlers(handlers)
+--     -- sb.logInfo("running registerStagehandHandlers")
+--     self.stagehandEnabled = handlers and handlers["dpcServer"]
+--     --put the stagehand check in here, but for some reason it doesn't work (no idea why)
+-- end
+
 function dynamicprox:uninit()
     -- FezzedOne: Ensures the player's name tag on OpenStarbound isn't left invisible or as a custom tag if DPC is uninstalled.
     if player.setNametag then
@@ -1772,14 +1778,6 @@ function dynamicprox:onModeChange(mode)
 
     setTextHint(mode)
 end
-
---[[
-function dynamicprox:registerStagehandHandlers(handlers)
-    -- sb.logInfo("running registerStagehandHandlers")
-    self.stagehandEnabled = handlers and handlers["DPC"]
-    --put the stagehand check in here, but for some reason it doesn't work (no idea why)
-end
-]]
 
 function dynamicprox:update(dt)
     SCCTimer:update(dt)
