@@ -1066,7 +1066,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
         if useRad == -1 and maxRad ~= -1 then
             maxRad = -1
         end
-        --radio mode doesn't take into account if you turn your radio off, but i don't really care about this edge case
+        -- radio mode doesn't take into account if you turn your radio off, but i don't really care about this edge case
         formatInsert(charBuffer, useRad, curMode, languageCode, radioMode, commCode, noScramble)
         charBuffer = ""
         prevMode = curMode
@@ -1427,7 +1427,7 @@ local handleMessage = function(authorEntityId, authorUUID, authorPos, msgTime, m
 end
 
 local function processVisuals(authorEntityId, authorPos, receiverEntityId, receiverUUID, recPos, maxRad,
-    messageDistance, formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message)
+    messageDistance, formattedTable, recWorld, langAlphabets, slashCount, tickCount, asterCount, message, edit)
     local activeFreq = (playerCommChannels and playerCommChannels[receiverUUID]) or {}
     local adminActive = activeAdmins[receiverUUID] == true or false
     local recLangs = (playerLangs and playerLangs[receiverUUID]) or {}
@@ -2702,11 +2702,14 @@ local function processVisuals(authorEntityId, authorPos, receiverEntityId, recei
     newMsg.processed = true
 
     newMsg.data = {}
+    newMsg.edit = edit
     newMsg.data.replyUUID = message.data and message.data.replyUUID
 
     if recWorld then
         newMsg.recId = receiverEntityId
         universe.sendWorldMessage(recWorld, "dpc_world_message", newMsg)
+    elseif edit then
+        world.sendEntityMessage(receiverEntityId, "scc_edit_message", newMsg)
     else
         world.sendEntityMessage(receiverEntityId, "scc_add_message", newMsg)
     end
@@ -2728,8 +2731,9 @@ local function checkVersion(data)
     return
 end
 
-local function processMessage(data)
+local function processMessage(data, edit)
     -- get a list of players, then process the message per player before sending it to each
+    local edit = edit or false
     local isGlobal = data.globalFlag
     local playerList = {}
     local playerWorlds = {}
@@ -2824,7 +2828,7 @@ local function processMessage(data)
             end
             local status, errorMsg = pcall(processVisuals, data.playerId, authorPos, recPlayer, recUUID, recPos,
                 maxRange, msgDistance, formattedTable, playerWorlds[recPlayer], langAlphabets, slashCount, tickCount,
-                asterCount, data)
+                asterCount, data, edit)
             if status then
                 -- don't return because we want it to loop
                 -- return errorMsg
@@ -2854,19 +2858,13 @@ function dpc_init()
         --     "[DEBUG] Checks are on. Remove them before going to production.")
         -- log and process here
         local status, errorMsg = pcall(logNewMessage, purpose, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while logging message: %s\n  Message data: %s", errorMsg, data)
             world.sendEntityMessage(data.playerId, "dpcServerMessage",
                 "[DEBUG] DPC Chat failed with error: " .. errorMsg)
         end
         local status, errorMsg = pcall(processMessage, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while formatting proximity message: %s\n  Message data: %s",
                 errorMsg, data)
         end
@@ -2875,97 +2873,67 @@ function dpc_init()
     elseif purpose == "checkVersion" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(checkVersion, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while checking version: %s\n  Message data: %s", errorMsg, data)
         end
     elseif purpose == "editLangPhrase" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(editLangPhrase, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while adding replacement word: %s\n  Message data: %s",
                 errorMsg, data)
         end
     elseif purpose == "addLang" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(addLang, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while adding language: %s\n  Message data: %s", errorMsg, data)
         end
     elseif purpose == "resetLangs" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(resetLangs, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while resetting languages: %s\n  Message data: %s", errorMsg,
                 data)
         end
     elseif purpose == "defaultLang" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(defaultLang, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while setting default language: %s\n  Message data: %s",
                 errorMsg, data)
         end
     elseif purpose == "langlist" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(langList, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while checking language list: %s\n  Message data: %s",
                 errorMsg, data)
         end
     elseif purpose == "editlang" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(editLang, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while editing language: %s\n  Message data: %s", errorMsg, data)
         end
     elseif purpose == "setfreq" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(setFreq, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s", errorMsg,
                 data)
         end
     elseif purpose == "toggleradio" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(toggleRadio, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s", errorMsg,
                 data)
         end
     elseif purpose == "checkStatus" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(checkStatus, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while adding comm channel: %s\n  Message data: %s", errorMsg,
                 data)
         end
@@ -2973,20 +2941,14 @@ function dpc_init()
     elseif purpose == "adminMode" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(adminMode, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while running admin mode: %s\n  Message data: %s", errorMsg,
                 data)
         end
     elseif purpose == "editCharHearing" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(editCharHearing, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn(
                 "[DynamicProxChat] Error occurred while running editing character hearing: %s\n  Message data: %s",
                 errorMsg, data)
@@ -2994,12 +2956,15 @@ function dpc_init()
     elseif purpose == "editLangPoints" then
         logCommand(purpose, data)
         local status, errorMsg = pcall(editLangPoints, data)
-        if status then
-            -- sb.logWarn("Status on processMessage %s, errorMsg: %s",status,errorMsg)
-            -- return errorMsg
-        else
+        if not status then
             sb.logWarn("[DynamicProxChat] Error occurred while running editing language points: %s\n  Message data: %s",
                 errorMsg, data)
+        end
+    elseif purpose and purpose == "editMessage" then
+        -- does nothing for now
+    elseif purpose == "requestHandlers" then
+        if data and data.playerId then
+            world.sendEntityMessage(data.playerId, "scc_stagehand_allowed_messages", {"editMessage"})
         end
     else
         -- All the other stuff

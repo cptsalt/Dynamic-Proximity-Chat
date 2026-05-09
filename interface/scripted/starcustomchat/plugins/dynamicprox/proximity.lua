@@ -181,6 +181,23 @@ function dynamicprox:checkServerState(attempt)
             self.serverValid = false
             widget.setHint("tbxInput", "^orange;DPC Loading: (" .. attempt .. ") Allowing server to respond...^reset;")
             local attempt = attempt + 1
+
+            local playerSecret = player.getProperty("DPC::playerCheck") or false
+            if not playerSecret then
+                playerSecret = sb.makeUuid()
+                player.setProperty("DPC::playerCheck", playerSecret)
+
+            end
+            local addInfo = {
+                player = player.id(),
+                uuid = player.uniqueId(),
+                secret = playerSecret
+            }
+            sendStagehand({
+                message = "checkStatus",
+                data = addInfo
+            })
+
             dynamicprox:checkServerState(attempt)
         else
             self.serverValid = false
@@ -1174,6 +1191,29 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
 
     -- check the stagehand here
     if self.serverValid == nil then
+        starcustomchat.utils.runWhenPlayerReady(function()
+            widget.setHint("tbxInput", "^red;Loading Dynamic Prox Chat...^reset;")
+            local playerSecret = player.getProperty("DPC::playerCheck") or false
+            if not playerSecret then
+                playerSecret = sb.makeUuid()
+                player.setProperty("DPC::playerCheck", playerSecret)
+
+            end
+            local addInfo = {
+                player = player.id(),
+                uuid = player.uniqueId(),
+                secret = playerSecret
+            }
+            sendStagehand({
+                message = "checkStatus",
+                data = addInfo
+            })
+            self.serverValid = dynamicprox:checkServerState(1)
+        end)
+    end
+
+    --[[ old server check code, testing new one first
+    if self.serverValid == nil and false then
         sb.logInfo("DPC: Running server check.")
         widget.setHint("tbxInput", "^red;Loading Dynamic Prox Chat...^reset;")
         self.serverValid = "running"
@@ -1206,6 +1246,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         -- SCCTimer:add(1, function()
         -- end)
     end
+    ]]
 end
 
 local function normaliseText(str)
@@ -1552,10 +1593,6 @@ end
 
 function dynamicprox:onSendMessage(data)
     local currentPlayerName = ""
-    if xsb then -- FezzedOne: Needed to ensure the correct default alias is sent on DPC after swapping characters on xStarbound.
-        local _, defaultName = getNames()
-        currentPlayerName = defaultName or ""
-    end
 
     -- think about running this in local to allow players without the mod to still see messages
     if data.mode == "Prox" then
@@ -1573,6 +1610,7 @@ function dynamicprox:onSendMessage(data)
             data.playerName = world.entityName(player.id())
 
             if self.serverValid == true then
+                sb.logInfo("data on send is %s", data)
                 sendStagehand({
                     message = "sendDynamicMessage",
                     data = data

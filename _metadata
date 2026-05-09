@@ -2,7 +2,7 @@
   "author" : "Captain Salt",
   "description" : "[h2] Notices [/h2]\n[list]\n[*] This mod is in active development as a hobby after work, it's possible I've missed things while developing, due to testing being somewhat limited.\n[*] This mod uses the same general method as the proximity mode of [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3445409664] Star Custom Chat RP [/url] by Degranon. That mod isn't required for this one, and the two should be able to work together.\n[/list]\n\n\n[h2] About [/h2]\nInspired by a fondly remembered server that unfortunately closed, this chat mod that adds a new chat mode which manages and alters incoming and outgoing messages based on proximity. This allows for a truly local chat system with various formatting options depending on the intended type of message being sent.\n\n[h2] Requirements [/h2]\nDynamic Proximity Chat for StarCustomChat, based on the proximity mode in the mod of the same name by Degranon. Requires [url=https://github.com/KrashV/StarCustomChat] Star Custom Chat[/url] and [url=https://github.com/OpenStarbound/OpenStarbound] Open Starbound[/url]\n\n[hr][/hr]\n\nI'm going to make a wiki on the github page eventually. I don't know when, though.\n\n[h2] Links [/h2]\n[url=https://github.com/cptsalt/Dynamic-Proximity-Chat]Github repository[/url]",
   "friendlyName" : "Dynamic Proximity Chat",
-  "includes" : ["starcustomchat"],
+  "includes" : ["starcustomchat","starcustomchatrp"],
   "link" : "steam://url/CommunityFilePage/3450266347",
   "name" : "dynamicprox",
   "steamContentId" : "3450266347",
