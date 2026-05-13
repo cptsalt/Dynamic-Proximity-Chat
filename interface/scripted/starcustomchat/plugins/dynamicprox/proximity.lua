@@ -1610,7 +1610,6 @@ function dynamicprox:onSendMessage(data)
             data.playerName = world.entityName(player.id())
 
             if self.serverValid == true then
-                sb.logInfo("data on send is %s", data)
                 sendStagehand({
                     message = "sendDynamicMessage",
                     data = data
