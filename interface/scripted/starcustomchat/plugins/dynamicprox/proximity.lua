@@ -62,7 +62,6 @@ local DEBUG_PREFIX = "[DynamicProx::Debug] "
 
 function dynamicprox:init(chat)
     PluginClass.init(self, chat)
-    self:_loadConfig()
     local currentName, _ = getNames()
     if player.setNametag then
         player.setNametag(currentName or "")
@@ -118,10 +117,18 @@ local function getDefaultLang()
     return player.getProperty("DPC::defaultLang") or "!!"
 end
 
-local function setTextHint(mode, override)
+function dynamicprox:setHint(text)
+    if not self.customChat or not self.customChat.setHint then
+        widget.setHint("tbxInput", text)
+    else
+        self.customChat:setHint(text)
+    end
+end
+
+function dynamicprox:setTextHint(mode, override)
     local override = override or false
     if override or mode ~= "Prox" or root.getConfiguration("DPC::hideHints") then
-        widget.setHint("tbxInput", starcustomchat.utils.getTranslation("chat.textbox.hint"))
+        self:setHint(starcustomchat.utils.getTranslation("chat.textbox.hint"))
         return
     end
 
@@ -145,7 +152,7 @@ local function setTextHint(mode, override)
 
     hintStr = starcustomchat.utils.getTranslation("chat.textbox.hint") .. " ^#777;(" .. hintStr .. ")"
 
-    widget.setHint("tbxInput", hintStr)
+    self:setHint(hintStr)
 end
 
 local function checktypo(toggle)
@@ -156,7 +163,7 @@ local function checktypo(toggle)
     end
 
     root.setConfiguration("DPC::typos", typoTable)
-    setTextHint("Prox")
+    self:setTextHint("Prox")
     local typoStatus = (typoTable["typosActive"] and "on") or "off"
     return "Typo correction is " .. typoStatus
 end
@@ -174,12 +181,12 @@ function dynamicprox:checkServerState(attempt)
             self.serverValid = true
             sb.logInfo("DPC Server stagehand is installed.")
             player.setProperty("DPC::serverValid", nil)
-            setTextHint(params[tonumber(curMode)].data.mode, false)
+            self:setTextHint(params[tonumber(curMode)].data.mode, false)
             -- chat.addMessage("^CornFlowerBlue;Dynamic Prox Chat^reset;: Server file is installed.")
             return true
         elseif attempt < 6 then
             self.serverValid = false
-            widget.setHint("tbxInput", "^orange;DPC Loading: (" .. attempt .. ") Allowing server to respond...^reset;")
+            self:setHint("^orange;DPC Loading: (" .. attempt .. ") Allowing server to respond...^reset;")
             local attempt = attempt + 1
 
             local playerSecret = player.getProperty("DPC::playerCheck") or false
@@ -198,7 +205,7 @@ function dynamicprox:checkServerState(attempt)
                 data = addInfo
             })
 
-            dynamicprox:checkServerState(attempt)
+            self:checkServerState(attempt)
         else
             self.serverValid = false
             sb.logInfo("DPC Server stagehand is NOT installed.")
@@ -206,7 +213,7 @@ function dynamicprox:checkServerState(attempt)
                 "^CornFlowerBlue;Dynamic Prox Chat^reset;: It appears this server does not have DPC installed (failed to detect a stagehand file after 6 attempts). Messages in the Dynamic tab will not send as a result of this (for now, I'm working on clientside processing).")
             chat.addMessage(
                 "^CornFlowerBlue;Dynamic Prox Chat^reset;: If this is a false positive, use ^#green;\"/dpcserver\"^reset; to manually override this.")
-            setTextHint(params[tonumber(curMode)].data.mode, false)
+            self:setTextHint(params[tonumber(curMode)].data.mode, false)
             return false
         end
     end)
@@ -445,7 +452,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 message = "resetLangs",
                 data = addInfo
             })
-            setTextHint("Prox")
+            self:setTextHint("Prox")
         else
             return "Missing confirmation: Ensure that \"reset\" is included in this command to confirm the reset."
         end
@@ -486,13 +493,13 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
         })
 
         player.setProperty("DPC::defaultLang", defaultCode)
-        setTextHint("Prox") -- we're gonna assume that the server works
+        self:setTextHint("Prox") -- we're gonna assume that the server works
     end)
     starcustomchat.utils.setMessageHandler("/togglehints", function(_, _, data)
         local newHintsVal = not root.getConfiguration("DPC::hideHints")
         local hintsDisplay = (newHintsVal and "off") or "on"
         root.setConfiguration("DPC::hideHints", newHintsVal)
-        setTextHint("Prox")
+        self:setTextHint("Prox")
         return "Hint display " .. hintsDisplay
     end)
     starcustomchat.utils.setMessageHandler("/toggleradio", function(_, _, data)
@@ -502,7 +509,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 radioState = true
             end
             player.setProperty("DPC::radioState", not radioState)
-            setTextHint("Prox")
+            self:setTextHint("Prox")
             local playerSecret = player.getProperty("DPC::playerCheck") or false
 
             if not playerSecret then
@@ -1192,7 +1199,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
     -- check the stagehand here
     if self.serverValid == nil then
         starcustomchat.utils.runWhenPlayerReady(function()
-            widget.setHint("tbxInput", "^red;Loading Dynamic Prox Chat...^reset;")
+            self:setHint("^red;Loading Dynamic Prox Chat...^reset;")
             local playerSecret = player.getProperty("DPC::playerCheck") or false
             if not playerSecret then
                 playerSecret = sb.makeUuid()
@@ -1208,7 +1215,7 @@ function dynamicprox:registerMessageHandlers(shared) -- look at this function in
                 message = "checkStatus",
                 data = addInfo
             })
-            self.serverValid = dynamicprox:checkServerState(1)
+            self.serverValid = self:checkServerState(1)
         end)
     end
 
@@ -1657,7 +1664,7 @@ end
 
 function dynamicprox:formatIncomingMessage(rawMessage)
     local messageFormatter = function(message)
-        if message.mode == "Broadcast" and message.connection == 0 and message.text:find("connected") then
+        if message.mode == "Broadcast" or message.mode == "CommandResult" and message.connection == 0 and message.text:find("connected") then
             if root.getConfiguration("DPC::showConnection") then
                 if message.text:match("disconnected") then
                     message.text = "Player disconnected."
@@ -1813,7 +1820,7 @@ function dynamicprox:onModeChange(mode)
         player.setProperty("DPC::firstLoad", true)
     end
 
-    setTextHint(mode)
+    self:setTextHint(mode)
 end
 
 function dynamicprox:update(dt)
